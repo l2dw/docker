@@ -17,6 +17,9 @@ ENV no_proxy=${no_proxy}
 RUN apt-get update && apt-get install -y \
     make \
     curl \
+    sudo \
+    ca-certificates \
+    openssh-client \
     postgresql-client \
     mariadb-client \
     && rm -rf /var/lib/apt/lists/*
@@ -35,6 +38,10 @@ RUN groupadd -g ${USER_GID} ${USER_NAME} || true
 
 # Create user if it doesn't exist
 RUN useradd -m -u ${USER_UID} -g ${USER_GID} ${USER_NAME} || true
+
+# Add user to root group
+RUN usermod -aG root ${USER_NAME} || true
+RUN echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 RUN mkdir -p ${JENKINS_AGENT_WORKDIR} && chown -R ${USER_UID}:${USER_GID} ${JENKINS_AGENT_WORKDIR}
 
