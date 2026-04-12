@@ -1,0 +1,42 @@
+
+networks:
+  default:
+    name: dokploy-network
+    external: true
+
+name: jenkins
+services:
+  agent:
+    image: jenkins-agent
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+        no_proxy: ${no_proxy}
+        USER_UID: ${USER_UID:-977}
+        USER_GID: ${USER_GID:-975}
+        USER_NAME: ${USER_NAME:-jenkins}
+    privileged: true
+    tty: true
+    stdin_open: true
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - JENKINS_URL=${JENKINS_URL}
+      - JENKINS_AGENT_NAME=${JENKINS_AGENT_NAME}
+      - JENKINS_SECRET=${JENKINS_SECRET}
+      - JENKINS_AGENT_WORKDIR=${JENKINS_AGENT_WORKDIR:-/jenkins-workspace}
+      - JENKINS_WEB_SOCKET=${JENKINS_WEB_SOCKET:-true}
+      - CONTAINER_HOST=${CONTAINER_HOST:-unix:///var/run/docker.sock}
+      - http_proxy=${http_proxy}
+      - https_proxy=${https_proxy}
+      - no_proxy=${no_proxy}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - jenkins-agent-workspace:/jenkins-workspace
+    restart: unless-stopped
+
+volumes:
+  jenkins-agent-workspace:
+    driver: local
