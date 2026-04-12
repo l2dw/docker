@@ -6,8 +6,9 @@ ARG http_proxy
 ARG https_proxy
 ARG no_proxy
 ARG USER_UID=501
-ARG USER_NAME=admin
 ARG USER_GID=100
+ARG JENKINS_AGENT_WORKDIR=/jenkins-workspace
+ARG USER_NAME=jenkins
 
 ENV http_proxy=${http_proxy}
 ENV https_proxy=${https_proxy}
@@ -35,7 +36,7 @@ RUN groupadd -g ${USER_GID} ${USER_NAME} || true
 # Create user if it doesn't exist
 RUN useradd -m -u ${USER_UID} -g ${USER_GID} ${USER_NAME} || true
 
-# USER jenkins
-USER ${USER_NAME}
+RUN mkdir -p ${JENKINS_AGENT_WORKDIR} && chown -R ${USER_UID}:${USER_GID} ${JENKINS_AGENT_WORKDIR}
 
-WORKDIR /home/${USER_NAME}
+USER ${USER_NAME}
+WORKDIR ${JENKINS_AGENT_WORKDIR}

@@ -15,9 +15,10 @@ services:
         http_proxy: ${http_proxy}
         https_proxy: ${https_proxy}
         no_proxy: ${no_proxy}
-        USER_UID: ${USER_UID:-977}
-        USER_GID: ${USER_GID:-975}
+        USER_UID: ${USER_UID:-501}
+        USER_GID: ${USER_GID:-100}
         USER_NAME: ${USER_NAME:-jenkins}
+        JENKINS_AGENT_WORKDIR: ${JENKINS_AGENT_WORKDIR:-/jenkins-workspace}
     privileged: true
     tty: true
     stdin_open: true
