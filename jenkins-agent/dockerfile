@@ -31,13 +31,11 @@ RUN curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc \
 
 # Create group if it doesn't exist
 RUN groupadd -g ${USER_GID} ${USER_NAME} || true
-RUN groupadd -g 974 docker || true
 
 # Create user if it doesn't exist
-RUN useradd -m -u ${USER_UID} -g ${USER_GID} ${USER_NAME} \
-    && usermod -aG 974 ${USER_NAME}
-
-USER ${USER_NAME}
+RUN useradd -m -u ${USER_UID} -g ${USER_GID} ${USER_NAME} || true
 
 # USER jenkins
+USER ${USER_NAME}
+
 WORKDIR /home/${USER_NAME}
