@@ -10,7 +10,7 @@ services:
   minio-client:
     image: minio/mc:latest
     restart: unless-stopped
-    pull_policy: always
+    # pull_policy: always ## Not supported by Docker Swarm
     entrypoint: ["/bin/sh", "-c"]
     command: ["sleep infinity"]
     environment:

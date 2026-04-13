@@ -10,7 +10,7 @@ services:
   rustfs:
     image: rustfs/rustfs:latest
     restart: unless-stopped
-    pull_policy: always
+    # pull_policy: always ## Not supported by Docker Swarm
     environment:
       - TZ
       - http_proxy
