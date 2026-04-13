@@ -1,0 +1,43 @@
+
+# networks:
+#   default:
+#     name: dokploy-network
+#     external: true
+
+name: storage
+services:
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      - TZ=${TZ}
+      - RUSTFS_VOLUMES=/data
+      - RUSTFS_ADDRESS=0.0.0.0:9000
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY}
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+    # labels:
+    #   - "traefik.enable=true"
+    #   # HTTPS router
+    #   - "traefik.http.services.rustfs-s3.loadbalancer.server.port=9000"
+    #   - "traefik.http.routers.rustfs-s3.rule=Host(`${RUSTFS_S3_DOMAIN}`)"
+    #   - "traefik.http.routers.rustfs-s3.service=rustfs-s3"
+    #   # - "traefik.http.routers.rustfs-s3.entrypoints=web"
+    #   - "traefik.http.routers.rustfs-s3.entrypoints=websecure"
+    #   - "traefik.http.routers.rustfs-s3.tls=true"
+    #   # RustFS Console HTTPS router
+    #   - "traefik.http.services.rustfs-console.loadbalancer.server.port=9001"
+    #   - "traefik.http.routers.rustfs-console.rule=Host(`${RUSTFS_S3_DOMAIN}`) && PathPrefix(`/rustfs`)"
+    #   - "traefik.http.routers.rustfs-console.service=rustfs-console"
+    #   # - "traefik.http.routers.rustfs-console.entrypoints=web"
+    #   - "traefik.http.routers.rustfs-console.entrypoints=websecure"
+    #   - "traefik.http.routers.rustfs-console.tls=true"
+    volumes:
+      - ${RUSTFS_DATA_DIR:-rustfs_data}:/data
+
+volumes:
+  rustfs_data:
+    driver: local
