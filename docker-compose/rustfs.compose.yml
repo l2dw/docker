@@ -40,7 +40,8 @@ services:
     #   - "traefik.http.routers.rustfs-console.tls=true"
     volumes:
       - ${RUSTFS_DATA_DIR:-rustfs_data}:/data
-
+    networks:
+      - default
     deploy:
       replicas: 1
       labels:
@@ -54,6 +55,12 @@ services:
         - homepage.icon=rustfs.png
         - homepage.href=http://${RUSTFS_DOMAIN}/
         - homepage.description=RustFS
+
 volumes:
   rustfs_data:
     driver: local
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: true
