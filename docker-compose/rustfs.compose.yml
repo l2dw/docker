@@ -4,7 +4,7 @@
 #     name: dokploy-network
 #     external: true
 
-name: storage
+# name: storage # Not supported by Docker Swarm
 services:
 
   rustfs:

@@ -1,6 +1,6 @@
 ## https://gethomepage.dev/installation/docker/
 
-name: dashboard
+# name: dashboard # Not supported by Docker Swarm
 
 services:
   homepage:
