@@ -41,6 +41,19 @@ services:
     volumes:
       - ${RUSTFS_DATA_DIR:-rustfs_data}:/data
 
+    deploy:
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        - traefik.http.services.rustfs.loadbalancer.server.port=9000
+        - traefik.http.routers.rustfs.entrypoints=web
+        - traefik.http.routers.rustfs.rule=Host(`${RUSTFS_DOMAIN}`)
+        - traefik.http.routers.rustfs.service=rustfs
+        - homepage.group=MacKantor
+        - homepage.name=RustFS
+        - homepage.icon=rustfs.png
+        - homepage.href=http://${RUSTFS_DOMAIN}/
+        - homepage.description=RustFS
 volumes:
   rustfs_data:
     driver: local

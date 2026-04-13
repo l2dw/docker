@@ -22,8 +22,9 @@ services:
       - MINIO_SERVER_ACCESS_KEY
       - MINIO_SERVER_SECRET_KEY
     volumes:
-      - ${MINIO_CLIENT_DATA_DIR:-minio_client_data}:/data
+      # - ${MINIO_CLIENT_BACKUP_DIR:-minio_client_data}:/data
+      - ${MINIO_CLIENT_DATA_DIR:-downloads}:/downloads
 
 volumes:
-  minio_client_data:
+  downloads:
     driver: local
