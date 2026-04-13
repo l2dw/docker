@@ -14,7 +14,10 @@ services:
     restart: unless-stopped
     pull_policy: always
     environment:
-      - TZ=${TZ}
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
       - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_DOMAIN}
 
     # labels:

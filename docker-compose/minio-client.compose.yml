@@ -14,10 +14,13 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["sleep infinity"]
     environment:
-      TZ: ${TZ}
-      MINIO_SERVER_HOST: ${MINIO_SERVER_HOST}
-      MINIO_SERVER_ACCESS_KEY: ${MINIO_SERVER_ACCESS_KEY}
-      MINIO_SERVER_SECRET_KEY: ${MINIO_SERVER_SECRET_KEY}
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - MINIO_SERVER_HOST
+      - MINIO_SERVER_ACCESS_KEY
+      - MINIO_SERVER_SECRET_KEY
     volumes:
       - ${MINIO_CLIENT_DATA_DIR:-minio_client_data}:/data
 
