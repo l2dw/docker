@@ -50,10 +50,14 @@ services:
         - traefik.http.routers.rustfs.entrypoints=web
         - traefik.http.routers.rustfs.rule=Host(`${RUSTFS_DOMAIN}`)
         - traefik.http.routers.rustfs.service=rustfs
+        - traefik.http.services.rustf-console.loadbalancer.server.port=9001
+        - traefik.http.routers.rustf-console.entrypoints=web
+        - traefik.http.routers.rustf-console.rule=Host(`${RUSTFS_DOMAIN}`)&&PathPrefix(`/rustfs`)
+        - traefik.http.routers.rustf-console.service=rustfs-console
         - homepage.group=MacKantor
         - homepage.name=RustFS
         - homepage.icon=rustfs.png
-        - homepage.href=http://${RUSTFS_DOMAIN}/
+        - homepage.href=http://${RUSTFS_DOMAIN}/rustfs/
         - homepage.description=RustFS
 
 volumes:
