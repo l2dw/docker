@@ -1,0 +1,43 @@
+
+
+services:
+  tpl:
+    image: tpl/tpl:latest
+    restart: unless-stopped
+    pull_policy: always ## Not supported by Docker Swarm
+    privileged: true
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+    volumes:
+      - ${TPL_DATA_DIR:-tpl_data}:/data
+    networks:
+      - default
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router
+      - "traefik.http.services.tpl.loadbalancer.server.port=9000"
+      - "traefik.http.routers.tpl.rule=Host(`${TPL_HOST_DOMAIN}`) && PathPrefix(`${TPL_HOST_URI}`)"
+      - "traefik.http.routers.tpl.service=tpl"
+      - "traefik.http.routers.tpl.entrypoints=web"
+      # HTTPS router
+      - "traefik.http.services.tpl-secure.loadbalancer.server.port=9001"
+      - "traefik.http.routers.tpl-secure.rule=Host(`${TPL_HOST_DOMAIN}`) && PathPrefix(`${TPL_HOST_URI}`)"
+      - "traefik.http.routers.tpl-secure.service=tpl-secure"
+      - "traefik.http.routers.tpl-secure.entrypoints=web"
+      # Homepage
+      - homepage.group=${TPL_HOMEPAGE_GROUP:-Templates}
+      - homepage.name=${TPL_HOMEPAGE_NAME:-TPL}
+      - homepage.icon=${TPL_HOMEPAGE_ICON:-tpl.png}
+      - homepage.href=${TPL_HOMEPAGE_HREF:-${TPL_HOST_PROTOCOL}://${TPL_HOST_DOMAIN}${TPL_HOST_URI}/}
+
+volumes:
+  tpl_data:
+    driver: local
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: true
