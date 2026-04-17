@@ -1,0 +1,141 @@
+
+name: siem
+services:
+  cert-utils:
+    image: elastic/elasticsearch:${SIEM_ES_VERSION:-8.19.14}
+    command: >
+      bash -c "
+        echo 'instances:' > /certs/instances.yml && \
+        echo '  - name: elasticsearch' >> /certs/instances.yml && \
+        echo '    dns:' >> /certs/instances.yml && \
+        echo '      - elasticsearch' >> /certs/instances.yml && \
+        echo '  # - name: es02' >> /certs/instances.yml && \
+        echo '  #   dns:' >> /certs/instances.yml && \
+        echo '  #     - es02' >> /certs/instances.yml && \
+        echo '  # - name: es03' >> /certs/instances.yml && \
+        rm -rf /certs/elastic-stack-ca.zip /certs/elastic-certificates.zip /certs/ca /certs/elasticsearch && \
+        bin/elasticsearch-certutil ca --silent --pem -out /certs/elastic-stack-ca.zip && \
+        unzip -o /certs/elastic-stack-ca.zip -d /certs && \
+        bin/elasticsearch-certutil cert --silent --ca-cert /certs/ca/ca.crt --ca-key /certs/ca/ca.key --pem --in /certs/instances.yml --out /certs/elastic-certificates.zip && \
+        unzip -o /certs/elastic-certificates.zip -d /certs && \
+        ls -l /certs;
+      "
+    user: "0"
+    volumes:
+      - ${SIEM_CERTS_DIR:-siem_certs}:/certs
+
+  elasticsearch:
+    image: elastic/elasticsearch:${SIEM_ES_VERSION:-8.19.14}
+    restart: unless-stopped
+    # pull_policy: always ## Not supported by Docker Swarm
+    privileged: true
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - node.name=elasticsearch
+      - cluster.name=es-docker-cluster
+      # Single-node cluster: required for stable discovery when only one ES node runs.
+      - discovery.type=single-node
+      - bootstrap.memory_lock=false
+      # 768m heap: 512m was tight for xpack + migrations on a single node.
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+      - xpack.security.enabled=true
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/elasticsearch/elasticsearch.crt
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/elasticsearch/elasticsearch.key
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca/ca.crt
+    mem_limit: ${SIEM_ES_MEM_LIMIT:-1024m}
+    # depends_on:
+    #   cert-utils:
+    #     condition: service_completed_successfully
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 40s
+    volumes:
+      - ${SIEM_ES_DATA_DIR:-siem_es_data}:/usr/share/elasticsearch/data
+      - ${SIEM_CERTS_DIR:-siem_certs}:/usr/share/elasticsearch/config/certs
+    ports:
+      - ${SIEM_ES_PORT:-9200}:9200
+    networks:
+      - default
+    labels:
+      - "traefik.enable=true"
+      # middlewares
+      - "traefik.http.middlewares.siem-es-strip-prefix.stripprefix.prefixes=${SIEM_ES_PREFIX:-/elasticsearch}"
+      # Web router
+      - "traefik.http.services.siem-es.loadbalancer.server.port=9200"
+      - "traefik.http.routers.siem-es.rule=Host(`${SIEM_HOST_DOMAIN}`) && PathPrefix(`${SIEM_ES_PREFIX:-/elasticsearch}`)"
+      - "traefik.http.routers.siem-es.middlewares=siem-es-strip-prefix"
+      - "traefik.http.routers.siem-es.service=siem-es"
+      - "traefik.http.routers.siem-es.entrypoints=web"
+      # Homepage
+      - homepage.group=${SIEM_ES_HOMEPAGE_GROUP:-SIEM}
+      - homepage.name=${SIEM_ES_HOMEPAGE_NAME:-Elasticsearch}
+      - homepage.icon=${SIEM_ES_HOMEPAGE_ICON:-elasticsearch.png}
+      - homepage.href=${SIEM_ES_HOMEPAGE_HREF:-${SIEM_HOST_PROTOCOL}://${SIEM_HOST_DOMAIN}${SIEM_ES_PREFIX:-/elasticsearch}/}
+
+  kibana:
+    image: elastic/kibana:${SIEM_KIBANA_VERSION:-8.19.14}
+    restart: unless-stopped
+    # pull_policy: always ## Not supported by Docker Swarm
+    privileged: true
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      # NOTE: Kibana Docker only supports env var -> config mapping via UPPERCASE names.
+      # The "dotted" form (e.g. elasticsearch.username=...) is ignored.
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=${SIEM_KB_PORT:-5601}
+      - SERVER_PUBLICBASEURL=${SIEM_KB_PUBLIC_BASE_URL:-${SIEM_HOST_PROTOCOL}://${SIEM_HOST_DOMAIN}${SIEM_KB_PREFIX}}
+      - SERVER_BASEPATH=${SIEM_KB_BASE_PATH:-${SIEM_KB_PREFIX}}
+      - SERVER_REWRITEBASEPATH=${SIEM_KB_REWRITE_BASE_PATH:-true}
+      # Elasticsearch (HTTP; security on → basic auth required)
+      - ELASTICSEARCH_HOSTS=${SIEM_KB_ELASTICSEARCH_HOSTS:-http://elasticsearch:9200}
+      - ELASTICSEARCH_USERNAME=${SIEM_KB_ELASTICSEARCH_USERNAME:-kibana_system}
+      - ELASTICSEARCH_PASSWORD=${SIEM_KB_ELASTICSEARCH_PASSWORD:-${SIEM_KB_PASSWORD}}
+      # X-Pack
+      - XPACK_SECURITY_ENABLED=true
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${SIEM_KB_ENCRYPTED_SAVED_OBJECTS_ENCRYPTION_KEY:-d365227a34a8e1f1ad620eeeaebdeb0f}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${SIEM_KB_REPORTING_ENCRYPTION_KEY:-26057c8eb2bc671ccd1e73ef0e9091b3}
+    volumes:
+      - ${SIEM_KB_DATA_DIR:-siem_kb_data}:/usr/share/kibana/data
+      - ${SIEM_CERTS_DIR:-siem_certs}:/usr/share/kibana/config/certs
+    # depends_on:
+    #   elasticsearch:
+    #     condition: service_healthy
+    networks:
+      - default
+    labels:
+      - "traefik.enable=true"
+      # Web router
+      - "traefik.http.services.siem-kb.loadbalancer.server.port=5601"
+      - "traefik.http.routers.siem-kb.rule=Host(`${SIEM_HOST_DOMAIN}`) && PathPrefix(`${SIEM_KB_PREFIX}`)"
+      - "traefik.http.routers.siem-kb.service=siem-kb"
+      - "traefik.http.routers.siem-kb.entrypoints=web"
+      # Homepage
+      - homepage.group=${SIEM_KB_HOMEPAGE_GROUP:-SIEM}
+      - homepage.name=${SIEM_KB_HOMEPAGE_NAME:-Kibana}
+      - homepage.icon=${SIEM_KB_HOMEPAGE_ICON:-kibana.png}
+      - homepage.href=${SIEM_KB_HOMEPAGE_HREF:-${SIEM_HOST_PROTOCOL}://${SIEM_HOST_DOMAIN}${SIEM_KB_PREFIX}/}
+
+volumes:
+  siem_es_data:
+    driver: local
+  siem_kb_data:
+    driver: local
+  siem_certs:
+    driver: local
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: true

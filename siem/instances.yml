@@ -1,0 +1,10 @@
+instances:
+  - name: elasticsearch
+    dns:
+      - elasticsearch
+  # - name: es02
+  #   dns:
+  #     - es02
+  # - name: es03
+  #   dns:
+  #     - es03
