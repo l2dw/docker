@@ -223,9 +223,9 @@ services:
         traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
         traefik.http.routers.traefik-dashboard-secure.tls: "true"
         traefik.http.routers.traefik-dashboard-secure.tls.certresolver: default
-        traefik.http.routers.traefik-dashboard-secure.middlewares: "stripprefix-traefik, traefik-dash-root, basic-auth"
+        traefik.http.routers.traefik-dashboard-secure.middlewares: "stripprefix-traefik, traefik-dash-root"
         ## Insecure router configuration
         traefik.http.routers.traefik-dashboard-insecure.entrypoints: web
         traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
         traefik.http.routers.traefik-dashboard-insecure.service: traefik-dashboard
-        traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, traefik-dash-root, basic-auth"
+        traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, traefik-dash-root"
