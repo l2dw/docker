@@ -28,6 +28,19 @@ volumes:
   dokploy-traefik_logs:
     name: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}
     external: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_certs:
+    name: ${DOKPLOY_TRAEFIK_CERTS_VOLUME_NAME:-dokploy-traefik_certs}
+    external: ${DOKPLOY_TRAEFIK_CERTS_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_rules:
+    name: ${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}
+    external: ${DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL:-false}
+  ## Single-file mount (traefik.yml), not a directory — empty named volumes behave like dirs; bind or pre-create the file when external.
+  dokploy-traefik_config_file:
+    name: ${DOKPLOY_TRAEFIK_CONFIG_FILE_VOLUME_NAME:-dokploy-traefik_config_file}
+    external: ${DOKPLOY_TRAEFIK_CONFIG_FILE_VOLUME_EXTERNAL:-false}
+    labels:
+      com.dokploy.volume.mount_as: file
+
 services:
   dokploy-postgresql:
     image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
@@ -110,7 +123,8 @@ services:
         condition: on-failure
         delay: 5s
       update_config:
-        order: start-first
+        # start-first + host ports = two tasks compete for the same PublishedPort on one node
+        order: stop-first
         failure_action: rollback
 
   ## traefik
@@ -128,8 +142,10 @@ services:
         protocol: tcp
         mode: host
     volumes:
+      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
       - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
-      - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/var/log/traefik
+      - ${DOKPLOY_TRAEFIK_CERTS_DIR:-dokploy-traefik_certs}:/etc/dokploy/traefik/certs
+      - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/dokploy/traefik/dynamic/rules
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       default:
@@ -143,7 +159,8 @@ services:
         condition: on-failure
         delay: 5s
       update_config:
-        order: start-first
+        # same rationale as dokploy: host PublishedPorts cannot overlap during rolling update
+        order: stop-first
         failure_action: rollback
       # Swarm: these are SERVICE labels (Spec.Labels), not task/container labels — they will not
       # appear on `docker container inspect`. Check: `docker service inspect dokploy_dokploy-traefik --format '{{json .Spec.Labels}}'`

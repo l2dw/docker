@@ -105,8 +105,34 @@ swarm-unlock-key: ## Show the unlock key
 		echo "Stack file $(STACK_FILE) does not exist"; \
 		exit 1; \
 	fi;
-stack-deploy: .check-stack-name ## Deploy a stack
-	$(DOCKER) stack deploy -c $(STACK_FILE) $(STACK_NAME) --with-registry-auth
+# Default: detach (return after scheduling). Blocking wait looks like an endless spin while Swarm pulls images.
+STACK_DEPLOY_WAIT ?=
+
+stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/stack-compose.yml; STACK_DEPLOY_WAIT=1 to wait)
+	@stk='$(STACK_NAME)'; compose='$(STACK_FILE)'; ovr='$(STACK_OVERRIDE)'; \
+	if [ -z "$$compose" ] && [ -f "$$stk/stack-compose.yml" ]; then compose="$$stk/stack-compose.yml"; fi; \
+	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
+		echo "STACK_FILE is unset and not found at $$stk/stack-compose.yml — set STACK_FILE or create that file."; exit 1; \
+	fi; \
+	if [ -z "$$ovr" ] && [ -f "$$stk/stack-compose.override.yml" ] || [ -L "$$stk/stack-compose.override.yaml" ]; then ovr="$$stk/stack-compose.override.yml"; fi; \
+	set -- -c "$$compose"; \
+	if [ -n "$$ovr" ] && [ -f "$$ovr" ]; then set -- "$$@" -c "$$ovr"; fi; \
+	detachflag=""; \
+	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) detachflag='--detach=false';; esac; \
+	set +e; \
+	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$detachflag; \
+	rc=$$?; \
+	if [ "$$rc" -ne 0 ]; then \
+	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$detachflag; \
+	rc=$$?; \
+	fi; \
+	set -e; \
+	if [ "$$rc" -ne 0 ]; then \
+		echo "Error: docker stack deploy failed (rc=$$rc)."; exit "$$rc"; \
+	fi; \
+	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) ;; *) \
+		echo 'Tip: rollout continues asynchronously — docker stack ps '"$(STACK_NAME)"' · docker stack services '"$(STACK_NAME)" >&2; \
+	;; esac
 stack-rm: .check-stack-name ## Remove a stack
 	$(DOCKER) stack rm $(STACK_NAME)
 # Engines without `docker stack logs`: use merged `docker service logs` instead.
@@ -122,7 +148,7 @@ stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — ke
 
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
-DOKPLOY_STACK_FILE := $(DOKPLOY_STACK_NAME)/stack-compose.yml
+# DOKPLOY_STACK_FILE := $(DOKPLOY_STACK_NAME)/stack-compose.yml
 DOKPLOY_SERVICES_SHORT := dokploy dokploy-postgresql dokploy-redis dokploy-traefik
 .dokploy-stack-setup:
 	@# Create network if it doesn't exist
@@ -143,7 +169,7 @@ DOKPLOY_SERVICES_SHORT := dokploy dokploy-postgresql dokploy-redis dokploy-traef
 		exit 1; \
 	fi
 dokploy-stack-up: .dokploy-stack-setup ## Deploy the dokploy stack
-	$(MAKE) stack-deploy STACK_FILE=$(DOKPLOY_STACK_FILE) STACK_NAME=$(DOKPLOY_STACK_NAME)
+	$(MAKE) stack-deploy STACK_NAME=$(DOKPLOY_STACK_NAME)
 
 dokploy-stack-down: ## Remove the dokploy stack
 	$(MAKE) stack-rm STACK_NAME=$(DOKPLOY_STACK_NAME)
