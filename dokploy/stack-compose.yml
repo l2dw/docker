@@ -147,7 +147,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command:
       - "--global.sendAnonymousUsage=false"
-      - "--global.checkNewVersion=true"
       - "--api.dashboard=true"
       - "--api.insecure=true"
       - "--entrypoints.web.address=:80"
@@ -169,7 +168,7 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/certificates/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
       - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
-      - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-INFO}"
+      - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-DEBUG}"
       - "--metrics.prometheus=true"
       - "--accesslog=true"
       - "--accesslog.filePath=/etc/dokploy/logs/traefik/access.log"
@@ -210,6 +209,10 @@ services:
         traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
         traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: "true"
         traefik.http.middlewares.stripprefix-traefik.stripPrefix.prefixes: "${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}"
+        ## After stripping the path prefix, bare `/` hits nothing on :8080; Traefik dashboard UI lives under `/dashboard/`
+        traefik.http.middlewares.traefik-dash-root.replacePathRegex.regex: "^/?$$"
+        traefik.http.middlewares.traefik-dash-root.replacePathRegex.replacement: "/dashboard/"
+        # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
         traefik.http.middlewares.basic-auth.basicAuth.users: "${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
         ## Service configuration
         traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
@@ -220,9 +223,9 @@ services:
         traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
         traefik.http.routers.traefik-dashboard-secure.tls: "true"
         traefik.http.routers.traefik-dashboard-secure.tls.certresolver: default
-        traefik.http.routers.traefik-dashboard-secure.middlewares: "stripprefix-traefik, basic-auth"
+        traefik.http.routers.traefik-dashboard-secure.middlewares: "stripprefix-traefik, traefik-dash-root, basic-auth"
         ## Insecure router configuration
         traefik.http.routers.traefik-dashboard-insecure.entrypoints: web
         traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
         traefik.http.routers.traefik-dashboard-insecure.service: traefik-dashboard
-        traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, basic-auth"
+        traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, traefik-dash-root, basic-auth"
