@@ -1,11 +1,20 @@
-# include .env if it exists
--include .env
+# $(ENV_FILE) is `-include`d as Makefile assignments; all KEY= names are `export`ed so every recipe and
+# subprocess (`docker stack deploy`, etc.) inherits the same values. See `.env.example`.
+ENV_FILE ?= $(CURDIR)/.env
 
+ENV_EXPORT_KEYS := $(shell test -f "$(ENV_FILE)" && sed -n '/^[[:space:]]*#/d;/^[[:space:]]*$$/d;/^[A-Za-z_][A-Za-z0-9_]*=/s/=.*$$//p' "$(ENV_FILE)" 2>/dev/null | tr '\n' ' ')
 
-# Parameters
-SHELL         = sh
-TZ            = America/Toronto
-IP_ADDRESS 	  = $(shell ./bin/ip_address.sh)
+ifneq (,$(wildcard $(ENV_FILE)))
+-include $(ENV_FILE)
+ifneq (,$(strip $(ENV_EXPORT_KEYS)))
+export $(ENV_EXPORT_KEYS)
+endif
+endif
+
+# Parameters (Makefile defaults apply only where below; .env overrides by inclusion above)
+SHELL          = sh
+TZ             ?= America/Toronto
+IP_ADDRESS 	   = $(shell ./bin/ip_address.sh)
 
 # Executables
 GIT           = git
