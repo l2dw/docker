@@ -17,8 +17,7 @@ MAKE            = make
 
 # Misc
 .DEFAULT_GOAL = help
-.PHONY        : # Not needed here, but you can put your all your targets to be sure
-                # there is no name conflict between your files and your targets.
+.PHONY        : dokploy-debug dokploy-debug-logs
 
 ## —— 🐝 The Makefile 🐝 ———————————————————————————————————
 help: ## Outputs this help screen
@@ -108,6 +107,7 @@ stack-watch-logs: .check-stack-name ## Watch logs of a stack
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
 DOKPLOY_STACK_FILE := $(DOKPLOY_STACK_NAME)/stack-compose.yml
+DOKPLOY_SERVICES_SHORT := dokploy dokploy-postgresql dokploy-redis dokploy-traefik
 .dokploy-stack-setup:
 	@# Create network if it doesn't exist
 	@if ! $(DOCKER) network ls | grep -q "dokploy-network"; then \
@@ -138,3 +138,25 @@ dokploy-stack-logs: ## Show logs of the dokploy stack
 	$(MAKE) stack-logs STACK_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-stack-watch-logs: ## Watch logs of the dokploy stack
 	$(MAKE) stack-watch-logs STACK_NAME=$(DOKPLOY_STACK_NAME)
+
+dokploy-debug: ## Debug dokploy swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(DOKPLOY_STACK_NAME))"
+	@$(DOCKER) stack services $(DOKPLOY_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+	@echo
+	@echo "--- docker service ls (${DOKPLOY_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(DOKPLOY_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(DOKPLOY_STACK_NAME)_' \
+		|| echo "(could not filter services)"
+	@echo
+	@echo "--- docker stack ps --no-trunc ($(DOKPLOY_STACK_NAME))"
+	@$(DOCKER) stack ps $(DOKPLOY_STACK_NAME) --no-trunc
+	@echo
+	@echo "--- traefik published ports ---"
+	@$(DOCKER) service inspect $(DOKPLOY_STACK_NAME)_dokploy-traefik --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(no traefik service or inspect failed)"
+
+dokploy-debug-logs: ## Tail recent logs for each dokploy service (e.g. services at 0/1)
+	@for s in $(DOKPLOY_SERVICES_SHORT); do \
+		echo "==================== $(DOKPLOY_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(DOKPLOY_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+		echo; \
+	done
