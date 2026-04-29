@@ -207,16 +207,20 @@ services:
         traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent: "true"
         traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
         traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: "true"
+        traefik.http.middlewares.stripprefix-traefik.stripPrefix.prefixes: "${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}"
+        traefik.http.middlewares.basic-auth.basicAuth.users: "${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
         ## Service configuration
-        traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
-        traefik.http.services.traefik-dashboard.loadbalancer.server.scheme: http
+        # traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
+        # traefik.http.services.traefik-dashboard.loadbalancer.server.scheme: http
         ## Secure router configuration
-        traefik.http.routers.traefik-dashboard-secure.service: traefik-dashboard
+        traefik.http.routers.traefik-dashboard-secure.service: api@internal
         traefik.http.routers.traefik-dashboard-secure.entrypoints: websecure
-        traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
         traefik.http.routers.traefik-dashboard-secure.tls: "true"
         traefik.http.routers.traefik-dashboard-secure.tls.certresolver: default
+        traefik.http.routers.traefik-dashboard-secure.middlewares: "stripprefix-traefik, basic-auth"
         ## Insecure router configuration
         traefik.http.routers.traefik-dashboard-insecure.entrypoints: web
-        traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
-        traefik.http.routers.traefik-dashboard-insecure.service: traefik-dashboard
+        traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
+        traefik.http.routers.traefik-dashboard-insecure.service: api@internal
+        traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, basic-auth"
