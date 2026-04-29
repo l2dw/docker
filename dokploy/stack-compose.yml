@@ -145,8 +145,11 @@ services:
       update_config:
         order: start-first
         failure_action: rollback
+      # Swarm: these are SERVICE labels (Spec.Labels), not task/container labels — they will not
+      # appear on `docker container inspect`. Check: `docker service inspect dokploy_dokploy-traefik --format '{{json .Spec.Labels}}'`
+      # Traefik Swarm provider reads service labels (enable providers.docker.swarmMode if using file provider defaults).
       labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.dashboard-web.rule=Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
-        - "traefik.http.routers.dashboard-web.service=dashboard-web"
-        - "traefik.http.services.dashboard-web.loadbalancer.server.port=3000"
+        traefik.enable: "true"
+        traefik.http.routers.dashboard-web.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        traefik.http.routers.dashboard-web.service: "dashboard-web"
+        traefik.http.services.dashboard-web.loadbalancer.server.port: "3000"
