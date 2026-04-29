@@ -204,19 +204,19 @@ services:
         traefik.enable: "true"
         ## Middleware configuration
         traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme: https
-        traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent: true
+        traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent: "true"
         traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
-        traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: true
+        traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: "true"
         ## Service configuration
         traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
         traefik.http.services.traefik-dashboard.loadbalancer.server.scheme: http
         ## Secure router configuration
         traefik.http.routers.traefik-dashboard-secure.service: traefik-dashboard
         traefik.http.routers.traefik-dashboard-secure.entrypoints: websecure
-        traefik.http.routers.traefik-dashboard-secure.rule: Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
-        traefik.http.routers.traefik-dashboard-secure.tls: true
+        traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        traefik.http.routers.traefik-dashboard-secure.tls: "true"
         traefik.http.routers.traefik-dashboard-secure.tls.certresolver: default
         ## Insecure router configuration
         traefik.http.routers.traefik-dashboard-insecure.entrypoints: web
-        traefik.http.routers.traefik-dashboard-insecure.rule: Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
         traefik.http.routers.traefik-dashboard-insecure.service: traefik-dashboard
