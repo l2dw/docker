@@ -35,11 +35,9 @@ volumes:
     name: ${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}
     external: ${DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL:-false}
   ## Single-file mount (traefik.yml), not a directory — empty named volumes behave like dirs; bind or pre-create the file when external.
-  dokploy-traefik_config_file:
-    name: ${DOKPLOY_TRAEFIK_CONFIG_FILE_VOLUME_NAME:-dokploy-traefik_config_file}
-    external: ${DOKPLOY_TRAEFIK_CONFIG_FILE_VOLUME_EXTERNAL:-false}
-    labels:
-      com.dokploy.volume.mount_as: file
+  dokploy-certificates:
+    name: ${DOKPLOY_CERTIFICATES_VOLUME_NAME:-dokploy-certificates}
+    external: ${DOKPLOY_CERTIFICATES_VOLUME_EXTERNAL:-false}
 
 services:
   dokploy-postgresql:
@@ -144,9 +142,46 @@ services:
     volumes:
       - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
       - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
-      - ${DOKPLOY_TRAEFIK_CERTS_DIR:-dokploy-traefik_certs}:/etc/dokploy/traefik/certs
+      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/dokploy/traefik/certificates
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/dokploy/traefik/dynamic/rules
       - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.swarm=true"
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.network=dokploy-network"
+      - "--providers.swarm.watch=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.watch=true"
+      - "--providers.file.directory=${DOKPLOY_TRAEFIK_RULES_DIR:-/etc/dokploy/traefik/dynamic}"
+      - "--providers.file.watch=true"
+      - "--certificatesresolvers.default.acme.tlschallenge=true"
+      - "--certificatesresolvers.default.acme.storage=/etc/dokploy/traefik/certificates/acme.json"
+      - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/certificates/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
+      - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
+      - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-INFO}"
+      - "--metrics.prometheus=true"
+      - "--accesslog=true"
+      - "--accesslog.filePath=${DOKPLOY_TRAEFIK_ACCESS_LOG_FILE:-/etc/dokploy/logs/traefik/access.log}"
+      - "--accesslog.format=${DOKPLOY_TRAEFIK_ACCESS_LOG_FORMAT:-json}"
+      - "--accesslog.fields.defaultMode=keep"
+      - "--accesslog.fields.names.RequestHost=keep"
+      - "--accesslog.fields.names.RequestPath=keep"
+      - "--accesslog.fields.names.RequestScheme=keep"
+      - "--accesslog.fields.names.RequestMethod=keep"
+      - "--accesslog.fields.names.RequestProtocol=keep"
+      - "--accesslog.fields.names.RequestPort=keep"
+      - "--accesslog.fields.names.RequestQuery=keep"
+      - "--accesslog.fields.names.DownstreamURL=keep"
+      - "${DOKPLOY_TRAEFIK_COMMAND:-}"
     networks:
       default:
     deploy:
@@ -167,6 +202,21 @@ services:
       # Traefik Swarm provider reads service labels (enable providers.docker.swarmMode if using file provider defaults).
       labels:
         traefik.enable: "true"
-        traefik.http.routers.dashboard-web.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
-        traefik.http.routers.dashboard-web.service: "dashboard-web"
-        traefik.http.services.dashboard-web.loadbalancer.server.port: "3000"
+        ## Middleware configuration
+        traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme: https
+        traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent: true
+        traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
+        traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: true
+        ## Service configuration
+        traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
+        traefik.http.services.traefik-dashboard.loadbalancer.server.scheme: http
+        ## Secure router configuration
+        traefik.http.routers.traefik-dashboard-secure.service: traefik-dashboard
+        traefik.http.routers.traefik-dashboard-secure.entrypoints: websecure
+        traefik.http.routers.traefik-dashboard-secure.rule: Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        traefik.http.routers.traefik-dashboard-secure.tls: true
+        traefik.http.routers.traefik-dashboard-secure.tls.certresolver: default
+        ## Insecure router configuration
+        traefik.http.routers.traefik-dashboard-insecure.entrypoints: web
+        traefik.http.routers.traefik-dashboard-insecure.rule: Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        traefik.http.routers.traefik-dashboard-insecure.service: traefik-dashboard
