@@ -113,12 +113,13 @@ DOKPLOY_STACK_FILE := $(DOKPLOY_STACK_NAME)/stack-compose.yml
 	@if ! $(DOCKER) network ls | grep -q "dokploy-network"; then \
 		$(DOCKER) network create "dokploy-network" --driver overlay; \
 	fi;
-	@# Check if the swarm is initialized
-	@if ! $(DOCKER) info | grep -q "Swarm: active"; then \
-		echo "Swarm is not initialized"; \
-		echo "Please initialize the swarm first: make swarm-init"; \
+	@# Check if this node is active in a swarm (grep on `docker info` text is unreliable across daemons/locales)
+	@swarm_state="$$($(DOCKER) info -f '{{.Swarm.LocalNodeState}}' 2>/dev/null)"; \
+	if [ "$$swarm_state" != "active" ]; then \
+		echo "Swarm is not active on this daemon (LocalNodeState=$$swarm_state)."; \
+		echo "Initialize with: make swarm-init"; \
 		exit 1; \
-	fi;
+	fi
 dokploy-stack-up: .dokploy-stack-setup ## Deploy the dokploy stack
 	$(MAKE) stack-deploy STACK_FILE=$(DOKPLOY_STACK_FILE) STACK_NAME=$(DOKPLOY_STACK_NAME)
 
