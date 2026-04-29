@@ -27,7 +27,7 @@ volumes:
     external: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL:-false}
   dokploy-traefik_logs:
     name: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}
-    external: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL:-true}
+    external: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL:-false}
 services:
   dokploy-postgresql:
     image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
@@ -42,9 +42,6 @@ services:
       - ${DOKPLOY_POSTGRES_LOGS_DIR:-dokploy-postgresql_logs}:/var/log/postgresql
     networks:
       default:
-        # aliases:
-        #   - dokploy-postgresql
-        #   - postgresql
     deploy:
       mode: replicated
       replicas: 1
@@ -70,9 +67,6 @@ services:
       - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:/var/log/redis
     networks:
       default:
-        # aliases:
-        #   - dokploy-redis
-        #   - redis
     deploy:
       mode: replicated
       replicas: 1
@@ -101,9 +95,6 @@ services:
       - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
     networks:
       default:
-        # aliases:
-        #   - dokploy
-        #   - dokploy
     ports:
       - target: 3000
         published: ${DOKPLOY_PORT:-3000}
@@ -156,6 +147,6 @@ services:
         failure_action: rollback
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.dashboard-web.rule=Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy.local}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        - "traefik.http.routers.dashboard-web.rule=Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
         - "traefik.http.routers.dashboard-web.service=dashboard-web"
         - "traefik.http.services.dashboard-web.loadbalancer.server.port=3000"
