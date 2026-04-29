@@ -105,25 +105,31 @@ swarm-unlock-key: ## Show the unlock key
 		echo "Stack file $(STACK_FILE) does not exist"; \
 		exit 1; \
 	fi;
-# Default: detach (return after scheduling). Blocking wait looks like an endless spin while Swarm pulls images.
-STACK_DEPLOY_WAIT ?=
+# Default: no detach flag (CLI without `--detach` rejects it). STACK_DEPLOY_WAIT=1 passes --detach=false only if `docker stack deploy --help` lists `--detach`; else prints a stderr note so older hosts remain usable.
+STACK_DEPLOY_WAIT ?= 1
 
-stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/stack-compose.yml; STACK_DEPLOY_WAIT=1 to wait)
+stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/stack-compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
 	@stk='$(STACK_NAME)'; compose='$(STACK_FILE)'; ovr='$(STACK_OVERRIDE)'; \
 	if [ -z "$$compose" ] && [ -f "$$stk/stack-compose.yml" ]; then compose="$$stk/stack-compose.yml"; fi; \
 	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
 		echo "STACK_FILE is unset and not found at $$stk/stack-compose.yml — set STACK_FILE or create that file."; exit 1; \
 	fi; \
-	if [ -z "$$ovr" ] && [ -f "$$stk/stack-compose.override.yml" ] || [ -L "$$stk/stack-compose.override.yaml" ]; then ovr="$$stk/stack-compose.override.yml"; fi; \
+	if [ -z "$$ovr" ] && { [ -f "$$stk/stack-compose.override.yml" ] || [ -L "$$stk/stack-compose.override.yml" ]; }; then ovr="$$stk/stack-compose.override.yml"; fi; \
 	set -- -c "$$compose"; \
 	if [ -n "$$ovr" ] && [ -f "$$ovr" ]; then set -- "$$@" -c "$$ovr"; fi; \
-	detachflag=""; \
-	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) detachflag='--detach=false';; esac; \
+	deploy_extra=""; \
+	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) \
+	  if $(DOCKER) stack deploy --help 2>/dev/null | grep -q -- '--detach'; then \
+	    deploy_extra='--detach=false'; \
+	  else \
+	    echo >&2 "Note: $(DOCKER) stack deploy has no --detach on this host — cannot wait for rollout; use docker stack ps $$stk."; \
+	  fi ;; \
+	esac; \
 	set +e; \
-	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$detachflag; \
+	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$deploy_extra; \
 	rc=$$?; \
 	if [ "$$rc" -ne 0 ]; then \
-	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$detachflag; \
+	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$deploy_extra; \
 	rc=$$?; \
 	fi; \
 	set -e; \
@@ -148,7 +154,7 @@ stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — ke
 
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
-# DOKPLOY_STACK_FILE := $(DOKPLOY_STACK_NAME)/stack-compose.yml
+DOKPLOY_STACK_FILE := $(DOKPLOY_STACK_NAME)/stack-compose.yml
 DOKPLOY_SERVICES_SHORT := dokploy dokploy-postgresql dokploy-redis dokploy-traefik
 .dokploy-stack-setup:
 	@# Create network if it doesn't exist
@@ -169,7 +175,7 @@ DOKPLOY_SERVICES_SHORT := dokploy dokploy-postgresql dokploy-redis dokploy-traef
 		exit 1; \
 	fi
 dokploy-stack-up: .dokploy-stack-setup ## Deploy the dokploy stack
-	$(MAKE) stack-deploy STACK_NAME=$(DOKPLOY_STACK_NAME)
+	$(MAKE) stack-deploy STACK_FILE=$(DOKPLOY_STACK_FILE) STACK_NAME=$(DOKPLOY_STACK_NAME)
 
 dokploy-stack-down: ## Remove the dokploy stack
 	$(MAKE) stack-rm STACK_NAME=$(DOKPLOY_STACK_NAME)
