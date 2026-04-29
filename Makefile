@@ -114,23 +114,8 @@ STACK_LOG_TAIL ?= 100
 STACK_LOG_ARGS ?=
 
 stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG_TAIL STACK_LOG_ARGS)
-	@names="$$($(DOCKER) service ls --filter "label=com.docker.stack.namespace=$(STACK_NAME)" --format '{{.Name}}' 2>/dev/null)"; \
-	if [ -z "$$names" ]; then \
-		names="$$($(DOCKER) stack services "$(STACK_NAME)" --format '{{.Name}}' 2>/dev/null)"; \
-	fi; \
-	if [ -z "$$names" ]; then \
-		echo >&2 "No services for stack $(STACK_NAME) (deploy the stack or check DOCKER_HOST / swarm)."; exit 1; \
-	fi; \
-	oldIFS=$$IFS; \
-	IFS=$$(printf '\n'); \
-	set -f; \
-	set -- $$names; \
-	IFS=$$oldIFS; \
-	for svc in "$$@"; do \
-		[ -n "$$svc" ] || continue; \
-		$(DOCKER) service logs "$$svc" --follow --tail $(STACK_LOG_TAIL) $(STACK_LOG_ARGS) & \
-	done; \
-	wait
+	@DOCKER="$(DOCKER)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)" \
+		bin/docker-stack-follow-logs.sh "$(STACK_NAME)"
 
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
