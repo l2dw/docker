@@ -1,0 +1,114 @@
+networks:
+  default:
+    name: dokploy-network
+    external: true
+
+volumes:
+  postgresql_data:
+    name: ${POSTGRES_DATA_VOLUME_NAME:-postgresql_data}
+    external: ${POSTGRES_DATA_VOLUME_EXTERNAL:-false}
+  postgresql_logs:
+    name: ${POSTGRES_LOGS_VOLUME_NAME:-postgresql_logs}
+    external: ${POSTGRES_LOGS_VOLUME_EXTERNAL:-false}
+  redis_data:
+    name: ${REDIS_DATA_VOLUME_NAME:-redis_data}
+    external: ${REDIS_DATA_VOLUME_EXTERNAL:-false}
+  redis_logs:
+    name: ${REDIS_LOGS_VOLUME_NAME:-redis_logs}
+    external: ${REDIS_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy_data:
+    name: ${DOKPROY_DATA_VOLUME_NAME:-dokploy_data}
+    external: ${DOKPROY_DATA_VOLUME_EXTERNAL:-false}
+  dokploy_logs:
+    name: ${DOKPROY_LOGS_VOLUME_NAME:-dokploy_logs}
+    external: ${DOKPROY_LOGS_VOLUME_EXTERNAL:-false}
+  traefik_config:
+    name: ${TRAEFIK_CONFIG_VOLUME_NAME:-traefik_config}
+    external: ${TRAEFIK_CONFIG_VOLUME_EXTERNAL:-false}
+  traefik_logs:
+    name: ${TRAEFIK_LOGS_VOLUME_NAME:-traefik_logs}
+    external: ${TRAEFIK_LOGS_VOLUME_EXTERNAL:-false}
+services:
+  dokploy-postgresql:
+    image: ${POSTGRES_IMAGE:-ghcr.io/baosystems/postgis:16-3.5}
+    restart: always
+    user: postgres
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-amukds4wi9001583845717ad2}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-dokploy}
+    volumes:
+      - ${POSTGRES_DATA_DIR:-postgresql_data}:/var/lib/postgresql/data
+      - ${POSTGRES_LOGS_DIR:-postgresql_logs}:/var/log/postgresql
+    networks:
+      default:
+    # deploy:
+    #   mode: replicated
+    #   replicas: 1
+    #   placement:
+    #     constraints:
+    #       - node.role == manager
+    #   restart_policy:
+    #     condition: on-failure
+    #     delay: 5s
+    #   update_config:
+    #     order: start-first
+    #     failure_action: rollback
+
+  ## redis
+  dokploy-redis:
+    image: ${REDIS_IMAGE:-redis:latest}
+    restart: always
+    pull_policy: always
+    user: redis
+    environment:
+      - REDIS_PASSWORD
+    volumes:
+      - ${REDIS_DATA_DIR:-redis_data}:/data
+      - ${REDIS_LOGS_DIR:-redis_logs}:/var/log/redis
+    networks:
+      default:
+    # deploy:
+    #   mode: replicated
+    #   replicas: 1
+    #   placement:
+    #     constraints:
+    #       - node.role == manager
+    #   restart_policy:
+    #     condition: on-failure
+    #     delay: 5s
+    #   update_config:
+    #     order: start-first
+    #     failure_action: rollback
+
+  ## dokploy
+  ## On manager node create dirs first: sudo mkdir -p /etc/dokploy /root/.docker
+  dokploy:
+    image: dokploy/dokploy:latest
+    restart: always
+    pull_policy: always
+    networks:
+      default: {}
+    environment:
+      - ADVERTISE_ADDR=${ADVERTISE_ADDR}
+      - DATABASE_URL=${DOKPROY_DATABASE_URL:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-amukds4wi9001583845717ad2}@dokploy-postgresql:5432/${POSTGRES_DB:-dokploy}}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOKPROY_DATA_DIR:-dokploy_data}:/etc/dokploy
+      - ${DOKPROY_LOGS_DIR:-dokploy_logs}:/etc/dokploy/logs
+      - ${TRAEFIK_CONFIG_DIR:-traefik_config}:/etc/dokploy/traefik
+
+  ## traefik
+  dokploy-traefik:
+    image: traefik:latest
+    restart: always
+    pull_policy: always
+    networks:
+      default:
+    ports:
+      - "${TRAEFIK_PORT_HTTP:-80}:80"
+      - "${TRAEFIK_PORT_HTTPS:-443}:443"
+    volumes:
+      - ${TRAEFIK_CONFIG_DIR:-traefik_config}:/etc/dokploy/traefik
+      - ${TRAEFIK_LOGS_DIR:-traefik_logs}:/var/log/traefik
+      - /var/run/docker.sock:/var/run/docker.sock

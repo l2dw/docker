@@ -1,0 +1,161 @@
+networks:
+  default:
+    name: dokploy-network
+    external: true
+
+volumes:
+  dokploy-postgresql_data:
+    name: ${DOKPLOY_POSTGRES_DATA_VOLUME_NAME:-dokploy-postgresql_data}
+    external: ${DOKPLOY_POSTGRES_DATA_VOLUME_EXTERNAL:-false}
+  dokploy-postgresql_logs:
+    name: ${DOKPLOY_POSTGRES_LOGS_VOLUME_NAME:-dokploy-postgresql_logs}
+    external: ${DOKPLOY_POSTGRES_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-redis_data:
+    name: ${DOKPLOY_REDIS_DATA_VOLUME_NAME:-dokploy-redis_data}
+    external: ${DOKPLOY_REDIS_DATA_VOLUME_EXTERNAL:-false}
+  dokploy-redis_logs:
+    name: ${DOKPLOY_REDIS_LOGS_VOLUME_NAME:-dokploy-redis_logs}
+    external: ${DOKPLOY_REDIS_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-data:
+    name: ${DOKPLOY_DATA_VOLUME_NAME:-dokploy-data}
+    external: ${DOKPLOY_DATA_VOLUME_EXTERNAL:-false}
+  dokploy-logs:
+    name: ${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}
+    external: ${DOKPLOY_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_config:
+    name: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME:-dokploy-traefik_config}
+    external: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_logs:
+    name: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}
+    external: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL:-true}
+services:
+  dokploy-postgresql:
+    image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
+    user: postgres
+    environment:
+      - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
+      - POSTGRES_USER=${DOKPLOY_POSTGRES_USER:-dokploy}
+      - POSTGRES_DB=${DOKPLOY_POSTGRES_DB:-dokploy}
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - ${DOKPLOY_POSTGRES_DATA_DIR:-dokploy-postgresql_data}:/var/lib/postgresql/data
+      - ${DOKPLOY_POSTGRES_LOGS_DIR:-dokploy-postgresql_logs}:/var/log/postgresql
+    networks:
+      default:
+        # aliases:
+        #   - dokploy-postgresql
+        #   - postgresql
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: start-first
+        failure_action: rollback
+
+  ## redis
+  dokploy-redis:
+    image: ${DOKPLOY_REDIS_IMAGE:-redis:latest}
+    user: redis
+    environment:
+      - REDIS_PASSWORD=${DOKPLOY_REDIS_PASSWORD}
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:/data
+      - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:/var/log/redis
+    networks:
+      default:
+        # aliases:
+        #   - dokploy-redis
+        #   - redis
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: start-first
+        failure_action: rollback
+
+  ## dokploy
+  ## On manager node create dirs first: sudo mkdir -p /etc/dokploy /root/.docker
+  dokploy:
+    image: dokploy/dokploy:latest
+    environment:
+      - ADVERTISE_ADDR=${ADVERTISE_ADDR}
+      - DATABASE_URL=${DOKPLOY_DATABASE_URL:-postgres://dokploy:ChangeMe@dokploy-postgresql:5432/dokploy}
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
+      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
+      - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
+    networks:
+      default:
+        # aliases:
+        #   - dokploy
+        #   - dokploy
+    ports:
+      - target: 3000
+        published: ${DOKPLOY_PORT:-3000}
+        protocol: tcp
+        mode: host
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: start-first
+        failure_action: rollback
+
+  ## traefik
+  dokploy-traefik:
+    image: traefik:latest
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    ports:
+      - target: 80
+        published: ${DOKPLOY_TRAEFIK_PORT_HTTP:-80}
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: ${DOKPLOY_TRAEFIK_PORT_HTTPS:-443}
+        protocol: tcp
+        mode: host
+    volumes:
+      - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
+      - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/var/log/traefik
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      default:
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: start-first
+        failure_action: rollback
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard-web.rule=Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy.local}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
+        - "traefik.http.routers.dashboard-web.service=dashboard-web"
+        - "traefik.http.services.dashboard-web.loadbalancer.server.port=3000"
