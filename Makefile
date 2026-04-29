@@ -113,11 +113,17 @@ DOKPLOY_STACK_FILE := $(DOKPLOY_STACK_NAME)/stack-compose.yml
 	@if ! $(DOCKER) network ls | grep -q "dokploy-network"; then \
 		$(DOCKER) network create "dokploy-network" --driver overlay; \
 	fi;
-	@# Check if this node is active in a swarm (grep on `docker info` text is unreliable across daemons/locales)
-	@swarm_state="$$($(DOCKER) info -f '{{.Swarm.LocalNodeState}}' 2>/dev/null)"; \
-	if [ "$$swarm_state" != "active" ]; then \
-		echo "Swarm is not active on this daemon (LocalNodeState=$$swarm_state)."; \
-		echo "Initialize with: make swarm-init"; \
+	@# Swarm stack deploy needs a manager control plane (ControlAvailable). LocalNodeState can be error when another node is Down while this leader still works.
+	@swarm_ctrl="$$($(DOCKER) info -f '{{.Swarm.ControlAvailable}}' 2>/dev/null)"; \
+	swarm_state="$$($(DOCKER) info -f '{{.Swarm.LocalNodeState}}' 2>/dev/null)"; \
+	if [ "$$swarm_ctrl" = "true" ]; then \
+		exit 0; \
+	elif [ "$$swarm_state" = "active" ]; then \
+		exit 0; \
+	else \
+		echo "Swarm stack commands not available here (ControlAvailable=$$swarm_ctrl LocalNodeState=$$swarm_state)."; \
+		echo "If another node shows Down / Unknown, fix or remove it: docker node ls && docker node rm"; \
+		echo "Otherwise join/init: make swarm-init"; \
 		exit 1; \
 	fi
 dokploy-stack-up: .dokploy-stack-setup ## Deploy the dokploy stack
