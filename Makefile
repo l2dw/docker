@@ -26,12 +26,13 @@ MAKE            = make
 
 # Misc
 .DEFAULT_GOAL = help
-.PHONY        : dokploy-debug dokploy-debug-logs
+.PHONY        : dokploy-debug dokploy-debug-logs stack-watch-logs
 
 ## —— 🐝 The Makefile 🐝 ———————————————————————————————————
 help: ## Outputs this help screen
-	@grep -E '(^[a-zA-Z0-9_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
-
+	@grep -h -E '(^[a-zA-Z0-9_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) \
+		| awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' \
+		| sed -e 's/\[32m##/[33m/'
 ## —— 🐝 Docker commands ———————————————————————————————————
 docker-ps: ## List all running containers
 	$(DOCKER) ps
@@ -108,10 +109,31 @@ stack-deploy: .check-stack-name ## Deploy a stack
 	$(DOCKER) stack deploy -c $(STACK_FILE) $(STACK_NAME) --with-registry-auth
 stack-rm: .check-stack-name ## Remove a stack
 	$(DOCKER) stack rm $(STACK_NAME)
-stack-logs: .check-stack-name ## Show logs of a stack
-	$(DOCKER) stack logs -f $(STACK_NAME)
-stack-watch-logs: .check-stack-name ## Watch logs of a stack
-	$(DOCKER) stack logs -f $(STACK_NAME)
+# Engines without `docker stack logs`: use merged `docker service logs` instead.
+STACK_LOG_TAIL ?= 100
+STACK_LOG_ARGS ?=
+
+stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG_TAIL STACK_LOG_ARGS)
+	@names="$$($(DOCKER) service ls --filter "label=com.docker.stack.namespace=$(STACK_NAME)" --format '{{.Name}}' 2>/dev/null)"; \
+	if [ -z "$$names" ]; then \
+		names="$$($(DOCKER) stack services "$(STACK_NAME)" --format '{{.Name}}' 2>/dev/null)"; \
+	fi; \
+	if [ -z "$$names" ]; then \
+		echo >&2 "No services for stack $(STACK_NAME) (deploy the stack or check DOCKER_HOST / swarm)."; exit 1; \
+	fi; \
+	oldIFS=$$IFS; \
+	IFS=$$(printf '\n'); \
+	set -f; \
+	set -- $$names; \
+	IFS=$$oldIFS; \
+	for svc in "$$@"; do \
+		[ -n "$$svc" ] || continue; \
+		$(DOCKER) service logs "$$svc" --follow --tail $(STACK_LOG_TAIL) $(STACK_LOG_ARGS) & \
+	done; \
+	wait
+
+stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
+	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
