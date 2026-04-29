@@ -146,8 +146,8 @@ services:
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/dokploy/traefik/dynamic/rules
       - /var/run/docker.sock:/var/run/docker.sock
     command:
-      - "--sendAnonymousUsage=false"
-      - "--checkNewVersion=true"
+      - "--global.sendAnonymousUsage=false"
+      - "--global.checkNewVersion=true"
       - "--api.dashboard=true"
       - "--api.insecure=true"
       - "--entrypoints.web.address=:80"
