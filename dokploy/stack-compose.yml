@@ -140,7 +140,7 @@ services:
         protocol: tcp
         mode: host
     volumes:
-      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
+      - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/etc/dokploy/logs/traefik
       - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
       - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/dokploy/traefik/certificates
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/dokploy/traefik/dynamic/rules
@@ -158,7 +158,7 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.watch=true"
-      - "--providers.file.directory=${DOKPLOY_TRAEFIK_RULES_DIR:-/etc/dokploy/traefik/dynamic}"
+      - "--providers.file.directory=/etc/dokploy/traefik/dynamic"
       - "--providers.file.watch=true"
       - "--certificatesresolvers.default.acme.tlschallenge=true"
       - "--certificatesresolvers.default.acme.storage=/etc/dokploy/traefik/certificates/acme.json"
@@ -170,7 +170,7 @@ services:
       - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-INFO}"
       - "--metrics.prometheus=true"
       - "--accesslog=true"
-      - "--accesslog.filePath=${DOKPLOY_TRAEFIK_ACCESS_LOG_FILE:-/etc/dokploy/logs/traefik/access.log}"
+      - "--accesslog.filePath=/etc/dokploy/logs/traefik/access.log"
       - "--accesslog.format=${DOKPLOY_TRAEFIK_ACCESS_LOG_FORMAT:-json}"
       - "--accesslog.fields.defaultMode=keep"
       - "--accesslog.fields.names.RequestHost=keep"
