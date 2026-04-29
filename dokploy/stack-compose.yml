@@ -146,6 +146,8 @@ services:
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/dokploy/traefik/dynamic/rules
       - /var/run/docker.sock:/var/run/docker.sock
     command:
+      - "--sendAnonymousUsage=false"
+      - "--checkNewVersion=true"
       - "--api.dashboard=true"
       - "--api.insecure=true"
       - "--entrypoints.web.address=:80"
@@ -210,10 +212,10 @@ services:
         traefik.http.middlewares.stripprefix-traefik.stripPrefix.prefixes: "${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}"
         traefik.http.middlewares.basic-auth.basicAuth.users: "${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
         ## Service configuration
-        # traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
-        # traefik.http.services.traefik-dashboard.loadbalancer.server.scheme: http
+        traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
+        traefik.http.services.traefik-dashboard.loadbalancer.server.scheme: http
         ## Secure router configuration
-        traefik.http.routers.traefik-dashboard-secure.service: api@internal
+        traefik.http.routers.traefik-dashboard-secure.service: traefik-dashboard
         traefik.http.routers.traefik-dashboard-secure.entrypoints: websecure
         traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
         traefik.http.routers.traefik-dashboard-secure.tls: "true"
@@ -222,5 +224,5 @@ services:
         ## Insecure router configuration
         traefik.http.routers.traefik-dashboard-insecure.entrypoints: web
         traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
-        traefik.http.routers.traefik-dashboard-insecure.service: api@internal
+        traefik.http.routers.traefik-dashboard-insecure.service: traefik-dashboard
         traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, basic-auth"
