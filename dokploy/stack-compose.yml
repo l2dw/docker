@@ -254,7 +254,7 @@ services:
         constraints:
           - node.role == manager
       labels:
-        traefik.enable: false
+        traefik.enable: "false"
     volumes:
       - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/certificates
 
@@ -269,4 +269,4 @@ services:
         constraints:
           - node.role == manager
       labels:
-        traefik.enable: false
+        traefik.enable: "false"
