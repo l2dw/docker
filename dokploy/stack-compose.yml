@@ -142,7 +142,7 @@ services:
     volumes:
       - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/etc/dokploy/logs/traefik
       - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
-      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/dokploy/traefik/certificates
+      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/dokploy/traefik/dynamic/certificates
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/dokploy/traefik/dynamic/rules
       - /var/run/docker.sock:/var/run/docker.sock
     command:
@@ -163,10 +163,10 @@ services:
       - "--providers.file.directory=/etc/dokploy/traefik/dynamic"
       - "--providers.file.watch=true"
       - "--certificatesresolvers.default.acme.tlschallenge=true"
-      - "--certificatesresolvers.default.acme.storage=/etc/dokploy/traefik/certificates/acme.json"
+      - "--certificatesresolvers.default.acme.storage=/etc/dokploy/traefik/dynamic/certificates/acme.json"
       - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/certificates/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/dynamic/certificates/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
       - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
       - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-DEBUG}"
@@ -183,6 +183,12 @@ services:
       - "--accesslog.fields.names.RequestPort=keep"
       - "--accesslog.fields.names.RequestQuery=keep"
       - "--accesslog.fields.names.DownstreamURL=keep"
+      - "--accesslog.fields.names.UserAgent=keep"
+      - "--accesslog.fields.names.Duration=keep"
+      - "--experimental.plugins.traefik-modsecurity-plugin.moduleName=github.com/acouvreur/traefik-modsecurity-plugin"
+      - "--experimental.plugins.traefik-modsecurity-plugin.version=v1.3.0"
+      - "--experimental.plugins.rewritebody.moduleName=github.com/traefik/plugin-rewritebody"
+      - "--experimental.plugins.rewritebody.version=v0.3.1"
       - "${DOKPLOY_TRAEFIK_COMMAND:-}"
     networks:
       default:
@@ -234,3 +240,33 @@ services:
         # traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
         # traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, traefik-dash-root"
         traefik.http.routers.traefik-dashboard-insecure.middlewares: "${DOKPLOY_TRAEFIK_MIDDLEWARES_INSECURE:-}"
+
+  traefik-certs-dumper:
+    image: ldez/traefik-certs-dumper:v2.8.3
+    entrypoint: sh -c '
+      apk add jq ;
+      while ! [ -e /etc/certificates/acme.json ] || ! [ `jq ".[] | .Certificates | length" /etc/certificates/acme.json` != 0 ]; do sleep 1 ; done
+      && traefik-certs-dumper file --version v2 --watch --source /etc/certificates/acme.json --dest /etc/certificates '
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        traefik.enable: false
+    volumes:
+      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/certificates
+
+  waf:
+    image: owasp/modsecurity-crs:apache
+    volumes:
+      - /var/log/apache2:/var/log/apache2
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        traefik.enable: false
