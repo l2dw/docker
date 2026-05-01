@@ -152,3 +152,42 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
+
+# —— 🐝 portainer commands ———————————————————————————————————
+PORTAINER_STACK_NAME := portainer
+PORTAINER_STACK_SERVICES := portainer
+
+
+portainer-stack-up: ## Deploy the portainer stack
+	$(MAKE) stack-deploy STACK_NAME=$(PORTAINER_STACK_NAME)
+
+portainer-stack-down: ## Remove the portainer stack
+	$(MAKE) stack-rm STACK_NAME=$(PORTAINER_STACK_NAME)
+
+portainer-stack-recreate: portainer-stack-down portainer-stack-up ## Recreate the portainer stack
+
+portainer-stack-logs: ## Show logs of the portainer stack
+	$(MAKE) stack-logs STACK_NAME=$(PORTAINER_STACK_NAME)
+
+portainer-stack-watch-logs: ## Watch logs of the portainer stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(PORTAINER_STACK_NAME)
+
+portainer-stack-debug: ## Debug portainer swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(PORTAINER_STACK_NAME))"
+	@$(DOCKER) stack services $(PORTAINER_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+	@echo
+	@echo "--- docker service ls (${PORTAINER_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(PORTAINER_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(PORTAINER_STACK_NAME)_' \
+		|| echo "(could not filter services)"
+	@echo
+	@echo "--- docker stack ps --no-trunc ($(PORTAINER_STACK_NAME))"
+	@$(DOCKER) stack ps $(PORTAINER_STACK_NAME) --no-trunc
+	@echo
+	@for s in $(PORTAINER_STACK_SERVICES); do \
+		echo "==================== $(PORTAINER_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(PORTAINER_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+		echo; \
+	done
+
+

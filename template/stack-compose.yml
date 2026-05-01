@@ -1,51 +1,49 @@
-# name: storage # Not supported by Docker Swarm
-
-volumes:
-  rustfs_data:
-    driver: local
 networks:
   default:
-    name: ${DEFAULT_NETWORK:-dokploy-network}
-    external: true
+    name: ${TPL_NETWORK:-dokploy-network}
+    external: ${TPL_NETWORK_EXTERNAL:-true}
+
+volumes:
+  tpl_data:
+    name: ${TPL_DATA_VOLUME_NAME:-tpl_data}
+    external: ${TPL_DATA_VOLUME_EXTERNAL:-false}
+  tpl_logs:
+    name: ${TPL_LOGS_VOLUME_NAME:-tpl_logs}
+    external: ${TPL_LOGS_VOLUME_EXTERNAL:-false}
 
 services:
-  rustfs:
-    image: rustfs/rustfs:latest
-    restart: unless-stopped
-    privileged: true
+  tpl:
+    image: ${TPL_IMAGE:-tpl/tpl:latest}
+    volumes:
+      - ${TPL_DATA_DIR:-tpl_data}:/data
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    # networks:
+    #   - default
     environment:
       - TZ
       - http_proxy
       - https_proxy
       - no_proxy
-      - RUSTFS_ACCESS_KEY
-      - RUSTFS_SECRET_KEY
-      - RUSTFS_VOLUMES=/data
-      - RUSTFS_ADDRESS=0.0.0.0:9000
-      - RUSTFS_CONSOLE_ENABLE=true
-      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
-    volumes:
-      - ${RUSTFS_DATA_DIR:-rustfs_data}:/data
-    networks:
-      - default
     ## Deploy
     deploy:
       replicas: 1
+      placement:
+        constraints:
+          - node.role==${TPL_PLACEMENT_CONSTRAINTS:-manager}
       labels:
-        - "traefik.enable=true"
-        # HTTPS router
-        - "traefik.http.services.rustfs-s3.loadbalancer.server.port=9000"
-        - "traefik.http.routers.rustfs-s3.rule=Host(`${RUSTFS_S3_DOMAIN}`)"
-        - "traefik.http.routers.rustfs-s3.service=rustfs-s3"
-        - "traefik.http.routers.rustfs-s3.entrypoints=web"
-        # RustFS Console HTTPS router
-        - "traefik.http.services.rustfs-console.loadbalancer.server.port=9001"
-        - "traefik.http.routers.rustfs-console.rule=Host(`${RUSTFS_S3_DOMAIN}`) && PathPrefix(`/rustfs`)"
-        - "traefik.http.routers.rustfs-console.service=rustfs-console"
-        - "traefik.http.routers.rustfs-console.entrypoints=web"
-        # Homepage
-        - homepage.group=${RUSTFS_HOMEPAGE_GROUP:-Storage}
-        - homepage.name=${RUSTFS_HOMEPAGE_NAME:-RustFS}
-        - homepage.icon=${RUSTFS_HOMEPAGE_ICON:-rustfs.png}
-        - homepage.href=${RUSTFS_HOMEPAGE_HREF:-http://${RUSTFS_S3_DOMAIN}/rustfs/}
+        traefik.enable: "true"
+        traefik.http.services.tpl.loadbalancer.server.port: 9000
+        traefik.http.routers.tpl.entrypoints: ${TPL_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.tpl.rule: Host(`${TPL_DOMAIN:-tpl.home}`) && PathPrefix(`${TPL_TRAEFIK_PATH_PREFIX:-/}`)
+        traefik.http.routers.tpl.service: tpl
+        traefik.http.routers.tpl.middlewares: "${TPL_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.tpl.tls: "${TPL_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.tpl.tls.certresolver: ${TPL_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${TPL_HOMEPAGE_GROUP:-Infra}
+        homepage.name: ${TPL_HOMEPAGE_NAME:-TPL}
+        homepage.icon: ${TPL_HOMEPAGE_ICON:-tpl.png}
+        homepage.href: http://${TPL_DOMAIN:-tpl.home}
+        homepage.description: ${TPL_HOMEPAGE_DESCRIPTION:-TPL is a platform for managing templates.}
+
 
