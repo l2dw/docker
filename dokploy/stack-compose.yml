@@ -38,9 +38,13 @@ volumes:
   dokploy-certificates:
     name: ${DOKPLOY_CERTIFICATES_VOLUME_NAME:-dokploy-certificates}
     external: ${DOKPLOY_CERTIFICATES_VOLUME_EXTERNAL:-false}
+  dokploy-waf_logs:
+    name: ${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}
+    external: ${DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL:-false}
 
 services:
   dokploy-postgresql:
+    # Swarm rejects compose `platform` (docker stack deploy). On ARM hosts use a multi-arch image (default postgres:16) or Postgres/PostGIS on amd64/non-Swarm.
     image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
     user: postgres
     environment:
@@ -53,6 +57,9 @@ services:
       - ${DOKPLOY_POSTGRES_LOGS_DIR:-dokploy-postgresql_logs}:/var/log/postgresql
     networks:
       default:
+        aliases:
+          - dokploy-postgresql
+          - postgresql
     deploy:
       mode: replicated
       replicas: 1
@@ -73,11 +80,21 @@ services:
     environment:
       - REDIS_PASSWORD=${DOKPLOY_REDIS_PASSWORD}
       - TZ=${TZ:-America/Toronto}
+    command: redis-server --maxmemory-policy noeviction --maxmemory ${DOKPLOY_REDIS_MAXMEMORY:-512mb}
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
     volumes:
       - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:/data
       - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:/var/log/redis
     networks:
       default:
+        aliases:
+          - dokploy-redis
+          - redis
     deploy:
       mode: replicated
       replicas: 1
@@ -106,11 +123,11 @@ services:
       - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
     networks:
       default:
-    ports:
-      - target: 3000
-        published: ${DOKPLOY_PORT:-3000}
-        protocol: tcp
-        mode: host
+    # ports:
+    #   - target: 3000
+    #     published: ${DOKPLOY_PORT:-3000}
+    #     protocol: tcp
+    #     mode: host
     deploy:
       mode: replicated
       replicas: 1
@@ -124,6 +141,20 @@ services:
         # start-first + host ports = two tasks compete for the same PublishedPort on one node
         order: stop-first
         failure_action: rollback
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.dokploy.loadbalancer.server.port: 3000
+        traefik.http.routers.dokploy.entrypoints: ${DOKPLOY_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.dokploy.rule: Host(`${DOKPLOY_DOMAIN:-dokploy.home}`)
+        traefik.http.routers.dokploy.service: dokploy
+        traefik.http.routers.dokploy.tls: "${DOKPLOY_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.dokploy.tls.certresolver: ${DOKPLOY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${DOKPLOY_HOMEPAGE_GROUP:-Infra}
+        homepage.name: ${DOKPLOY_HOMEPAGE_NAME:-Dokploy}
+        homepage.icon: ${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}
+        homepage.href: http://${DOKPLOY_DOMAIN:-dokploy.home}/
+        homepage.description: ${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}
 
   ## traefik
   dokploy-traefik:
@@ -215,7 +246,7 @@ services:
         traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent: "true"
         traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
         traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: "true"
-        traefik.http.middlewares.stripprefix-traefik.stripPrefix.prefixes: "${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}"
+        traefik.http.middlewares.stripprefix-traefik.stripPrefix.prefixes: "${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}"
         ## After stripping the path prefix, bare `/` hits nothing on :8080; Traefik dashboard UI lives under `/dashboard/`
         traefik.http.middlewares.traefik-dash-root.replacePathRegex.regex: "^/?$$"
         traefik.http.middlewares.traefik-dash-root.replacePathRegex.replacement: "/dashboard/"
@@ -261,7 +292,7 @@ services:
   waf:
     image: owasp/modsecurity-crs:apache
     volumes:
-      - /var/log/apache2:/var/log/apache2
+      - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2
     deploy:
       mode: replicated
       replicas: 1
