@@ -153,7 +153,7 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-# —— 🐝 portainer commands ———————————————————————————————————
+# —— 🐝 tpl commands ———————————————————————————————————
 TPL_STACK_NAME := tpl
 TPL_STACK_SERVICES := tpl
 
