@@ -153,39 +153,39 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-# —— 🐝 portainer commands ———————————————————————————————————
-TPL_STACK_NAME := tpl
-TPL_STACK_SERVICES := tpl
+# —— 🐝 minio-client commands ———————————————————————————————————
+MINIO_CLIENT_STACK_NAME := minio-client
+MINIO_CLIENT_STACK_SERVICES := minio-client
 
-tpl-stack-up: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL_STACK_NAME)
+minio-client-stack-up: ## Deploy the minio-client stack
+	$(MAKE) stack-deploy STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
 
-tpl-stack-down: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL_STACK_NAME)
+minio-client-stack-down: ## Remove the minio-client stack
+	$(MAKE) stack-rm STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
 
-tpl-stack-recreate: tpl-stack-down tpl-stack-up ## Recreate the tpl stack
+minio-client-stack-recreate: minio-client-stack-down minio-client-stack-up ## Recreate the minio-client stack
 
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL_STACK_NAME)
+minio-client-stack-logs: ## Show logs of the minio-client stack
+	$(MAKE) stack-logs STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
 
-tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL_STACK_NAME)
+minio-client-stack-watch: ## Watch logs of the minio-client stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
 
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack services $(TPL_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+minio-client-stack-debug: ## Debug minio-client swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(MINIO_CLIENT_STACK_NAME))"
+	@$(DOCKER) stack services $(MINIO_CLIENT_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL_STACK_NAME}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL_STACK_NAME) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL_STACK_NAME)_' \
+	@echo "--- docker service ls (${MINIO_CLIENT_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(MINIO_CLIENT_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(MINIO_CLIENT_STACK_NAME)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack ps $(TPL_STACK_NAME) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(MINIO_CLIENT_STACK_NAME))"
+	@$(DOCKER) stack ps $(MINIO_CLIENT_STACK_NAME) --no-trunc
 	@echo
-	@for s in $(TPL_STACK_SERVICES); do \
-		echo "==================== $(TPL_STACK_NAME)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(MINIO_CLIENT_STACK_SERVICES); do \
+		echo "==================== $(MINIO_CLIENT_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(MINIO_CLIENT_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 

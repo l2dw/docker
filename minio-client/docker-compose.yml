@@ -1,0 +1,40 @@
+
+networks:
+  default:
+    name: ${MINIO_CLIENT_NETWORK:-dokploy-network}
+    external: ${MINIO_CLIENT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  minio_client_data:
+    name: ${MINIO_CLIENT_DATA_VOLUME_NAME:-minio_client_data}
+    external: ${MINIO_CLIENT_DATA_VOLUME_EXTERNAL:-false}
+  minio_client_config:
+    name: ${MINIO_CLIENT_CONFIG_VOLUME_NAME:-minio_client_config}
+    external: ${MINIO_CLIENT_CONFIG_VOLUME_EXTERNAL:-false}
+
+services:
+  minio-client:
+    image: ${MINIO_CLIENT_IMAGE:-docker.io/minio/mc:latest}
+    pull_policy: ${MINIO_CLIENT_PULL_POLICY:-always}
+    restart: ${MINIO_CLIENT_RESTART:-unless-stopped}
+    privileged: ${MINIO_CLIENT_PRIVILEGED:-true}
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["sleep infinity"]
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - MINIO_SERVER_HOST
+      - MINIO_SERVER_ACCESS_KEY
+      - MINIO_SERVER_SECRET_KEY
+    volumes:
+      - ${MINIO_CLIENT_DATA_DIR:-minio_client_data}:/data
+      - ${MINIO_CLIENT_CONFIG_DIR:-minio_client_config}:/root/.mc
+
+    labels:
+      ## Homepage configuration
+      homepage.group: ${MINIO_CLIENT_HOMEPAGE_GROUP:-Infra}
+      homepage.name: ${MINIO_CLIENT_HOMEPAGE_NAME:-minio-client}
+      homepage.icon: ${MINIO_CLIENT_HOMEPAGE_ICON:-minio-client.png}
+      homepage.description: ${MINIO_CLIENT_HOMEPAGE_DESCRIPTION:-Minio Client is a platform for cli tool for s3 management.}
