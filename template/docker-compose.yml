@@ -40,3 +40,5 @@ services:
       homepage.icon: ${TPL_HOMEPAGE_ICON:-tpl.png}
       homepage.href: http://${TPL_DOMAIN:-tpl.home}
       homepage.description: ${TPL_HOMEPAGE_DESCRIPTION:-TPL is a platform for managing templates.}
+      homepage.siteMonitor: ${TPL_HOMEPAGE_SITEMONITOR}
+      homepage.ping: ${TPL_HOMEPAGE_PING}

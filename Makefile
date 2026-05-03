@@ -168,7 +168,7 @@ tpl-stack-recreate: tpl-stack-down tpl-stack-up ## Recreate the tpl stack
 tpl-stack-logs: ## Show logs of the tpl stack
 	$(MAKE) stack-logs STACK_NAME=$(TPL_STACK_NAME)
 
-tpl-stack-watch-logs: ## Watch logs of the tpl stack
+tpl-stack-watch: ## Watch logs of the tpl stack
 	$(MAKE) stack-watch-logs STACK_NAME=$(TPL_STACK_NAME)
 
 tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
