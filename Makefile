@@ -34,6 +34,7 @@ help: ## Outputs this help screen
 	@grep -h -E '(^[a-zA-Z0-9_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' \
 		| sed -e 's/\[32m##/[33m/'
+
 ## —— 🐝 Docker commands ———————————————————————————————————
 docker-ps: ## List all running containers
 	$(DOCKER) ps
@@ -153,39 +154,39 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-# —— 🐝 portainer commands ———————————————————————————————————
-TPL_STACK_NAME := tpl
-TPL_STACK_SERVICES := tpl
+## —— 🐝 homepage commands ———————————————————————————————————
+HOMEPAGE_STACK_NAME := homepage
+HOMEPAGE_STACK_SERVICES := homepage
 
-tpl-stack-up: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL_STACK_NAME)
+homepage-stack-up: ## Deploy the homepage stack
+	$(MAKE) stack-deploy STACK_NAME=$(HOMEPAGE_STACK_NAME)
 
-tpl-stack-down: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL_STACK_NAME)
+homepage-stack-down: ## Remove the homepage stack
+	$(MAKE) stack-rm STACK_NAME=$(HOMEPAGE_STACK_NAME)
 
-tpl-stack-recreate: tpl-stack-down tpl-stack-up ## Recreate the tpl stack
+homepage-stack-recreate: homepage-stack-down homepage-stack-up ## Recreate the homepage stack
 
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL_STACK_NAME)
+homepage-stack-logs: ## Show logs of the homepage stack
+	$(MAKE) stack-logs STACK_NAME=$(HOMEPAGE_STACK_NAME)
 
-tpl-stack-watch-logs: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL_STACK_NAME)
+homepage-stack-watch-logs: ## Watch logs of the homepage stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(HOMEPAGE_STACK_NAME)
 
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack services $(TPL_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+homepage-stack-debug: ## Debug homepage swarm stack:
+	@echo "--- docker stack services ($(HOMEPAGE_STACK_NAME))"
+	@$(DOCKER) stack services $(HOMEPAGE_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL_STACK_NAME}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL_STACK_NAME) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL_STACK_NAME)_' \
+	@echo "--- docker service ls (${HOMEPAGE_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(HOMEPAGE_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(HOMEPAGE_STACK_NAME)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack ps $(TPL_STACK_NAME) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(HOMEPAGE_STACK_NAME))"
+	@$(DOCKER) stack ps $(HOMEPAGE_STACK_NAME) --no-trunc
 	@echo
-	@for s in $(TPL_STACK_SERVICES); do \
-		echo "==================== $(TPL_STACK_NAME)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(HOMEPAGE_STACK_SERVICES); do \
+		echo "==================== $(HOMEPAGE_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(HOMEPAGE_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 

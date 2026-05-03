@@ -1,0 +1,37 @@
+networks:
+  default:
+    name: ${HOMEPAGE_NETWORK:-dokploy-network}
+    external: ${HOMEPAGE_NETWORK_EXTERNAL:-true}
+
+volumes:
+  homepage_data:
+    name: ${HOMEPAGE_DATA_VOLUME_NAME:-homepage_data}
+    external: ${HOMEPAGE_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  homepage:
+    image: ${HOMEPAGE_IMAGE:-ghcr.io/gethomepage/homepage:latest}
+    volumes:
+      - ${HOMEPAGE_DATA_DIR:-homepage_data}:/app/config
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - HOMEPAGE_ALLOWED_HOSTS
+    ## Deploy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==${HOMEPAGE_PLACEMENT_CONSTRAINTS:-manager}
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.homepage.loadbalancer.server.port: 3000
+        traefik.http.routers.homepage.entrypoints: ${HOMEPAGE_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.homepage.rule: Host(`${HOMEPAGE_DOMAIN:-homepage.home}`) && PathPrefix(`${HOMEPAGE_TRAEFIK_PATH_PREFIX:-/}`)
+        traefik.http.routers.homepage.service: homepage
+        traefik.http.routers.homepage.middlewares: "${HOMEPAGE_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.homepage.tls: "${HOMEPAGE_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.homepage.tls.certresolver: ${HOMEPAGE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
