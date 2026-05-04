@@ -210,63 +210,63 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-## —— 🐝 tpl commands ———————————————————————————————————
-TPL := tpl
-TPL_SERVICES := tpl
-TPL_PODS := tpl
+## —— 🐝 jenkins commands ———————————————————————————————————
+JENKINS := jenkins
+JENKINS_SERVICES := jenkins
+JENKINS_PODS := jenkins
 
-tpl-deploy: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL)
+jenkins-deploy: ## Deploy the jenkins stack
+	$(MAKE) stack-deploy STACK_NAME=$(JENKINS)
 
-tpl-remove: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL)
-tpl-redeploy: tpl-remove tpl-deploy ## Recreate the tpl stack
+jenkins-remove: ## Remove the jenkins stack
+	$(MAKE) stack-rm STACK_NAME=$(JENKINS)
+jenkins-redeploy: jenkins-remove jenkins-deploy ## Recreate the jenkins stack
 
-tpl-stack-deploy: tpl-deploy ## Deploy the tpl stack
-tpl-stack-remove: tpl-remove ## Remove the tpl stack
+jenkins-stack-deploy: jenkins-deploy ## Deploy the jenkins stack
+jenkins-stack-remove: jenkins-remove ## Remove the jenkins stack
 
-tpl-stack-redeploy: tpl-redeploy ## Recreate the tpl stack
+jenkins-stack-redeploy: jenkins-redeploy ## Recreate the jenkins stack
 
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL)
+jenkins-stack-logs: ## Show logs of the jenkins stack
+	$(MAKE) stack-logs STACK_NAME=$(JENKINS)
 
-tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL)
+jenkins-stack-watch: ## Watch logs of the jenkins stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(JENKINS)
 
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL))"
-	@$(DOCKER) stack services $(TPL) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+jenkins-stack-debug: ## Debug jenkins swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(JENKINS))"
+	@$(DOCKER) stack services $(JENKINS) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL)_' \
+	@echo "--- docker service ls (${JENKINS}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(JENKINS) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(JENKINS)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL))"
-	@$(DOCKER) stack ps $(TPL) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(JENKINS))"
+	@$(DOCKER) stack ps $(JENKINS) --no-trunc
 	@echo
-	@for s in $(TPL_SERVICES); do \
-		echo "==================== $(TPL)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(JENKINS_SERVICES); do \
+		echo "==================== $(JENKINS)_$$s ===================="; \
+		$(DOCKER) service logs "$(JENKINS)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
-tpl-up: ## Deploy the tpl project
-	$(MAKE) docker-project-up PROJECT_NAME=$(TPL)
+jenkins-up: ## Deploy the jenkins project
+	$(MAKE) docker-project-up PROJECT_NAME=$(JENKINS)
 
-tpl-down: ## Remove the tpl project
-	$(MAKE) docker-project-down PROJECT_NAME=$(TPL)
+jenkins-down: ## Remove the jenkins project
+	$(MAKE) docker-project-down PROJECT_NAME=$(JENKINS)
 
-tpl-recreate: tpl-down tpl-up ## Recreate the tpl project
+jenkins-recreate: jenkins-down jenkins-up ## Recreate the jenkins project
 
-tpl-compose-up: tpl-up ## Deploy the tpl project
+jenkins-compose-up: jenkins-up ## Deploy the jenkins project
 
-tpl-compose-down: tpl-down # Remove the tpl project
+jenkins-compose-down: jenkins-down # Remove the jenkins project
 
-tpl-compose-recreate: tpl-recreate ## Recreate the tpl project
+jenkins-compose-recreate: jenkins-recreate ## Recreate the jenkins project
 
-tpl-compose-logs: ## Show logs of the tpl project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(TPL)
+jenkins-compose-logs: ## Show logs of the jenkins project
+	$(MAKE) docker-project-logs PROJECT_NAME=$(JENKINS)
 
-tpl-compose-watch: ## Watch logs of the tpl project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(TPL)
+jenkins-compose-watch: ## Watch logs of the jenkins project
+	$(MAKE) docker-project-watch PROJECT_NAME=$(JENKINS)
