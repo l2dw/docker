@@ -74,6 +74,63 @@ docker-rm: docker-exists-container ## Remove a container
 docker-watch-logs: docker-exists-container ## Watch logs of a container
 	$(DOCKER) logs -f $(CONTAINER_NAME)
 
+# —— 🐝 docker-compose commands ———————————————————————————————————
+.docker-exists-project: # Check if a docker-compose project exists
+	@# Check if the project name is provided
+	@if [ -z "$(PROJECT_NAME)" ]; then \
+		echo "Project name is not provided"; \
+		exit 1; \
+	fi;
+	@# Check if the folder exists
+	@if [ ! -d "$(PROJECT_NAME)" ]; then \
+		echo "Folder $(PROJECT_NAME) does not exist"; \
+		exit 1; \
+	fi;
+docker-project-up: .docker-exists-project # Deploy a docker-compose stack
+	@# if not set variable DOCKER_COMPOSE_FILE, use the docker-compose.yml file in the project folder
+	@if [ -z "$(DOCKER_COMPOSE_FILE)" ]; then \
+		DOCKER_COMPOSE_FILE=$(PROJECT_NAME)/docker-compose.yml; \
+	fi;
+	@# Check if the DOCKER_COMPOSE_FILE exists or is a symlink
+	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
+		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
+		exit 1; \
+	fi;
+	$(DOCKER_COMPOSE) up -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE) -d
+
+docker-project-down: .docker-exists-project # Remove a docker-compose stack
+	@# if not set variable DOCKER_COMPOSE_FILE, use the docker-compose.yml file in the project folder
+	@if [ -z "$(DOCKER_COMPOSE_FILE)" ]; then \
+		DOCKER_COMPOSE_FILE=$(PROJECT_NAME)/docker-compose.yml; \
+	fi;
+	@# Check if the DOCKER_COMPOSE_FILE exists or is a symlink
+	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
+		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
+		exit 1; \
+	fi;
+	$(DOCKER_COMPOSE) down -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE)
+
+docker-project-recreate: docker-project-down docker-project-up # Recreate a docker-compose project
+
+docker-project-restart: .check-project-name # Restart a docker-compose project
+	@# Check if the project name is provided
+	@if [ -z "$(PROJECT_NAME)" ]; then \
+		echo "Project name is not provided"; \
+		exit 1; \
+	fi;
+	@# Check if the docker-compose.yml file exists or is a symlink
+	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
+		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
+		exit 1; \
+	fi;
+	$(DOCKER_COMPOSE) restart -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE)
+
+docker-project-logs: .docker-exists-project ## Show logs of a docker-compose project
+	$(DOCKER_COMPOSE) logs $(DOCKER_COMPOSE_FILE)
+
+docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose project
+	$(DOCKER_COMPOSE) logs -f  -f $(DOCKER_COMPOSE_FILE)
+
 ## —— 🐝 swarm commands ———————————————————————————————————
 swarm-init: ## Initialize the swarm
 	$(DOCKER_SWARM) init --advertise-addr $(IP_ADDRESS)
@@ -153,40 +210,63 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-# —— 🐝 tpl commands ———————————————————————————————————
-TPL_STACK_NAME := tpl
-TPL_STACK_SERVICES := tpl
+## —— 🐝 tpl commands ———————————————————————————————————
+TPL := tpl
+TPL_SERVICES := tpl
+TPL_PODS := tpl
 
-tpl-stack-up: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL_STACK_NAME)
+tpl-deploy: ## Deploy the tpl stack
+	$(MAKE) stack-deploy STACK_NAME=$(TPL)
 
-tpl-stack-down: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL_STACK_NAME)
+tpl-remove: ## Remove the tpl stack
+	$(MAKE) stack-rm STACK_NAME=$(TPL)
+tpl-redeploy: tpl-remove tpl-deploy ## Recreate the tpl stack
 
-tpl-stack-recreate: tpl-stack-down tpl-stack-up ## Recreate the tpl stack
+tpl-stack-deploy: tpl-deploy ## Deploy the tpl stack
+tpl-stack-remove: tpl-remove ## Remove the tpl stack
+
+tpl-stack-redeploy: tpl-redeploy ## Recreate the tpl stack
 
 tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL_STACK_NAME)
+	$(MAKE) stack-logs STACK_NAME=$(TPL)
 
 tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL_STACK_NAME)
+	$(MAKE) stack-watch-logs STACK_NAME=$(TPL)
 
 tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack services $(TPL_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+	@echo "--- docker stack services ($(TPL))"
+	@$(DOCKER) stack services $(TPL) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL_STACK_NAME}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL_STACK_NAME) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL_STACK_NAME)_' \
+	@echo "--- docker service ls (${TPL}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(TPL)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack ps $(TPL_STACK_NAME) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(TPL))"
+	@$(DOCKER) stack ps $(TPL) --no-trunc
 	@echo
-	@for s in $(TPL_STACK_SERVICES); do \
-		echo "==================== $(TPL_STACK_NAME)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(TPL_SERVICES); do \
+		echo "==================== $(TPL)_$$s ===================="; \
+		$(DOCKER) service logs "$(TPL)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
+tpl-up: ## Deploy the tpl project
+	$(MAKE) docker-project-up PROJECT_NAME=$(TPL)
 
+tpl-down: ## Remove the tpl project
+	$(MAKE) docker-project-down PROJECT_NAME=$(TPL)
+
+tpl-recreate: tpl-down tpl-up ## Recreate the tpl project
+
+tpl-compose-up: tpl-up ## Deploy the tpl project
+
+tpl-compose-down: tpl-down # Remove the tpl project
+
+tpl-compose-recreate: tpl-recreate ## Recreate the tpl project
+
+tpl-compose-logs: ## Show logs of the tpl project
+	$(MAKE) docker-project-logs PROJECT_NAME=$(TPL)
+
+tpl-compose-watch: ## Watch logs of the tpl project
+	$(MAKE) docker-project-watch PROJECT_NAME=$(TPL)
