@@ -50,9 +50,9 @@ services:
         homepage.group: ${BYTESTASH_HOMEPAGE_GROUP:-Infra}
         homepage.name: ${BYTESTASH_HOMEPAGE_NAME:-ByteStash}
         homepage.icon: ${BYTESTASH_HOMEPAGE_ICON:-bytestash.png}
-        homepage.href: http://${BYTESTASH_DOMAIN:-example.com/bytestash}
+        homepage.href: ${BYTESTASH_HOMEPAGE_HREF:-http://example.com/bytestash}
         homepage.description: ${BYTESTASH_HOMEPAGE_DESCRIPTION:-}
         homepage.siteMonitor: ${BYTESTASH_HOMEPAGE_SITEMONITOR:-http://bytestash:5000}
-        homepage.ping: ${BYTESTASH_HOMEPAGE_PING:-http://bytestash:5000}
+        # homepage.ping: ${BYTESTASH_HOMEPAGE_PING:-http://bytestash:5000}
 
 
