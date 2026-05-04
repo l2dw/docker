@@ -210,63 +210,63 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-## —— 🐝 tpl commands ———————————————————————————————————
-TPL := tpl
-TPL_SERVICES := tpl
-TPL_PODS := tpl
+## —— 🐝 bytestash commands ———————————————————————————————————
+BYTESTASH := bytestash
+BYTESTASH_SERVICES := bytestash
+BYTESTASH_PODS := bytestash
 
-tpl-deploy: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL)
+bytestash-deploy: ## Deploy the bytestash stack
+	$(MAKE) stack-deploy STACK_NAME=$(BYTESTASH)
 
-tpl-remove: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL)
-tpl-redeploy: tpl-remove tpl-deploy ## Recreate the tpl stack
+bytestash-remove: ## Remove the bytestash stack
+	$(MAKE) stack-rm STACK_NAME=$(BYTESTASH)
+bytestash-redeploy: bytestash-remove bytestash-deploy ## Recreate the bytestash stack
 
-tpl-stack-deploy: tpl-deploy ## Deploy the tpl stack
-tpl-stack-remove: tpl-remove ## Remove the tpl stack
+bytestash-stack-deploy: bytestash-deploy ## Deploy the bytestash stack
+bytestash-stack-remove: bytestash-remove ## Remove the bytestash stack
 
-tpl-stack-redeploy: tpl-redeploy ## Recreate the tpl stack
+bytestash-stack-redeploy: bytestash-redeploy ## Recreate the bytestash stack
 
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL)
+bytestash-stack-logs: ## Show logs of the bytestash stack
+	$(MAKE) stack-logs STACK_NAME=$(BYTESTASH)
 
-tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL)
+bytestash-stack-watch: ## Watch logs of the bytestash stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(BYTESTASH)
 
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL))"
-	@$(DOCKER) stack services $(TPL) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+bytestash-stack-debug: ## Debug bytestash swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(BYTESTASH))"
+	@$(DOCKER) stack services $(BYTESTASH) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL)_' \
+	@echo "--- docker service ls (${BYTESTASH}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(BYTESTASH) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(BYTESTASH)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL))"
-	@$(DOCKER) stack ps $(TPL) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(BYTESTASH))"
+	@$(DOCKER) stack ps $(BYTESTASH) --no-trunc
 	@echo
-	@for s in $(TPL_SERVICES); do \
-		echo "==================== $(TPL)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(BYTESTASH_SERVICES); do \
+		echo "==================== $(BYTESTASH)_$$s ===================="; \
+		$(DOCKER) service logs "$(BYTESTASH)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
-tpl-up: ## Deploy the tpl project
-	$(MAKE) docker-project-up PROJECT_NAME=$(TPL)
+bytestash-up: ## Deploy the bytestash project
+	$(MAKE) docker-project-up PROJECT_NAME=$(BYTESTASH)
 
-tpl-down: ## Remove the tpl project
-	$(MAKE) docker-project-down PROJECT_NAME=$(TPL)
+bytestash-down: ## Remove the bytestash project
+	$(MAKE) docker-project-down PROJECT_NAME=$(BYTESTASH)
 
-tpl-recreate: tpl-down tpl-up ## Recreate the tpl project
+bytestash-recreate: bytestash-down bytestash-up ## Recreate the bytestash project
 
-tpl-compose-up: tpl-up ## Deploy the tpl project
+bytestash-compose-up: bytestash-up ## Deploy the bytestash project
 
-tpl-compose-down: tpl-down # Remove the tpl project
+bytestash-compose-down: bytestash-down # Remove the bytestash project
 
-tpl-compose-recreate: tpl-recreate ## Recreate the tpl project
+bytestash-compose-recreate: bytestash-recreate ## Recreate the bytestash project
 
-tpl-compose-logs: ## Show logs of the tpl project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(TPL)
+bytestash-compose-logs: ## Show logs of the bytestash project
+	$(MAKE) docker-project-logs PROJECT_NAME=$(BYTESTASH)
 
-tpl-compose-watch: ## Watch logs of the tpl project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(TPL)
+bytestash-compose-watch: ## Watch logs of the bytestash project
+	$(MAKE) docker-project-watch PROJECT_NAME=$(BYTESTASH)

@@ -1,0 +1,58 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  bytestash_data:
+    name: ${BYTESTASH_DATA_VOLUME_NAME:-bytestash_data}
+    external: ${BYTESTASH_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  bytestash:
+    image: ${BYTESTASH_IMAGE:-ghcr.io/jordan-dalby/bytestash:latest}
+    volumes:
+      - ${BYTESTASH_MOUNT_DATA:-bytestash_data}:/data/snippets
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - BASE_PATH=${BYTESTASH_BASE_PATH:-/bytestash}
+      - JWT_SECRET=${BYTESTASH_JWT_SECRET:-your-secret}
+      - TOKEN_EXPIRY=${BYTESTASH_TOKEN_EXPIRY:-24h}
+      - ALLOW_NEW_ACCOUNTS=${BYTESTASH_ALLOW_NEW_ACCOUNTS:-true}
+      - DEBUG=${BYTESTASH_DEBUG:-false}
+      - DISABLE_ACCOUNTS=${BYTESTASH_DISABLE_ACCOUNTS:-false}
+      - DISABLE_INTERNAL_ACCOUNTS=${BYTESTASH_DISABLE_INTERNAL_ACCOUNTS:-false}
+      - OIDC_ENABLED=${BYTESTASH_OIDC_ENABLED:-false}
+      - OIDC_DISPLAY_NAME=${BYTESTASH_OIDC_DISPLAY_NAME:-}
+      - OIDC_ISSUER_URL=${BYTESTASH_OIDC_ISSUER_URL:-}
+      - OIDC_CLIENT_ID=${BYTESTASH_OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${BYTESTASH_OIDC_CLIENT_SECRET:-}
+      - OIDC_SCOPES=${BYTESTASH_OIDC_SCOPES:-}
+    ## Deploy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==${BYTESTASH_PLACEMENT_CONSTRAINTS:-manager}
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.bytestash.loadbalancer.server.port: 5000
+        traefik.http.routers.bytestash.entrypoints: ${BYTESTASH_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.bytestash.rule: Host(`${BYTESTASH_DOMAIN:-example.com}`) && PathPrefix(`${BYTESTASH_BASE_PATH:-/bytestash}`)
+        traefik.http.routers.bytestash.service: bytestash
+        traefik.http.routers.bytestash.middlewares: "${BYTESTASH_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.bytestash.tls: "${BYTESTASH_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.bytestash.tls.certresolver: ${BYTESTASH_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${BYTESTASH_HOMEPAGE_GROUP:-Infra}
+        homepage.name: ${BYTESTASH_HOMEPAGE_NAME:-ByteStash}
+        homepage.icon: ${BYTESTASH_HOMEPAGE_ICON:-bytestash.png}
+        homepage.href: http://${BYTESTASH_DOMAIN:-example.com/bytestash}
+        homepage.description: ${BYTESTASH_HOMEPAGE_DESCRIPTION:-}
+        homepage.siteMonitor: ${BYTESTASH_HOMEPAGE_SITEMONITOR:-http://bytestash:5000}
+        homepage.ping: ${BYTESTASH_HOMEPAGE_PING:-http://bytestash:5000}
+
+
