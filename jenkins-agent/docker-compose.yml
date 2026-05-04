@@ -1,0 +1,56 @@
+
+networks:
+  default:
+    name: ${JENKINS_AGENT_NETWORK:-dokploy-network}
+    external: ${JENKINS_AGENT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  jenkins_agent_home:
+    name: ${JENKINS_AGENT_HOME_VOLUME_NAME:-jenkins_agent_home}
+    external: ${JENKINS_AGENT_HOME_VOLUME_EXTERNAL:-false}
+  jenkins_agent_workdir:
+    name: ${JENKINS_AGENT_WORKDIR_VOLUME_NAME:-jenkins_agent_workdir}
+    external: ${JENKINS_AGENT_WORKDIR_VOLUME_EXTERNAL:-false}
+
+services:
+  jenkins-agent:
+    image: ${JENKINS_AGENT_IMAGE:-docker.io/jenkins/inbound-agent:latest}
+    container_name: ${JENKINS_AGENT_CONTAINER_NAME:-jenkins-agent}
+    pull_policy: ${JENKINS_AGENT_PULL_POLICY:-always}
+    restart: ${JENKINS_AGENT_RESTART:-unless-stopped}
+    privileged: ${JENKINS_AGENT_PRIVILEGED:-true}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+        no_proxy: ${no_proxy}
+        USER_UID: ${USER_UID:-501}
+        USER_GID: ${USER_GID:-100}
+        USER_NAME: ${USER_NAME:-jenkins}
+        DOCKER_VERSION: ${DOCKER_VERSION:-27.3.1}
+    tty: true
+    stdin_open: true
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - USER_NAME=${JENKINS_AGENT_USER:-jenkins}
+      - JENKINS_URL=${JENKINS_AGENT_URL}
+      - JENKINS_AGENT_NAME=${JENKINS_AGENT_NAME}
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET}
+      - JENKINS_AGENT_WORKDIR=${JENKINS_AGENT_WORKDIR:-/var/jenkins/agent}
+      - JENKINS_WEB_SOCKET=${JENKINS_AGENT_WEB_SOCKET:-true}
+      - CONTAINER_HOST=${CONTAINER_HOST:-unix:///var/run/docker.sock}
+    volumes:
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${JENKINS_AGENT_MOUNT_HOME_DIR:-jenkins_agent_home}:${JENKINS_AGENT_HOME:-/home/jenkins}
+      - ${JENKINS_AGENT_MOUNT_WORKDIR:-jenkins_agent_workdir}:${JENKINS_AGENT_WORKDIR:-/var/jenkins/agent}
+    labels:
+      ## Homepage configuration
+      homepage.group: ${JENKINS_AGENT_HOMEPAGE_GROUP:-Infra}
+      homepage.name: ${JENKINS_AGENT_HOMEPAGE_NAME:-Jenkins Agent}
+      homepage.icon: ${JENKINS_AGENT_HOMEPAGE_ICON:-jenkins.png}
+      homepage.description: ${JENKINS_AGENT_HOMEPAGE_DESCRIPTION:-}

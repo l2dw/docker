@@ -153,39 +153,39 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-# —— 🐝 tpl commands ———————————————————————————————————
-TPL_STACK_NAME := tpl
-TPL_STACK_SERVICES := tpl
+# —— 🐝 jenkins-agent commands ———————————————————————————————————
+JENKINS_AGENT_STACK_NAME := jenkins-agent
+JENKINS_AGENT_STACK_SERVICES := jenkins-agent
 
-tpl-stack-up: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL_STACK_NAME)
+jenkins-agent-stack-up: ## Deploy the jenkins-agent stack
+	$(MAKE) stack-deploy STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
 
-tpl-stack-down: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL_STACK_NAME)
+jenkins-agent-stack-down: ## Remove the jenkins-agent stack
+	$(MAKE) stack-rm STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
 
-tpl-stack-recreate: tpl-stack-down tpl-stack-up ## Recreate the tpl stack
+jenkins-agent-stack-recreate: jenkins-agent-stack-down jenkins-agent-stack-up ## Recreate the jenkins-agent stack
 
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL_STACK_NAME)
+jenkins-agent-stack-logs: ## Show logs of the jenkins-agent stack
+	$(MAKE) stack-logs STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
 
-tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL_STACK_NAME)
+jenkins-agent-stack-watch: ## Watch logs of the jenkins-agent stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
 
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack services $(TPL_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+jenkins-agent-stack-debug: ## Debug jenkins-agent swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(JENKINS_AGENT_STACK_NAME))"
+	@$(DOCKER) stack services $(JENKINS_AGENT_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL_STACK_NAME}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL_STACK_NAME) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL_STACK_NAME)_' \
+	@echo "--- docker service ls (${JENKINS_AGENT_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(JENKINS_AGENT_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(JENKINS_AGENT_STACK_NAME)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL_STACK_NAME))"
-	@$(DOCKER) stack ps $(TPL_STACK_NAME) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(JENKINS_AGENT_STACK_NAME))"
+	@$(DOCKER) stack ps $(JENKINS_AGENT_STACK_NAME) --no-trunc
 	@echo
-	@for s in $(TPL_STACK_SERVICES); do \
-		echo "==================== $(TPL_STACK_NAME)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(JENKINS_AGENT_STACK_SERVICES); do \
+		echo "==================== $(JENKINS_AGENT_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(JENKINS_AGENT_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
