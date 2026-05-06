@@ -1,0 +1,105 @@
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  rie_data:
+    name: ${RIE_DATA_VOLUME_NAME:-rie_data}
+    external: ${RIE_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+
+  rie-app:
+    image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
+    # pull_policy: ${RIE_PULL_POLICY:-always}
+    # restart: ${RIE_RESTART:-unless-stopped}
+    # privileged: ${RIE_PRIVILEGED:-true}
+    tty: true
+    stdin_open: true
+    networks:
+      default:
+        aliases:
+          - ${RIE_NETWORK_ALIAS:-rie-app}
+    volumes:
+      - ${RIE_MOUNT_DATA:-rie_data}:/app/data
+    mem_limit: ${RIE_MEMORY_LIMIT:-512M}
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - ENABLE_SERVICE_WEB_APP=true
+      - ENABLE_SERVICE_API=true
+      # Database configuration
+      - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie_db}
+      - PG_DATABASE_USER=${RIE_DATABASE_USER:-rie}
+      - PG_DATABASE_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
+      - PG_DATABASE_HOST=${RIE_DATABASE_HOST:-rie-db}
+      - PG_DATABASE_PORT=${RIE_DATABASE_PORT:-5432}
+      # API configuration
+      - API_BASE_PATH=${RIE_API_BASE_PATH:-/donnees/api}
+      # - API_PORT=${RIE_API_PORT:-4000}
+      - RIE_API_DOMAIN=${RIE_API_DOMAIN:-rie.example.com}
+      - RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
+      # Authentication
+      - MICROSOFT_TENANT_ID=${RIE_MICROSOFT_TENANT_ID:-your-microsoft-tenant-id}
+      - MICROSOFT_CLIENT_ID=${RIE_MICROSOFT_CLIENT_ID:-your-microsoft-client-id}
+      - MICROSOFT_CLIENT_SECRET=${RIE_MICROSOFT_CLIENT_SECRET:-your-microsoft-client-secret}
+      - BETTER_AUTH_SECRET=${RIE_BETTER_AUTH_SECRET:-your-better-auth-secret--long-32}
+      # OpenTelemetry
+      - LOG_LEVEL=${RIE_LOG_LEVEL:-info}
+      - OTEL_SERVICE_NAME_API=rie-${RIE_ENV_NAME}--api
+      - OTEL_SERVICE_NAME_WEB_APP=rie-${RIE_ENV_NAME}--frontend
+      - OTEL_API_ENABLED=${RIE_OTEL_API_ENABLED:-true}
+      - OTEL_CLIENT_ENABLED=${RIE_OTEL_CLIENT_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${RIE_OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}
+      # S3 Storage client
+      - S3_ENDPOINT=${RIE_S3_ENDPOINT:-https://s3.example.com}
+      - S3_ACCESS_KEY=${RIE_S3_ACCESS_KEY:-your-s3-access-key}
+      - S3_SECRET_KEY=${RIE_S3_SECRET_KEY:-your-s3-secret-key}
+      - S3_PROVIDER=${RIE_S3_PROVIDER:-your-s3-provider}
+      - S3_USE_SSL=${RIE_S3_USE_SSL:-true}
+      - S3_REGION=${RIE_S3_REGION:-your-s3-region}
+      - S3_BUCKET=${RIE_S3_BUCKET:-rie-storage}
+      # Client configuration
+      - RIE_CLIENT_DOMAIN=${RIE_CLIENT_DOMAIN:-rie.example.com}
+      - RIE_CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
+      - CLIENT_DOMAIN=${RIE_CLIENT_DOMAIN:-rie.example.com}
+      - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
+      - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
+      - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.rie-${RIE_ENV_NAME}.loadbalancer.server.port=${RIE_TRAEFIK_SERVER_PORT:-}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}.entrypoints=${RIE_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}.rule=Host(`${RIE_TRAEFIK_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_TRAEFIK_BASE_PATH:-/}`)"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}.service=rie-${RIE_ENV_NAME}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}.middlewares=${RIE_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      ## Homepage configuration
+      - "homepage.group=${RIE_HOMEPAGE_GROUP:-RIÉ}"
+      - "homepage.name=${RIE_HOMEPAGE_NAME:-RIÉ App}"
+      - "homepage.icon=${RIE_HOMEPAGE_ICON:-}"
+      - "homepage.href=${RIE_HOMEPAGE_HREF:-http://rie.example.com/}"
+      - "homepage.description=${RIE_HOMEPAGE_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${RIE_HOMEPAGE_SITEMONITOR:-http://rie.example.com/}"
+      - "homepage.ping=${RIE_HOMEPAGE_PING:-}"
+      # ## Web App configuration
+      # - "traefik.http.services.rie-${RIE_ENV_NAME}--frontend.loadbalancer.server.port=3000"
+      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.entrypoints=${RIE_FRONTEND_TRAEFIK_ENTRYPOINTS:-web}"
+      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.rule=Host(`${RIE_CLIENT_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_CLIENT_BASE_PATH:-/donnees}`)"
+      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.service=rie-${RIE_ENV_NAME}--frontend"
+      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.middlewares=${RIE_FRONTEND_TRAEFIK_MIDDLEWARES:-}"
+      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls=${RIE_FRONTEND_TRAEFIK_TLS_ENABLED:-false}"
+      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls.certresolver=${RIE_FRONTEND_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      # ## Homepage configuration
+      # - "homepage.group=${RIE_FRONTEND_HOMEPAGE_GROUP:-RIÉ}"
+      # - "homepage.name=${RIE_FRONTEND_HOMEPAGE_NAME:-RIÉ Web App}"
+      # - "homepage.icon=${RIE_FRONTEND_HOMEPAGE_ICON:-}"
+      # - "homepage.href=${RIE_FRONTEND_HOMEPAGE_HREF:-http://rie.example.com/donnees}"
+      # - "homepage.description=${RIE_FRONTEND_HOMEPAGE_DESCRIPTION:-}"
+      # - "homepage.siteMonitor=${RIE_FRONTEND_HOMEPAGE_SITEMONITOR:-http://rie.example.com/donnees/fr}"
+      # - "homepage.ping=${RIE_FRONTEND_HOMEPAGE_PING:-http://rie:3000}"

@@ -32,9 +32,9 @@ services:
       - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data
 
-  rie-backend:
-    image: ${RIE_BACKEND_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:backend}
-    # container_name: rie-${RIE_ENV_NAME}--backend
+  rie-fullstack:
+    image: ${RIE_FULLSTACK_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
+    # container_name: rie-${RIE_ENV_NAME}--fullstack
     pull_policy: ${RIE_PULL_POLICY:-always}
     restart: ${RIE_RESTART:-unless-stopped}
     privileged: ${RIE_PRIVILEGED:-true}
@@ -44,6 +44,7 @@ services:
       default:
         aliases:
           - rie-${RIE_ENV_NAME}--backend
+          - rie-${RIE_ENV_NAME}--frontend
     volumes:
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data
     mem_limit: ${RIE_MEMORY_LIMIT:-512M}
@@ -52,7 +53,7 @@ services:
       - http_proxy
       - https_proxy
       - no_proxy
-      - ENABLE_SERVICE_WEB_APP=false
+      - ENABLE_SERVICE_WEB_APP=true
       - ENABLE_SERVICE_API=true
       # Database configuration
       - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie_db}
@@ -75,7 +76,7 @@ services:
       - OTEL_SERVICE_NAME_API=rie-${RIE_ENV_NAME}--api
       - OTEL_SERVICE_NAME_CLIENT=rie-${RIE_ENV_NAME}--client
       - OTEL_API_ENABLED=${RIE_OTEL_API_ENABLED:-true}
-      - OTEL_CLIENT_ENABLED=false
+      - OTEL_CLIENT_ENABLED=${RIE_OTEL_CLIENT_ENABLED:-true}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${RIE_OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}
       # S3 Storage client
       - S3_ENDPOINT=${RIE_S3_ENDPOINT:-https://s3.example.com}
@@ -93,35 +94,47 @@ services:
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
     labels:
-      traefik.enable: "true"
-      traefik.http.services.rie-${RIE_ENV_NAME}--backend.loadbalancer.server.port: 4000
-      traefik.http.routers.rie-${RIE_ENV_NAME}--backend.entrypoints: ${RIE_BACKEND_TRAEFIK_ENTRYPOINTS:-web}
-      traefik.http.routers.rie-${RIE_ENV_NAME}--backend.rule: Host(`${RIE_API_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_API_BASE_PATH:-/donnees/api}`)
-      traefik.http.routers.rie-${RIE_ENV_NAME}--backend.service: rie-${RIE_ENV_NAME}--backend
-      traefik.http.routers.rie-${RIE_ENV_NAME}--backend.middlewares: "${RIE_BACKEND_TRAEFIK_MIDDLEWARES:-}"
-      traefik.http.routers.rie-${RIE_ENV_NAME}--backend.tls: "${RIE_BACKEND_TRAEFIK_TLS_ENABLED:-false}"
-      traefik.http.routers.rie-${RIE_ENV_NAME}--backend.tls.certresolver: ${RIE_BACKEND_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+      - "traefik.enable=true"
+      - "traefik.http.services.rie-${RIE_ENV_NAME}--backend.loadbalancer.server.port=4000"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.entrypoints=${RIE_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.rule=Host(`${RIE_API_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_API_BASE_PATH:-/donnees/api}`)"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.service=rie-${RIE_ENV_NAME}--backend"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.middlewares=${RIE_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
-      homepage.group: ${RIE_BACKEND_HOMEPAGE_GROUP:-RIÉ}
-      homepage.name: ${RIE_BACKEND_HOMEPAGE_NAME:-RIÉ API}
-      homepage.icon: ${RIE_BACKEND_HOMEPAGE_ICON:-}
-      homepage.href: ${RIE_BACKEND_HOMEPAGE_HREF:-http://rie.example.com/donnees/api}
-      homepage.description: ${RIE_BACKEND_HOMEPAGE_DESCRIPTION:-}
-      homepage.siteMonitor: ${RIE_BACKEND_HOMEPAGE_SITEMONITOR:-http://rie.example.com/donnees/api/version}
-      homepage.ping: ${RIE_BACKEND_HOMEPAGE_PING:-http://rie-backend:4000}
+      - "homepage.group=${RIE_HOMEPAGE_BACKEND_GROUP:-RIÉ}"
+      - "homepage.name=${RIE_HOMEPAGE_BACKEND_NAME:-RIÉ API}"
+      - "homepage.icon=${RIE_HOMEPAGE_BACKEND_ICON:-}"
+      - "homepage.href=${RIE_HOMEPAGE_BACKEND_HREF:-http://rie.example.com/donnees/api}"
+      - "homepage.description=${RIE_HOMEPAGE_BACKEND_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${RIE_HOMEPAGE_SBACKEND_ITEMONITOR:-http://rie.example.com/donnees/api/version}"
+      - "homepage.ping=${RIE_HOMEPAGE_BACKEND_PING:-http://rie-backend:4000}"
+      # ## Web App configuration
+      - "traefik.http.services.rie-${RIE_ENV_NAME}--frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.entrypoints=${RIE_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.rule=Host(`${RIE_CLIENT_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_CLIENT_BASE_PATH:-/donnees}`)"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.service=rie-${RIE_ENV_NAME}--frontend"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.middlewares=${RIE_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      ## Homepage configuration
+      - "homepage.group=${RIE_HOMEPAGE_FRONTEND_GROUP:-RIÉ}"
+      - "homepage.name=${RIE_HOMEPAGE_FRONTEND_NAME:-RIÉ Web App}"
+      - "homepage.icon=${RIE_HOMEPAGE_FRONTEND_ICON:-}"
+      - "homepage.href=${RIE_HOMEPAGE_FRONTEND_HREF:-http://rie.example.com/donnees}"
+      - "homepage.description=${RIE_HOMEPAGE_FRONTEND_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${RIE_HOMEPAGE_FRONTEND_SITEMONITOR:-http://rie.example.com/donnees/fr}"
+      - "homepage.ping=${RIE_HOMEPAGE_FRONTEND_PING:-http://rie-frontend:3000}"
 
-  rie-frontend:
-    image: ${RIE_FRONTEND_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:web-app}
-    # container_name: rie-${RIE_ENV_NAME}--frontend
+
+  rie-workspace:
+    image: ${RIE_WORKSPACE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:workspace}
     pull_policy: ${RIE_PULL_POLICY:-always}
     restart: ${RIE_RESTART:-unless-stopped}
     privileged: ${RIE_PRIVILEGED:-true}
     tty: true
     stdin_open: true
-    networks:
-      default:
-        aliases:
-          - rie-${RIE_ENV_NAME}--frontend
     volumes:
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data
     mem_limit: ${RIE_MEMORY_LIMIT:-512M}
@@ -152,7 +165,7 @@ services:
       - LOG_LEVEL=${RIE_LOG_LEVEL:-info}
       - OTEL_SERVICE_NAME_API=rie-${RIE_ENV_NAME}--api
       - OTEL_SERVICE_NAME_CLIENT=rie-${RIE_ENV_NAME}--client
-      - OTEL_API_ENABLED=${RIE_OTEL_API_ENABLED:-true}
+      - OTEL_API_ENABLED=false
       - OTEL_CLIENT_ENABLED=false
       - OTEL_EXPORTER_OTLP_ENDPOINT=${RIE_OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}
       # S3 Storage client
@@ -170,21 +183,4 @@ services:
       - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
-    labels:
-      traefik.enable: "true"
-      traefik.http.services.rie-${RIE_ENV_NAME}--frontend.loadbalancer.server.port: 3000
-      traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.entrypoints: ${RIE_FRONTEND_TRAEFIK_ENTRYPOINTS:-web}
-      traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.rule: Host(`${RIE_CLIENT_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_CLIENT_BASE_PATH:-/donnees}`)
-      traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.service: rie-${RIE_ENV_NAME}--frontend
-      traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.middlewares: "${RIE_FRONTEND_TRAEFIK_MIDDLEWARES:-}"
-      traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls: "${RIE_FRONTEND_TRAEFIK_TLS_ENABLED:-false}"
-      traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls.certresolver: ${RIE_FRONTEND_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
-      ## Homepage configuration
-      homepage.group: ${RIE_FRONTEND_HOMEPAGE_GROUP:-RIÉ}
-      homepage.name: ${RIE_FRONTEND_HOMEPAGE_NAME:-RIÉ Web App}
-      homepage.icon: ${RIE_FRONTEND_HOMEPAGE_ICON:-}
-      homepage.href: ${RIE_FRONTEND_HOMEPAGE_HREF:-http://rie.example.com/donnees}
-      homepage.description: ${RIE_FRONTEND_HOMEPAGE_DESCRIPTION:-}
-      homepage.siteMonitor: ${RIE_FRONTEND_HOMEPAGE_SITEMONITOR:-http://rie.example.com/donnees/fr}
-      homepage.ping: ${RIE_FRONTEND_HOMEPAGE_PING:-http://rie-frontend:3000}
 
