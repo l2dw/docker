@@ -17,6 +17,8 @@ services:
   rie-postgresql:
     image: ${RIE_POSTGRESQL_IMAGE:-docker.io/postgres:15}
     privileged: ${RIE_PRIVILEGED:-true}
+    tty: ${RIE_TTY:-raw}
+    stdin_open: ${RIE_STDIN_OPEN:-true}
     environment:
       - TZ=America/Toronto
       - POSTGRES_USER=${RIE_DATABASE_USER:-rie}
@@ -29,8 +31,8 @@ services:
   rie-fullstack:
     image: ${RIE_FULLSTACK_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
     privileged: ${RIE_PRIVILEGED:-true}
-    # tty: true
-    # stdin_open: true
+    tty: ${RIE_TTY:-raw}
+    stdin_open: ${RIE_STDIN_OPEN:-true}
     networks:
       default:
         aliases:
@@ -130,8 +132,8 @@ services:
   rie-workspace:
     image: ${RIE_WORKSPACE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:workspace}
     privileged: ${RIE_PRIVILEGED:-true}
-    # tty: true
-    # stdin_open: true
+    tty: ${RIE_TTY:-raw}
+    stdin_open: ${RIE_STDIN_OPEN:-true}
     networks:
       default:
         aliases:
