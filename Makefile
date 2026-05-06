@@ -210,63 +210,63 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-## —— 🐝 tpl commands ———————————————————————————————————
-TPL := tpl
-TPL_SERVICES := tpl
-TPL_PODS := tpl
+## —— 🐝 rie commands ———————————————————————————————————
+RIE := rie
+RIE_SERVICES := rie
+RIE_PODS := rie
 
-tpl-deploy: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL)
+rie-deploy: ## Deploy the rie stack
+	$(MAKE) stack-deploy STACK_NAME=$(RIE)
 
-tpl-remove: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL)
-tpl-redeploy: tpl-remove tpl-deploy ## Recreate the tpl stack
+rie-remove: ## Remove the rie stack
+	$(MAKE) stack-rm STACK_NAME=$(RIE)
+rie-redeploy: rie-remove rie-deploy ## Recreate the rie stack
 
-tpl-stack-deploy: tpl-deploy ## Deploy the tpl stack
-tpl-stack-remove: tpl-remove ## Remove the tpl stack
+rie-stack-deploy: rie-deploy ## Deploy the rie stack
+rie-stack-remove: rie-remove ## Remove the rie stack
 
-tpl-stack-redeploy: tpl-redeploy ## Recreate the tpl stack
+rie-stack-redeploy: rie-redeploy ## Recreate the rie stack
 
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL)
+rie-stack-logs: ## Show logs of the rie stack
+	$(MAKE) stack-logs STACK_NAME=$(RIE)
 
-tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL)
+rie-stack-watch: ## Watch logs of the rie stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(RIE)
 
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL))"
-	@$(DOCKER) stack services $(TPL) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+rie-stack-debug: ## Debug rie swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(RIE))"
+	@$(DOCKER) stack services $(RIE) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL)_' \
+	@echo "--- docker service ls (${RIE}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(RIE) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(RIE)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL))"
-	@$(DOCKER) stack ps $(TPL) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(RIE))"
+	@$(DOCKER) stack ps $(RIE) --no-trunc
 	@echo
-	@for s in $(TPL_SERVICES); do \
-		echo "==================== $(TPL)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(RIE_SERVICES); do \
+		echo "==================== $(RIE)_$$s ===================="; \
+		$(DOCKER) service logs "$(RIE)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
-tpl-up: ## Deploy the tpl project
-	$(MAKE) docker-project-up PROJECT_NAME=$(TPL)
+rie-up: ## Deploy the rie project
+	$(MAKE) docker-project-up PROJECT_NAME=$(RIE)
 
-tpl-down: ## Remove the tpl project
-	$(MAKE) docker-project-down PROJECT_NAME=$(TPL)
+rie-down: ## Remove the rie project
+	$(MAKE) docker-project-down PROJECT_NAME=$(RIE)
 
-tpl-recreate: tpl-down tpl-up ## Recreate the tpl project
+rie-recreate: rie-down rie-up ## Recreate the rie project
 
-tpl-compose-up: tpl-up ## Deploy the tpl project
+rie-compose-up: rie-up ## Deploy the rie project
 
-tpl-compose-down: tpl-down # Remove the tpl project
+rie-compose-down: rie-down # Remove the rie project
 
-tpl-compose-recreate: tpl-recreate ## Recreate the tpl project
+rie-compose-recreate: rie-recreate ## Recreate the rie project
 
-tpl-compose-logs: ## Show logs of the tpl project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(TPL)
+rie-compose-logs: ## Show logs of the rie project
+	$(MAKE) docker-project-logs PROJECT_NAME=$(RIE)
 
-tpl-compose-watch: ## Watch logs of the tpl project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(TPL)
+rie-compose-watch: ## Watch logs of the rie project
+	$(MAKE) docker-project-watch PROJECT_NAME=$(RIE)
