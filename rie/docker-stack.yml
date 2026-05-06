@@ -28,16 +28,16 @@ services:
       - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data
 
-  rie-fullstack:
-    image: ${RIE_FULLSTACK_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
-    privileged: ${RIE_PRIVILEGED:-true}
-    tty: ${RIE_TTY:-raw}
-    stdin_open: ${RIE_STDIN_OPEN:-true}
-    networks:
-      default:
-        aliases:
-          - rie-${RIE_ENV_NAME}--backend
-          - rie-${RIE_ENV_NAME}--frontend
+  rie-app:
+    image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
+    privileged: ${RIE_PRIVILEGED:-false}
+    # tty: ${RIE_TTY:-true}
+    # stdin_open: ${RIE_STDIN_OPEN:-true}
+    # networks:
+    #   default:
+    #     aliases:
+    #       - rie-${RIE_ENV_NAME}--backend
+    #       - rie-${RIE_ENV_NAME}--frontend
     volumes:
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data
     environment:
@@ -45,10 +45,10 @@ services:
       - http_proxy
       - https_proxy
       - no_proxy
-      - ENABLE_SERVICE_WEB_APP=true
-      - ENABLE_SERVICE_API=true
+      - ENABLE_SERVICE_WEB_APP=${RIE_ENABLE_SERVICE_WEB_APP:-true}
+      - ENABLE_SERVICE_API=${RIE_ENABLE_SERVICE_API:-true}
       # Database configuration
-      - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie_db}
+      - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie}
       - PG_DATABASE_USER=${RIE_DATABASE_USER:-rie}
       - PG_DATABASE_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
       - PG_DATABASE_HOST=${RIE_POSTGRESQL_HOST:-rie-postgresql}
@@ -86,16 +86,16 @@ services:
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
     deploy:
-      replicas: ${RIE_FULLSTACK_REPLICAS:-1}
+      replicas: ${RIE_REPLICAS:-1}
       placement:
         constraints:
-          - node.role==${RIE_FULLSTACK_PLACEMENT_NODE_ROLE:-manager}
+          - node.role==${RIE_PLACEMENT_NODE_ROLE:-manager}
       resources:
         limits:
           cpus: ${RIE_CPU_LIMIT:-1}
           memory: ${RIE_MEMORY_LIMIT:-512M}
       labels:
-        - "traefik.enable=true"
+        - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
         - "traefik.http.services.rie-${RIE_ENV_NAME}--backend.loadbalancer.server.port=4000"
         - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.entrypoints=${RIE_TRAEFIK_ENTRYPOINTS:-web}"
         - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.rule=Host(`${RIE_API_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_API_BASE_PATH:-/donnees/api}`)"
@@ -103,13 +103,6 @@ services:
         - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.middlewares=${RIE_TRAEFIK_MIDDLEWARES:-}"
         - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
         - "traefik.http.routers.rie-${RIE_ENV_NAME}--backend.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
-        ## Homepage configuration
-        - "homepage.group=${RIE_HOMEPAGE_BACKEND_GROUP:-RIÉ}"
-        - "homepage.name=${RIE_HOMEPAGE_BACKEND_NAME:-RIÉ API}"
-        - "homepage.icon=${RIE_HOMEPAGE_BACKEND_ICON:-}"
-        - "homepage.href=${RIE_HOMEPAGE_BACKEND_HREF:-http://rie.example.com/donnees/api}"
-        - "homepage.description=${RIE_HOMEPAGE_BACKEND_DESCRIPTION:-}"
-        - "homepage.siteMonitor=${RIE_HOMEPAGE_BACKEND_SITEMONITOR:-http://rie.example.com/donnees/api/version}"
         - "homepage.ping=${RIE_HOMEPAGE_BACKEND_PING:-http://rie-backend:4000}"
         # ## Web App configuration
         - "traefik.http.services.rie-${RIE_ENV_NAME}--frontend.loadbalancer.server.port=3000"
@@ -120,24 +113,32 @@ services:
         - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
         - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
         ## Homepage configuration
-        - "homepage.group=${RIE_HOMEPAGE_FRONTEND_GROUP:-RIÉ}"
-        - "homepage.name=${RIE_HOMEPAGE_FRONTEND_NAME:-RIÉ Web App}"
-        - "homepage.icon=${RIE_HOMEPAGE_FRONTEND_ICON:-}"
-        - "homepage.href=${RIE_HOMEPAGE_FRONTEND_HREF:-http://rie.example.com/donnees}"
-        - "homepage.description=${RIE_HOMEPAGE_FRONTEND_DESCRIPTION:-}"
-        - "homepage.siteMonitor=${RIE_HOMEPAGE_FRONTEND_SITEMONITOR:-http://rie.example.com/donnees/fr}"
-        - "homepage.ping=${RIE_HOMEPAGE_FRONTEND_PING:-http://rie-frontend:3000}"
+        - "homepage.enabled=${RIE_HOMEPAGE_BACKEND_ENABLED:-true}"
+        - "homepage.group=${RIE_HOMEPAGE_BACKEND_GROUP:-RIÉ}"
+        - "homepage.name=${RIE_HOMEPAGE_BACKEND_NAME:-RIÉ API}"
+        - "homepage.icon=${RIE_HOMEPAGE_BACKEND_ICON:-}"
+        - "homepage.href=${RIE_HOMEPAGE_BACKEND_HREF:-http://rie.example.com/donnees/api}"
+        - "homepage.description=${RIE_HOMEPAGE_BACKEND_DESCRIPTION:-}"
+        - "homepage.siteMonitor=${RIE_HOMEPAGE_BACKEND_SITEMONITOR:-http://rie.example.com/donnees/api/version}"
+        # ## Homepage configuration
+        # - "homepage.group=${RIE_HOMEPAGE_FRONTEND_GROUP:-RIÉ}"
+        # - "homepage.name=${RIE_HOMEPAGE_FRONTEND_NAME:-RIÉ Web App}"
+        # - "homepage.icon=${RIE_HOMEPAGE_FRONTEND_ICON:-}"
+        # - "homepage.href=${RIE_HOMEPAGE_FRONTEND_HREF:-http://rie.example.com/donnees}"
+        # - "homepage.description=${RIE_HOMEPAGE_FRONTEND_DESCRIPTION:-}"
+        # - "homepage.siteMonitor=${RIE_HOMEPAGE_FRONTEND_SITEMONITOR:-http://rie.example.com/donnees/fr}"
+        # - "homepage.ping=${RIE_HOMEPAGE_FRONTEND_PING:-http://rie-frontend:3000}"
 
 
   rie-workspace:
     image: ${RIE_WORKSPACE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:workspace}
-    privileged: ${RIE_PRIVILEGED:-true}
-    tty: ${RIE_TTY:-raw}
-    stdin_open: ${RIE_STDIN_OPEN:-true}
-    networks:
-      default:
-        aliases:
-          - rie-${RIE_ENV_NAME}--frontend
+    privileged: ${RIE_PRIVILEGED:-false}
+    # tty: ${RIE_TTY:-}
+    # stdin_open: ${RIE_STDIN_OPEN:-true}
+    # networks:
+    #   default:
+    #     aliases:
+    #       - rie-${RIE_ENV_NAME}--frontend
     volumes:
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data
     environment:
@@ -145,7 +146,7 @@ services:
       - http_proxy
       - https_proxy
       - no_proxy
-      - ENABLE_SERVICE_WEB_APP=true
+      - ENABLE_SERVICE_WEB_APP=false
       - ENABLE_SERVICE_API=false
       # Database configuration
       - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie_db}

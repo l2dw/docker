@@ -19,13 +19,13 @@ services:
     # pull_policy: ${RIE_PULL_POLICY:-always}
     # restart: ${RIE_RESTART:-unless-stopped}
     privileged: ${RIE_PRIVILEGED:-true}
-    tty: ${RIE_TTY:-raw}
+    tty: ${RIE_TTY:-true}
     stdin_open: ${RIE_STDIN_OPEN:-true}
     environment:
       - TZ=America/Toronto
       - POSTGRES_USER=${RIE_DATABASE_USER:-rie}
       - POSTGRES_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
-      - POSTGRES_DB=${RIE_DATABASE_NAME:-rie_db}
+      - POSTGRES_DB=${RIE_DATABASE_NAME:-rie}
     volumes:
       - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data

@@ -12,11 +12,11 @@ volumes:
 services:
 
   rie-app:
-    image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
-    # pull_policy: ${RIE_PULL_POLICY:-always}
-    # restart: ${RIE_RESTART:-unless-stopped}
-    # privileged: ${RIE_PRIVILEGED:-true}
-    tty: ${RIE_TTY:-raw}
+      image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
+      # pull_policy: ${RIE_PULL_POLICY:-always}
+      # restart: ${RIE_RESTART:-unless-stopped}
+      # privileged: ${RIE_PRIVILEGED:-true}
+    tty: ${RIE_TTY:-true}
     stdin_open: ${RIE_STDIN_OPEN:-true}
     networks:
       default:
@@ -30,16 +30,16 @@ services:
       - http_proxy
       - https_proxy
       - no_proxy
-      - ENABLE_SERVICE_WEB_APP=true
-      - ENABLE_SERVICE_API=true
+      - ENABLE_SERVICE_WEB_APP=${RIE_ENABLE_SERVICE_WEB_APP:-true}
+      - ENABLE_SERVICE_API=${RIE_ENABLE_SERVICE_API:-true}
       # Database configuration
-      - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie_db}
+      - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie}
       - PG_DATABASE_USER=${RIE_DATABASE_USER:-rie}
       - PG_DATABASE_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
-      - PG_DATABASE_HOST=${RIE_DATABASE_HOST:-rie-db}
+      - PG_DATABASE_HOST=${RIE_DATABASE_HOST:-rie-postgresql}
       - PG_DATABASE_PORT=${RIE_DATABASE_PORT:-5432}
       # API configuration
-      - API_BASE_PATH=${RIE_API_BASE_PATH:-/donnees/api}
+      - API_BASE_PATH=${RIE_API_BASE_PATH:-/api}
       # - API_PORT=${RIE_API_PORT:-4000}
       - RIE_API_DOMAIN=${RIE_API_DOMAIN:-rie.example.com}
       - RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
@@ -65,13 +65,13 @@ services:
       - S3_BUCKET=${RIE_S3_BUCKET:-rie-storage}
       # Client configuration
       - RIE_CLIENT_DOMAIN=${RIE_CLIENT_DOMAIN:-rie.example.com}
-      - RIE_CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
+      - RIE_CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
       - CLIENT_DOMAIN=${RIE_CLIENT_DOMAIN:-rie.example.com}
-      - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
-      - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
+      - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
+      - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
       - "traefik.http.services.rie-${RIE_ENV_NAME}.loadbalancer.server.port=${RIE_TRAEFIK_SERVER_PORT:-}"
       - "traefik.http.routers.rie-${RIE_ENV_NAME}.entrypoints=${RIE_TRAEFIK_ENTRYPOINTS:-web}"
       - "traefik.http.routers.rie-${RIE_ENV_NAME}.rule=Host(`${RIE_TRAEFIK_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_TRAEFIK_BASE_PATH:-/}`)"
@@ -80,6 +80,7 @@ services:
       - "traefik.http.routers.rie-${RIE_ENV_NAME}.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
       - "traefik.http.routers.rie-${RIE_ENV_NAME}.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
+      - "homepage.enabled=${RIE_HOMEPAGE_ENABLED:-true}"
       - "homepage.group=${RIE_HOMEPAGE_GROUP:-RIÉ}"
       - "homepage.name=${RIE_HOMEPAGE_NAME:-RIÉ App}"
       - "homepage.icon=${RIE_HOMEPAGE_ICON:-}"
