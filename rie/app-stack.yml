@@ -20,14 +20,12 @@ services:
     privileged: ${RIE_PRIVILEGED:-false}
     # tty: ${RIE_TTY:-true}
     # stdin_open: ${RIE_STDIN_OPEN:-true}
-    # networks:
-    #   default:
-    #     aliases:
-    #       - rie-${RIE_ENV_NAME}--frontend
-    #       - rie-${RIE_ENV_NAME}--backend
+    networks:
+      default:
+        aliases:
+          - ${RIE_BACKEND_HOST:-rie-backend-host}
     volumes:
       - ${RIE_MOUNT_DATA:-rie_data}:/app/data
-    # mem_limit: ${RIE_MEMORY_LIMIT:-512M}
     environment:
       - TZ
       - http_proxy
