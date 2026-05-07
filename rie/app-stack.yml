@@ -73,6 +73,8 @@ services:
       - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
+      - NEXT_PUBLIC_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
+      - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/api}
     deploy:
       replicas: ${RIE_REPLICAS:-1}
       placement:
