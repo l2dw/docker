@@ -16,6 +16,9 @@ services:
 
   rie-postgresql:
     image: ${RIE_POSTGRESQL_IMAGE:-docker.io/postgres:15}
+    # TCP (e.g. -h service-name from other pods) requires listening beyond localhost;
+    # a persisted postgresql.conf may still say listen_addresses='localhost'.
+    command: ["postgres", "-c", "listen_addresses=*"]
     # pull_policy: ${RIE_PULL_POLICY:-always}
     # restart: ${RIE_RESTART:-unless-stopped}
     privileged: ${RIE_PRIVILEGED:-true}

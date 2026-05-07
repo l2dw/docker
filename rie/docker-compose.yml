@@ -17,6 +17,7 @@ services:
 
   rie-postgresql:
     image: ${RIE_POSTGRESQL_IMAGE:-docker.io/postgres:15}
+    command: ["postgres", "-c", "listen_addresses=*"]
     # container_name: rie-${RIE_ENV_NAME}--postgresql
     pull_policy: ${RIE_PULL_POLICY:-always}
     restart: ${RIE_RESTART:-unless-stopped}

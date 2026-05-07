@@ -16,6 +16,7 @@ services:
 
   rie-postgresql:
     image: ${RIE_POSTGRESQL_IMAGE:-docker.io/postgres:15}
+    command: ["postgres", "-c", "listen_addresses=*"]
     privileged: ${RIE_PRIVILEGED:-true}
     tty: ${RIE_TTY:-raw}
     stdin_open: ${RIE_STDIN_OPEN:-true}
