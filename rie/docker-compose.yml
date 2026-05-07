@@ -145,8 +145,8 @@ services:
       - http_proxy
       - https_proxy
       - no_proxy
-      - ENABLE_SERVICE_WEB_APP=${RIE_ENABLE_SERVICE_WEB_APP:-false}
-      - ENABLE_SERVICE_API=${RIE_ENABLE_SERVICE_API:-false}
+      - ENABLE_SERVICE_WEB_APP=false
+      - ENABLE_SERVICE_API=false
       # Database configuration
       - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie}
       - PG_DATABASE_USER=${RIE_DATABASE_USER:-rie}
