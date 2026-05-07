@@ -62,7 +62,7 @@ services:
       - S3_ENDPOINT=${RIE_S3_ENDPOINT:-https://s3.example.com}
       - S3_ACCESS_KEY=${RIE_S3_ACCESS_KEY:-your-s3-access-key}
       - S3_SECRET_KEY=${RIE_S3_SECRET_KEY:-your-s3-secret-key}
-      - S3_PROVIDER=${RIE_S3_PROVIDER:-your-s3-provider}
+      - S3_PROVIDER=${RIE_S3_PROVIDER:-minio}
       - S3_USE_SSL=${RIE_S3_USE_SSL:-true}
       - S3_REGION=${RIE_S3_REGION:-your-s3-region}
       - S3_BUCKET=${RIE_S3_BUCKET:-rie-storage}
