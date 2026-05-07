@@ -18,7 +18,7 @@ services:
     image: ${RIE_POSTGRESQL_IMAGE:-docker.io/postgres:15}
     command: ["postgres", "-c", "listen_addresses=*"]
     privileged: ${RIE_PRIVILEGED:-true}
-    tty: ${RIE_TTY:-raw}
+    tty: ${RIE_TTY:-true}
     stdin_open: ${RIE_STDIN_OPEN:-true}
     environment:
       - TZ=America/Toronto
@@ -52,8 +52,8 @@ services:
       - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie}
       - PG_DATABASE_USER=${RIE_DATABASE_USER:-rie}
       - PG_DATABASE_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
-      - PG_DATABASE_HOST=${RIE_POSTGRESQL_HOST:-rie-postgresql}
-      - PG_DATABASE_PORT=${RIE_POSTGRESQL_PORT:-5432}
+      - PG_DATABASE_HOST=${RIE_DATABASE_HOST:-rie-postgresql}
+      - PG_DATABASE_PORT=${RIE_DATABASE_PORT:-5432}
       # API configuration
       - API_BASE_PATH=${RIE_API_BASE_PATH:-/donnees/api}
       - API_PORT=${RIE_API_PORT:-4000}
@@ -153,8 +153,8 @@ services:
       - PG_DATABASE_NAME=${RIE_DATABASE_NAME:-rie_db}
       - PG_DATABASE_USER=${RIE_DATABASE_USER:-rie}
       - PG_DATABASE_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
-      - PG_DATABASE_HOST=${RIE_POSTGRESQL_HOST:-rie-postgresql}
-      - PG_DATABASE_PORT=${RIE_POSTGRESQL_PORT:-5432}
+      - PG_DATABASE_HOST=${RIE_DATABASE_HOST:-rie-postgresql}
+      - PG_DATABASE_PORT=${RIE_DATABASE_PORT:-5432}
       # API configuration
       - API_BASE_PATH=${RIE_API_BASE_PATH:-/donnees/api}
       - API_PORT=${RIE_API_PORT:-4000}

@@ -35,4 +35,4 @@ services:
     networks:
       default:
         aliases:
-          - ${RIE_POSTGRESQL_NETWORK_ALIAS:-rie-postgres}
+          - ${RIE_POSTGRESQL_NETWORK_ALIAS:-rie-postgresql}
