@@ -26,10 +26,13 @@ services:
       - ${RIE_MOUNT_DATA:-rie_data}:/data:z
     mem_limit: ${RIE_MEMORY_LIMIT:-1G}
     environment:
-      - TZ
-      - http_proxy
-      - https_proxy
-      - no_proxy
+      - TZ=${TZ:-America/Montreal}
+      - http_proxy=${HTTP_PROXY:-}
+      - https_proxy=${HTTPS_PROXY:-}
+      - no_proxy=${NO_PROXY:-}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
       - ENABLE_SERVICE_WEB_APP=${RIE_ENABLE_SERVICE_WEB_APP:-true}
       - ENABLE_SERVICE_API=${RIE_ENABLE_SERVICE_API:-true}
       # Database configuration
