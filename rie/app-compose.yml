@@ -42,6 +42,7 @@ services:
       - PG_DATABASE_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
       - PG_DATABASE_HOST=${RIE_DATABASE_HOST:-rie-postgresql}
       - PG_DATABASE_PORT=${RIE_DATABASE_PORT:-5432}
+      - PGPASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
       # API configuration
       - API_BASE_PATH=${RIE_API_BASE_PATH:-/api}
       # - API_PORT=${RIE_API_PORT:-4000}
@@ -94,19 +95,3 @@ services:
       - "homepage.description=${RIE_HOMEPAGE_DESCRIPTION:-}"
       - "homepage.siteMonitor=${RIE_HOMEPAGE_SITEMONITOR:-http://rie.example.com/}"
       - "homepage.ping=${RIE_HOMEPAGE_PING:-}"
-      # ## Web App configuration
-      # - "traefik.http.services.rie-${RIE_ENV_NAME}--frontend.loadbalancer.server.port=3000"
-      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.entrypoints=${RIE_FRONTEND_TRAEFIK_ENTRYPOINTS:-web}"
-      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.rule=Host(`${RIE_CLIENT_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_CLIENT_BASE_PATH:-/donnees}`)"
-      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.service=rie-${RIE_ENV_NAME}--frontend"
-      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.middlewares=${RIE_FRONTEND_TRAEFIK_MIDDLEWARES:-}"
-      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls=${RIE_FRONTEND_TRAEFIK_TLS_ENABLED:-false}"
-      # - "traefik.http.routers.rie-${RIE_ENV_NAME}--frontend.tls.certresolver=${RIE_FRONTEND_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
-      # ## Homepage configuration
-      # - "homepage.group=${RIE_FRONTEND_HOMEPAGE_GROUP:-RIÉ}"
-      # - "homepage.name=${RIE_FRONTEND_HOMEPAGE_NAME:-RIÉ Web App}"
-      # - "homepage.icon=${RIE_FRONTEND_HOMEPAGE_ICON:-}"
-      # - "homepage.href=${RIE_FRONTEND_HOMEPAGE_HREF:-http://rie.example.com/donnees}"
-      # - "homepage.description=${RIE_FRONTEND_HOMEPAGE_DESCRIPTION:-}"
-      # - "homepage.siteMonitor=${RIE_FRONTEND_HOMEPAGE_SITEMONITOR:-http://rie.example.com/donnees/fr}"
-      # - "homepage.ping=${RIE_FRONTEND_HOMEPAGE_PING:-http://rie:3000}"
