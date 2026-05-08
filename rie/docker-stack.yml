@@ -27,24 +27,19 @@ services:
       - POSTGRES_DB=${RIE_DATABASE_NAME:-rie_db}
     volumes:
       - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data
-      - ${RIE_MOUNT_DATA:-rie_data}:/app/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data
 
   rie-app:
     image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
     privileged: ${RIE_PRIVILEGED:-false}
     # tty: ${RIE_TTY:-true}
     # stdin_open: ${RIE_STDIN_OPEN:-true}
-    # networks:
-    #   default:
-    #     aliases:
-    #       - rie-${RIE_ENV_NAME}--backend
-    #       - rie-${RIE_ENV_NAME}--frontend
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/app/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data
     networks:
       default:
         aliases:
-          - ${RIE_BACKEND_HOST:-rie-backend-host}
+          - ${RIE_NETWORK_ALIAS:-rie-app}
     environment:
       - TZ
       - http_proxy
@@ -142,16 +137,10 @@ services:
     privileged: ${RIE_PRIVILEGED:-false}
     # tty: ${RIE_TTY:-}
     # stdin_open: ${RIE_STDIN_OPEN:-true}
-    # networks:
-    #   default:
-    #     aliases:
-    #       - rie-${RIE_ENV_NAME}--frontend
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/app/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data
     networks:
       default:
-        aliases:
-          - ${RIE_BACKEND_HOST:-rie-backend-host}
     environment:
       - TZ
       - http_proxy
@@ -206,5 +195,4 @@ services:
           - node.role==${RIE_WORKSPACE_PLACEMENT_NODE_ROLE:-manager}
       resources:
         limits:
-          cpus: ${RIE_CPU_LIMIT:-1}
           memory: 1G

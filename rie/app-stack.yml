@@ -23,9 +23,9 @@ services:
     networks:
       default:
         aliases:
-          - ${RIE_BACKEND_HOST:-rie-backend-host}
+          - ${RIE_NETWORK_ALIAS:-rie-app}
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/app/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data
     environment:
       - TZ
       - http_proxy
@@ -80,7 +80,6 @@ services:
           - node.role==${RIE_PLACEMENT_NODE_ROLE:-manager}
       resources:
         limits:
-          cpus: ${RIE_CPU_LIMIT:-1}
           memory: ${RIE_MEMORY_LIMIT:-512M}
       labels:
         - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
