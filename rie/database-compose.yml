@@ -8,7 +8,7 @@ volumes:
   rie_postgresql_data:
     name: ${RIE_POSTGRESQL_DATA_VOLUME_NAME:-rie_postgresql_data}
     external: ${RIE_POSTGRESQL_DATA_VOLUME_EXTERNAL:-false}
-  rie-data:
+  rie_data:
     name: ${RIE_DATA_VOLUME_NAME:-rie_data}
     external: ${RIE_DATA_VOLUME_EXTERNAL:-false}
 
