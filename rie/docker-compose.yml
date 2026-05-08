@@ -108,6 +108,8 @@ services:
       - NEXT_PUBLIC_API_HTTP_HOST=${RIE_API_DOMAIN:-rie.example.com}
       - NEXT_PUBLIC_API_PORT=443
       - NEXT_PUBLIC_API_BASE_PATH=${RIE_API_BASE_PATH:-/api}
+      - NEXT_PUBLIC_POSTHOG_KEY=${RIE_POSTHOG_KEY:-your-posthog-api-key}
+      - NEXT_PUBLIC_POSTHOG_HOST=${RIE_POSTHOG_HOST:-https://us.i.posthog.com}
     labels:
       - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
       - "traefik.http.services.rie-${RIE_ENV_NAME}--backend.loadbalancer.server.port=4000"
@@ -212,4 +214,6 @@ services:
       - NEXT_PUBLIC_API_HTTP_HOST=${RIE_API_DOMAIN:-rie.example.com}
       - NEXT_PUBLIC_API_PORT=443
       - NEXT_PUBLIC_API_BASE_PATH=/workspace${RIE_API_BASE_PATH:-/api}
+      - NEXT_PUBLIC_POSTHOG_KEY=${RIE_POSTHOG_KEY:-your-posthog-api-key}
+      - NEXT_PUBLIC_POSTHOG_HOST=${RIE_POSTHOG_HOST:-https://us.i.posthog.com}
 
