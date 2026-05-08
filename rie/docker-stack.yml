@@ -88,8 +88,14 @@ services:
       - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
-      - NEXT_PUBLIC_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
-      - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/donnees/api}
+      # Next.js configuration
+      - NEXT_PUBLIC_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
+      - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/api}
+      - NEXT_PUBLIC_RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
+      - NEXT_PUBLIC_API_HTTP_PROTOCOL=https
+      - NEXT_PUBLIC_API_HTTP_HOST=${RIE_API_DOMAIN:-rie.example.com}
+      - NEXT_PUBLIC_API_PORT=443
+      - NEXT_PUBLIC_API_BASE_PATH=${RIE_API_BASE_PATH:-/api}
     deploy:
       replicas: ${RIE_REPLICAS:-1}
       placement:
@@ -161,10 +167,10 @@ services:
       - PG_DATABASE_HOST=${RIE_DATABASE_HOST:-rie-postgresql}
       - PG_DATABASE_PORT=${RIE_DATABASE_PORT:-5432}
       # API configuration
-      - API_BASE_PATH=${RIE_API_BASE_PATH:-/donnees/api}
+      - API_BASE_PATH=/workspace${RIE_API_BASE_PATH:-/api}
       - API_PORT=${RIE_API_PORT:-4000}
       - RIE_API_DOMAIN=${RIE_API_DOMAIN:-rie.example.com}
-      - RIE_API_URL=${RIE_API_URL:-http://rie.example.com/donnees/api}
+      - RIE_API_URL=${RIE_API_URL:-http://rie.example.com/workspace/api}
       # Authentication
       - MICROSOFT_TENANT_ID=${RIE_MICROSOFT_TENANT_ID:-your-microsoft-tenant-id}
       - MICROSOFT_CLIENT_ID=${RIE_MICROSOFT_CLIENT_ID:-your-microsoft-client-id}
@@ -187,13 +193,19 @@ services:
       - S3_BUCKET=${RIE_S3_BUCKET:-rie-storage}
       # Client configuration
       - RIE_CLIENT_DOMAIN=${RIE_CLIENT_DOMAIN:-rie.example.com}
-      - RIE_CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
+      - RIE_CLIENT_BASE_PATH=/workspace${RIE_CLIENT_BASE_PATH:-/donnees}
       - CLIENT_DOMAIN=${RIE_CLIENT_DOMAIN:-rie.example.com}
       - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
-      - NEXT_PUBLIC_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/workspace}
-      - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/workspace/api}
+      # Next.js configuration
+      - NEXT_PUBLIC_BASE_PATH=/workspace${RIE_CLIENT_BASE_PATH:-/}
+      - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/api}
+      - NEXT_PUBLIC_RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
+      - NEXT_PUBLIC_API_HTTP_PROTOCOL=https
+      - NEXT_PUBLIC_API_HTTP_HOST=${RIE_API_DOMAIN:-rie.example.com}
+      - NEXT_PUBLIC_API_PORT=443
+      - NEXT_PUBLIC_API_BASE_PATH=/workspace${RIE_API_BASE_PATH:-/api}
     deploy:
       replicas: ${RIE_WORKSPACE_REPLICAS:-1}
       placement:

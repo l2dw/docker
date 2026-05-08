@@ -74,8 +74,14 @@ services:
       - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
+      # Next.js configuration
       - NEXT_PUBLIC_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
       - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/api}
+      - NEXT_PUBLIC_RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
+      - NEXT_PUBLIC_API_HTTP_PROTOCOL=https
+      - NEXT_PUBLIC_API_HTTP_HOST=${RIE_API_DOMAIN:-rie.example.com}
+      - NEXT_PUBLIC_API_PORT=443
+      - NEXT_PUBLIC_API_BASE_PATH=${RIE_API_BASE_PATH:-/api}
     labels:
       - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
       - "traefik.http.services.rie-${RIE_ENV_NAME}.loadbalancer.server.port=${RIE_TRAEFIK_SERVER_PORT:-}"
