@@ -34,8 +34,8 @@ services:
       - POSTGRES_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
       - POSTGRES_DB=${RIE_DATABASE_NAME:-rie}
     volumes:
-      - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
+      - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data:z
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
 
   rie-app:
     image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
@@ -46,8 +46,8 @@ services:
     tty: ${RIE_TTY:-true}
     stdin_open: ${RIE_STDIN_OPEN:-true}
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
-    mem_limit: ${RIE_MEMORY_LIMIT:-512M}
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
+    mem_limit: ${RIE_MEMORY_LIMIT:-1G}
     networks:
       default:
         aliases:
@@ -143,7 +143,7 @@ services:
     tty: ${RIE_TTY:-true}
     stdin_open: ${RIE_STDIN_OPEN:-true}
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
     mem_limit: 1G
     networks:
       default:

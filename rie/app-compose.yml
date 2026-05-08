@@ -23,8 +23,8 @@ services:
         aliases:
           - ${RIE_NETWORK_ALIAS:-rie-app}
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
-    mem_limit: ${RIE_MEMORY_LIMIT:-512M}
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
+    mem_limit: ${RIE_MEMORY_LIMIT:-1G}
     environment:
       - TZ
       - http_proxy

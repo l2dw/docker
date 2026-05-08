@@ -25,7 +25,7 @@ services:
         aliases:
           - ${RIE_NETWORK_ALIAS:-rie-app}
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
     environment:
       - TZ
       - http_proxy
@@ -80,7 +80,7 @@ services:
           - node.role==${RIE_PLACEMENT_NODE_ROLE:-manager}
       resources:
         limits:
-          memory: ${RIE_MEMORY_LIMIT:-512M}
+          memory: ${RIE_MEMORY_LIMIT:-1G}
       labels:
         - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
         - "traefik.http.services.rie-${RIE_ENV_NAME}.loadbalancer.server.port=${RIE_TRAEFIK_SERVER_PORT:-}"

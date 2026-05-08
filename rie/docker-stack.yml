@@ -26,8 +26,8 @@ services:
       - POSTGRES_PASSWORD=${RIE_DATABASE_PASSWORD:-rie123}
       - POSTGRES_DB=${RIE_DATABASE_NAME:-rie_db}
     volumes:
-      - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
+      - ${RIE_POSTGRESQL_MOUNT_DATA:-rie_postgresql_data}:/var/lib/postgresql/data:z
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
 
   rie-app:
     image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
@@ -35,7 +35,7 @@ services:
     # tty: ${RIE_TTY:-true}
     # stdin_open: ${RIE_STDIN_OPEN:-true}
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
     networks:
       default:
         aliases:
@@ -95,7 +95,7 @@ services:
       resources:
         limits:
           cpus: ${RIE_CPU_LIMIT:-1}
-          memory: ${RIE_MEMORY_LIMIT:-512M}
+          memory: ${RIE_MEMORY_LIMIT:-1G}
       labels:
         - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
         - "traefik.http.services.rie-${RIE_ENV_NAME}--backend.loadbalancer.server.port=4000"
@@ -138,7 +138,7 @@ services:
     # tty: ${RIE_TTY:-}
     # stdin_open: ${RIE_STDIN_OPEN:-true}
     volumes:
-      - ${RIE_MOUNT_DATA:-rie_data}:/data
+      - ${RIE_MOUNT_DATA:-rie_data}:/data:z
     networks:
       default:
     environment:
