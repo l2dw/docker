@@ -16,6 +16,7 @@ services:
       # pull_policy: ${RIE_PULL_POLICY:-always}
       # restart: ${RIE_RESTART:-unless-stopped}
       # privileged: ${RIE_PRIVILEGED:-true}
+    platform: linux/amd64
     tty: ${RIE_TTY:-true}
     stdin_open: ${RIE_STDIN_OPEN:-true}
     networks:

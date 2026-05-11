@@ -14,6 +14,7 @@ services:
 
   rie-app:
     image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
+    # platform: linux/amd64
     # container_name: ${RIE_FULLSTACK_CONTAINER_NAME:-rie-${RIE_ENV_NAME}--fullstack}
     # pull_policy: ${RIE_PULL_POLICY:-always}
     # restart: ${RIE_RESTART:-unless-stopped}

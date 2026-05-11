@@ -17,6 +17,7 @@ services:
 
   rie-postgresql:
     image: ${RIE_POSTGRESQL_IMAGE:-docker.io/postgres:15}
+    platform: linux/amd64
     command: ["postgres", "-c", "listen_addresses=*"]
     # container_name: rie-${RIE_ENV_NAME}--postgresql
     pull_policy: ${RIE_PULL_POLICY:-always}
@@ -39,6 +40,7 @@ services:
 
   rie-app:
     image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
+    platform: linux/amd64
     # container_name: rie-${RIE_ENV_NAME}--fullstack
     pull_policy: ${RIE_PULL_POLICY:-always}
     restart: ${RIE_RESTART:-unless-stopped}
@@ -153,6 +155,7 @@ services:
 
   rie-workspace:
     image: ${RIE_WORKSPACE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:workspace}
+    platform: linux/amd64
     pull_policy: ${RIE_PULL_POLICY:-always}
     restart: ${RIE_RESTART:-unless-stopped}
     privileged: ${RIE_PRIVILEGED:-false}

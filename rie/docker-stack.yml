@@ -16,6 +16,7 @@ services:
 
   rie-postgresql:
     image: ${RIE_POSTGRESQL_IMAGE:-docker.io/postgres:15}
+    # platform: linux/amd64
     command: ["postgres", "-c", "listen_addresses=*"]
     privileged: ${RIE_PRIVILEGED:-true}
     tty: ${RIE_TTY:-true}
@@ -31,6 +32,7 @@ services:
 
   rie-app:
     image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:latest}
+    # platform: linux/amd64
     privileged: ${RIE_PRIVILEGED:-false}
     # tty: ${RIE_TTY:-true}
     # stdin_open: ${RIE_STDIN_OPEN:-true}
@@ -150,6 +152,7 @@ services:
 
   rie-workspace:
     image: ${RIE_WORKSPACE_IMAGE:-atelier.cen.umontreal.ca/rie/rie-fullstack:workspace}
+    # platform: linux/amd64
     privileged: ${RIE_PRIVILEGED:-false}
     # tty: ${RIE_TTY:-}
     # stdin_open: ${RIE_STDIN_OPEN:-true}
