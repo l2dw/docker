@@ -48,6 +48,7 @@ services:
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
+      - NODE_ENV=${NODE_ENV:-production}
       - ENABLE_SERVICE_WEB_APP=${RIE_ENABLE_SERVICE_WEB_APP:-true}
       - ENABLE_SERVICE_API=${RIE_ENABLE_SERVICE_API:-true}
       # Database configuration
@@ -88,7 +89,11 @@ services:
       - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
+      - CLIENT_HTTP_PROTOCOL=${RIE_CLIENT_HTTP_PROTOCOL:-https}
+      - CLIENT_HTTP_HOST=${RIE_CLIENT_HTTP_HOST:-rie.example.com}
+      - CLIENT_HTTP_PORT=${RIE_CLIENT_HTTP_PORT:-443}
       # Next.js configuration
+      - NEXT_PUBLIC_VERSION=${RIE_VERSION:-}
       - NEXT_PUBLIC_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/}
       - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/api}
       - NEXT_PUBLIC_RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
@@ -159,6 +164,7 @@ services:
       - no_proxy=${NO_PROXY:-}
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NODE_ENV=${NODE_ENV:-production}
       - NO_PROXY=${NO_PROXY:-}
       - ENABLE_SERVICE_WEB_APP=false
       - ENABLE_SERVICE_API=false
@@ -200,7 +206,11 @@ services:
       - CLIENT_BASE_PATH=${RIE_CLIENT_BASE_PATH:-/donnees}
       - CLIENT_ORIGIN_URL=${RIE_CLIENT_ORIGIN_URL:-http://rie.example.com/donnees}
       - CLIENT_PORT=${RIE_CLIENT_PORT:-3000}
+      - CLIENT_HTTP_PROTOCOL=${RIE_CLIENT_HTTP_PROTOCOL:-https}
+      - CLIENT_HTTP_HOST=${RIE_CLIENT_HTTP_HOST:-rie.example.com}
+      - CLIENT_HTTP_PORT=${RIE_CLIENT_HTTP_PORT:-443}
       # Next.js configuration
+      - NEXT_PUBLIC_VERSION=${RIE_VERSION:-}
       - NEXT_PUBLIC_BASE_PATH=/workspace${RIE_CLIENT_BASE_PATH:-/}
       - NEXT_PUBLIC_API_FULL_URL=${RIE_API_URL:-http://rie.example.com/api}
       - NEXT_PUBLIC_RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
