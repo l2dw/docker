@@ -100,13 +100,13 @@ services:
           memory: ${RIE_MEMORY_LIMIT:-1G}
       labels:
         - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
-        - "traefik.http.services.rie-${RIE_ENV_NAME}.loadbalancer.server.port=${RIE_TRAEFIK_SERVER_PORT:-}"
-        - "traefik.http.routers.rie-${RIE_ENV_NAME}.entrypoints=${RIE_TRAEFIK_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.rie-${RIE_ENV_NAME}.rule=Host(`${RIE_TRAEFIK_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_TRAEFIK_BASE_PATH:-/}`)"
-        - "traefik.http.routers.rie-${RIE_ENV_NAME}.service=rie-${RIE_ENV_NAME}"
-        - "traefik.http.routers.rie-${RIE_ENV_NAME}.middlewares=${RIE_TRAEFIK_MIDDLEWARES:-}"
-        - "traefik.http.routers.rie-${RIE_ENV_NAME}.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
-        - "traefik.http.routers.rie-${RIE_ENV_NAME}.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.${APP_NAME:-rie-app}.loadbalancer.server.port=${RIE_TRAEFIK_SERVER_PORT:-}"
+        - "traefik.http.routers.${APP_NAME:-rie-app}.entrypoints=${RIE_TRAEFIK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-rie-app}.rule=Host(`${RIE_TRAEFIK_DOMAIN:-rie.example.com}`) && PathPrefix(`${RIE_TRAEFIK_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-rie-app}.service=${APP_NAME:-rie-app}"
+        - "traefik.http.routers.${APP_NAME:-rie-app}.middlewares=${RIE_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-rie-app}.tls=${RIE_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-rie-app}.tls.certresolver=${RIE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
         ## Homepage configuration
         - "homepage.enabled=${RIE_HOMEPAGE_ENABLED:-true}"
         - "homepage.group=${RIE_HOMEPAGE_GROUP:-RIÉ}"
