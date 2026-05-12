@@ -101,7 +101,7 @@ services:
       - NEXT_PUBLIC_RIE_API_URL=${RIE_API_URL:-http://rie.example.com/api}
       - NEXT_PUBLIC_API_HTTP_PROTOCOL=${RIE_API_HTTP_PROTOCOL:-https}
       - NEXT_PUBLIC_API_HTTP_HOST=${RIE_API_DOMAIN:-rie.example.com}
-      - NEXT_PUBLIC_API_PORT=${RIE_API_PORT:-443}
+      - NEXT_PUBLIC_API_PORT=${RIE_API_HTTP_PORT:-443}
       - NEXT_PUBLIC_API_BASE_PATH=${RIE_API_BASE_PATH:-/api}
       - NEXT_PUBLIC_POSTHOG_KEY=${RIE_POSTHOG_KEY:-your-posthog-api-key}
       - NEXT_PUBLIC_POSTHOG_HOST=${RIE_POSTHOG_HOST:-https://us.i.posthog.com}
