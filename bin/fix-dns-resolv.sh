@@ -4,8 +4,8 @@ sudo systemctl restart systemd-resolved
 # sudo systemctl disable systemd-resolved
 
 sudo tee /etc/resolv.conf << EOF > /dev/null
-nameserver 192.168.124.175
-nameserver 192.168.124.2
-nameserver 192.168.124.3
-search ocrx.arbutus-cloud arbutus ocrx.arbutus.cloud
+nameserver ${NAMESERVER1}
+nameserver ${NAMESERVER2}
+nameserver ${NAMESERVER3}
+search ${INFRA_NAME} ${INFRA_NAME}.${INFRA_DOMAIN} ${SEARCH_DOMAIN}
 EOF
