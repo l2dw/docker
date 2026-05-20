@@ -27,3 +27,6 @@ fi
 
 # Add admin user to docker group
 sudo usermod -aG docker $ADMIN_USER
+
+# Enable and start docker service
+sudo systemctl enable docker --now

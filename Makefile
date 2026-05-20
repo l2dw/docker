@@ -54,6 +54,11 @@ setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want
 	@$(BIN_DIR)/install-utilities-packages.sh
 	@$(BIN_DIR)/install-docker-ce.sh
 	@$(BIN_DIR)/fix-dns-resolv.sh
+	@$(BIN_DIR)/server-update.sh
+
+update-server: ## Update server
+	@echo "Updating server..."
+	@$(BIN_DIR)/server-update.sh
 
 deploy-infrastructure: ## Deploy infrastructure
 	@echo "Deploying infrastructure..."
