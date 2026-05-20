@@ -1,0 +1,48 @@
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  adguard_data:
+    name: ${ADGUARD_DATA_VOLUME_NAME:-adguard_data}
+    external: ${ADGUARD_DATA_VOLUME_EXTERNAL:-false}
+  adguard_logs:
+    name: ${ADGUARD_LOGS_VOLUME_NAME:-adguard_logs}
+    external: ${ADGUARD_LOGS_VOLUME_EXTERNAL:-false}
+
+services:
+  adguard:
+    image: ${ADGUARD_IMAGE:-adguard/adguard:latest}
+    pull_policy: ${ADGUARD_PULL_POLICY:-always}
+    restart: ${ADGUARD_RESTART:-unless-stopped}
+    privileged: ${ADGUARD_PRIVILEGED:-true}
+    ports:
+      - ${ADGUARD_PORT_TCP:-53}:53/tcp
+      - ${ADGUARD_PORT_UDP:-53}:53/udp
+    environment:
+      - TZ
+      - HTTP_PROXY
+      - HTTPS_PROXY
+      - NO_PROXY
+    volumes:
+      - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
+      - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
+    labels:
+      traefik.enable: "true"
+      traefik.http.services.adguard.loadbalancer.server.port: 80
+      traefik.http.routers.adguard.entrypoints: ${ADGUARD_TRAEFIK_ENTRYPOINTS:-web}
+      traefik.http.routers.adguard.rule: Host(`${ADGUARD_DOMAIN:-example.com}`) && PathPrefix(`${ADGUARD_BASE_PATH:-/}`)
+      traefik.http.routers.adguard.service: adguard
+      traefik.http.routers.adguard.middlewares: "${ADGUARD_TRAEFIK_MIDDLEWARES:-}"
+      traefik.http.routers.adguard.tls: "${ADGUARD_TRAEFIK_TLS_ENABLED:-false}"
+      traefik.http.routers.adguard.tls.certresolver: ${ADGUARD_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+      ## Homepage configuration
+      homepage.group: ${ADGUARD_HOMEPAGE_GROUP:-Infra}
+      homepage.name: ${ADGUARD_HOMEPAGE_NAME:-Adguard}
+      homepage.icon: ${ADGUARD_HOMEPAGE_ICON:-adguard.png}
+      homepage.href: ${ADGUARD_HOMEPAGE_HREF:-http://example.com}
+      homepage.description: ${ADGUARD_HOMEPAGE_DESCRIPTION:-}
+      homepage.siteMonitor: ${ADGUARD_HOMEPAGE_SITEMONITOR:-http://example.com}
+      homepage.ping: ${ADGUARD_HOMEPAGE_PING:-http://adguard:9000}

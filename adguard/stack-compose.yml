@@ -1,0 +1,62 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  adguard_conf:
+    name: ${ADGUARD_CONF_VOLUME_NAME:-adguard_conf}
+    external: ${ADGUARD_CONF_VOLUME_EXTERNAL:-false}
+  adguard_work:
+    name: ${ADGUARD_WORK_VOLUME_NAME:-adguard_work}
+    external: ${ADGUARD_WORK_VOLUME_EXTERNAL:-false}
+
+services:
+  adguard:
+    image: ${ADGUARD_IMAGE:-adguard/adguard:latest}
+    x-pull-policy: always
+    networks:
+      default:
+        alias: adguard-${APP_NAME:-adguard}
+    volumes:
+      - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
+      - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
+    environment:
+      - TZ
+      - HTTP_PROXY
+      - HTTPS_PROXY
+      - NO_PROXY
+    ports:
+      - target: 53
+        published: ${ADGUARD_PORT_TCP:-53}
+        protocol: tcp
+        mode: host
+      - target: 53
+        published: ${ADGUARD_PORT_UDP:-53}
+        protocol: udp
+        mode: host
+    ## Deploy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==${ADGUARD_PLACEMENT_CONSTRAINTS:-manager}
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.adguard.loadbalancer.server.port: 9000
+        traefik.http.routers.adguard.entrypoints: ${ADGUARD_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.adguard.rule: Host(`${ADGUARD_DOMAIN:-example.com}`) && PathPrefix(`${ADGUARD_BASE_PATH:-/}`)
+        traefik.http.routers.adguard.service: adguard
+        traefik.http.routers.adguard.middlewares: "${ADGUARD_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.adguard.tls: "${ADGUARD_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.adguard.tls.certresolver: ${ADGUARD_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${ADGUARD_HOMEPAGE_GROUP:-Infra}
+        homepage.name: ${ADGUARD_HOMEPAGE_NAME:-Adguard}
+        homepage.icon: ${ADGUARD_HOMEPAGE_ICON:-adguard.png}
+        homepage.href: ${ADGUARD_HOMEPAGE_HREF:-http://example.com}
+        homepage.description: ${ADGUARD_HOMEPAGE_DESCRIPTION:-}
+        homepage.siteMonitor: ${ADGUARD_HOMEPAGE_SITEMONITOR:-http://example.com}
+        homepage.ping: ${ADGUARD_HOMEPAGE_PING:-http://adguard:9000}
+
+
