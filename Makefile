@@ -11,8 +11,14 @@ BIN_DIR=./bin
 # BACKUPS_DIR=$(APPDATA_DIR)/backups
 
 # Export environment variables from .env file if it exists
-ifneq ($(wildcard .env),)
-	export $(shell sed 's/=.*//' .env)
+ENV_FILE ?= $(CURDIR)/.env
+ENV_EXPORT_KEYS := $(shell test -f "$(ENV_FILE)" && sed -n '/^[[:space:]]*\#/d;/^[[:space:]]*$$/d;/^[A-Za-z_][A-Za-z0-9_]*=/s/=.*$$//p' "$(ENV_FILE)" 2>/dev/null | tr '\n' ' ')
+
+ifneq (,$(wildcard $(ENV_FILE)))
+-include $(ENV_FILE)
+ifneq (,$(strip $(ENV_EXPORT_KEYS)))
+export $(ENV_EXPORT_KEYS)
+endif
 endif
 
 
