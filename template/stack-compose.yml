@@ -14,6 +14,7 @@ volumes:
 services:
   tpl:
     image: ${TPL_IMAGE:-tpl/tpl:latest}
+    x-pull-policy: always
     volumes:
       - ${TPL_MOUNT_DATA:-tpl_data}:/var/tpl
       - ${TPL_MOUNT_LOGS:-tpl_logs}:/var/log/tpl
