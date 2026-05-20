@@ -46,6 +46,7 @@ services:
   dokploy-postgresql:
     # Swarm rejects compose `platform` (docker stack deploy). On ARM hosts use a multi-arch image (default postgres:16) or Postgres/PostGIS on amd64/non-Swarm.
     image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
+    x-pull-policy: always
     user: postgres
     environment:
       - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
@@ -112,6 +113,7 @@ services:
   ## On manager node create dirs first: sudo mkdir -p /etc/dokploy /root/.docker
   dokploy:
     image: dokploy/dokploy:latest
+    x-pull-policy: always
     environment:
       - ADVERTISE_ADDR=${ADVERTISE_ADDR}
       - DATABASE_URL=${DOKPLOY_DATABASE_URL:-postgres://dokploy:ChangeMe@dokploy-postgresql:5432/dokploy}
@@ -159,6 +161,7 @@ services:
   ## traefik
   dokploy-traefik:
     image: traefik:latest
+    x-pull-policy: always
     environment:
       - TZ=${TZ:-America/Toronto}
     ports:
