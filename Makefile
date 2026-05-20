@@ -10,7 +10,10 @@ ENV=prod
 BIN_DIR=./bin
 # BACKUPS_DIR=$(APPDATA_DIR)/backups
 
-# Executables
+# Export environment variables from .env file if it exists
+ifneq ($(wildcard .env),)
+	export $(shell sed 's/=.*//' .env)
+endif
 
 
 USE_CACHE = "yes"
