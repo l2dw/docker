@@ -10,23 +10,27 @@ volumes:
   adguard_work:
     name: ${ADGUARD_WORK_VOLUME_NAME:-adguard_work}
     external: ${ADGUARD_WORK_VOLUME_EXTERNAL:-false}
+  adguard_home:
+    name: ${ADGUARD_HOME_VOLUME_NAME:-adguard_home}
+    external: ${ADGUARD_HOME_VOLUME_EXTERNAL:-false}
 
 services:
   adguard:
-    image: ${ADGUARD_IMAGE:-adguard/adguard:latest}
+    image: ${ADGUARD_IMAGE:-docker.io/adguard/adguardhome:latest}
     x-pull-policy: always
     networks:
       default:
         aliases:
           - adguard-${APP_NAME:-adguard}
     volumes:
-      - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
-      - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
+      - ${ADGUARD_MOUNT_HOME:-adguard_home}:/opt/adguardhome
+      # - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
+      # - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
     environment:
-      - TZ
-      - HTTP_PROXY
-      - HTTPS_PROXY
-      - NO_PROXY
+      - TZ=${TZ}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
     ports:
       - target: 53
         published: ${ADGUARD_PORT_TCP:-53}
