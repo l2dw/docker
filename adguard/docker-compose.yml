@@ -28,15 +28,16 @@ services:
     ports:
       - ${ADGUARD_PORT_TCP:-53}:53/tcp
       - ${ADGUARD_PORT_UDP:-53}:53/udp
+      - ${ADGUARD_PORT_NODEJS:-34000}:3000/tcp
     environment:
       - TZ=${TZ}
       - HTTP_PROXY=${HTTP_PROXY}
       - HTTPS_PROXY=${HTTPS_PROXY}
       - NO_PROXY=${NO_PROXY}
     volumes:
-      - ${ADGUARD_MOUNT_HOME:-adguard_home}:/opt/adguardhome
-      # - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
-      # - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
+      # - ${ADGUARD_MOUNT_HOME:-adguard_home}:/opt/adguardhome
+      - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
+      - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
     labels:
       traefik.enable: "true"
       traefik.http.services.adguard.loadbalancer.server.port: 80

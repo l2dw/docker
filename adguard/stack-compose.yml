@@ -23,9 +23,9 @@ services:
         aliases:
           - adguard-${APP_NAME:-adguard}
     volumes:
-      - ${ADGUARD_MOUNT_HOME:-adguard_home}:/opt/adguardhome
-      # - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
-      # - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
+      # - ${ADGUARD_MOUNT_HOME:-adguard_home}:/opt/adguardhome
+      - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
+      - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
     environment:
       - TZ=${TZ}
       - HTTP_PROXY=${HTTP_PROXY}
@@ -39,6 +39,10 @@ services:
       - target: 53
         published: ${ADGUARD_PORT_UDP:-53}
         protocol: udp
+        mode: host
+      - target: 3000
+        published: ${ADGUARD_PORT_NODEJS:-34000}
+        protocol: tcp
         mode: host
     ## Deploy
     deploy:
