@@ -17,7 +17,8 @@ services:
     x-pull-policy: always
     networks:
       default:
-        alias: adguard-${APP_NAME:-adguard}
+        aliases:
+          - adguard-${APP_NAME:-adguard}
     volumes:
       - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
       - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work

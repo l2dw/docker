@@ -18,6 +18,10 @@ services:
     pull_policy: ${ADGUARD_PULL_POLICY:-always}
     restart: ${ADGUARD_RESTART:-unless-stopped}
     privileged: ${ADGUARD_PRIVILEGED:-true}
+    networks:
+      default:
+        aliases:
+          - adguard-${APP_NAME:-adguard}
     ports:
       - ${ADGUARD_PORT_TCP:-53}:53/tcp
       - ${ADGUARD_PORT_UDP:-53}:53/udp
