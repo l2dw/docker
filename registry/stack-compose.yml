@@ -1,0 +1,55 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  registry_data:
+    name: ${REGISTRY_DATA_VOLUME_NAME:-registry_data}
+    external: ${REGISTRY_DATA_VOLUME_EXTERNAL:-false}
+  # registry_logs:
+  #   name: ${REGISTRY_LOGS_VOLUME_NAME:-registry_logs}
+  #   external: ${REGISTRY_LOGS_VOLUME_EXTERNAL:-false}
+
+services:
+  registry:
+    image: ${REGISTRY_IMAGE:-docker.io/registry:2}
+    x-pull-policy: always
+    volumes:
+      - ${REGISTRY_DATA:-registry_data}:/var/lib/registry
+      - ${REGISTRY_PASSWORD_FILE:-./registry.password}:/auth/registry.password
+      # - ${REGISTRY_MOUNT_LOGS:-registry_logs}:/var/log/registry
+      # - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    environment:
+      TZ: ${TZ}
+      REGISTRY_STORAGE_DELETE_ENABLED: ${REGISTRY_STORAGE_DELETE_ENABLED:-true}
+      REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: ${REGISTRY_HEALTH_STORAGEDRIVER_ENABLED:-true}
+      REGISTRY_HTTP_SECRET: ${REGISTRY_HTTP_SECRET:-}
+      REGISTRY_AUTH: ${REGISTRY_AUTH:-htpasswd}
+      REGISTRY_AUTH_HTPASSWD_REALM: ${REGISTRY_AUTH_HTPASSWD_REALM:-Registry Realm}
+      REGISTRY_AUTH_HTPASSWD_PATH: ${REGISTRY_AUTH_HTPASSWD_PATH:-/auth/registry.password}
+    ## Deploy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==${REGISTRY_PLACEMENT_CONSTRAINTS:-manager}
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.registry.loadbalancer.server.port: 5000
+        traefik.http.routers.registry.entrypoints: ${REGISTRY_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.registry.rule: Host(`${REGISTRY_DOMAIN:-registry.example.com}`) && PathPrefix(`${REGISTRY_BASE_PATH:-/}`)
+        traefik.http.routers.registry.service: registry
+        traefik.http.routers.registry.middlewares: "${REGISTRY_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.registry.tls: "${REGISTRY_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.registry.tls.certresolver: ${REGISTRY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${REGISTRY_HOMEPAGE_GROUP:-}
+        homepage.name: ${REGISTRY_HOMEPAGE_NAME:-Registry}
+        homepage.icon: ${REGISTRY_HOMEPAGE_ICON:-registry.png}
+        homepage.href: ${REGISTRY_HOMEPAGE_HREF:-http://registry.example.com}
+        homepage.description: ${REGISTRY_HOMEPAGE_DESCRIPTION:-}
+        homepage.siteMonitor: ${REGISTRY_HOMEPAGE_SITEMONITOR:-http://registry.example.com}
+        homepage.ping: ${REGISTRY_HOMEPAGE_PING:-}
+
+

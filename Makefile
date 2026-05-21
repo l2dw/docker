@@ -210,63 +210,63 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-## —— 🐝 tpl commands ———————————————————————————————————
-TPL := tpl
-TPL_SERVICES := tpl
-TPL_PODS := tpl
+## —— 🐝 registry commands ———————————————————————————————————
+REGISTRY := registry
+REGISTRY_SERVICES := registry
+REGISTRY_PODS := registry
 
-tpl-deploy: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL)
+registry-deploy: ## Deploy the registry stack
+	$(MAKE) stack-deploy STACK_NAME=$(REGISTRY)
 
-tpl-remove: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL)
-tpl-redeploy: tpl-remove tpl-deploy ## Recreate the tpl stack
+registry-remove: ## Remove the registry stack
+	$(MAKE) stack-rm STACK_NAME=$(REGISTRY)
+registry-redeploy: registry-remove registry-deploy ## Recreate the registry stack
 
-tpl-stack-deploy: tpl-deploy ## Deploy the tpl stack
-tpl-stack-remove: tpl-remove ## Remove the tpl stack
+registry-stack-deploy: registry-deploy ## Deploy the registry stack
+registry-stack-remove: registry-remove ## Remove the registry stack
 
-tpl-stack-redeploy: tpl-redeploy ## Recreate the tpl stack
+registry-stack-redeploy: registry-redeploy ## Recreate the registry stack
 
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL)
+registry-stack-logs: ## Show logs of the registry stack
+	$(MAKE) stack-logs STACK_NAME=$(REGISTRY)
 
-tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL)
+registry-stack-watch: ## Watch logs of the registry stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(REGISTRY)
 
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL))"
-	@$(DOCKER) stack services $(TPL) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+registry-stack-debug: ## Debug registry swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(REGISTRY))"
+	@$(DOCKER) stack services $(REGISTRY) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${TPL}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL)_' \
+	@echo "--- docker service ls (${REGISTRY}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(REGISTRY) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(REGISTRY)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL))"
-	@$(DOCKER) stack ps $(TPL) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(REGISTRY))"
+	@$(DOCKER) stack ps $(REGISTRY) --no-trunc
 	@echo
-	@for s in $(TPL_SERVICES); do \
-		echo "==================== $(TPL)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(REGISTRY_SERVICES); do \
+		echo "==================== $(REGISTRY)_$$s ===================="; \
+		$(DOCKER) service logs "$(REGISTRY)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
-tpl-up: ## Deploy the tpl project
-	$(MAKE) docker-project-up PROJECT_NAME=$(TPL)
+registry-up: ## Deploy the registry project
+	$(MAKE) docker-project-up PROJECT_NAME=$(REGISTRY)
 
-tpl-down: ## Remove the tpl project
-	$(MAKE) docker-project-down PROJECT_NAME=$(TPL)
+registry-down: ## Remove the registry project
+	$(MAKE) docker-project-down PROJECT_NAME=$(REGISTRY)
 
-tpl-recreate: tpl-down tpl-up ## Recreate the tpl project
+registry-recreate: registry-down registry-up ## Recreate the registry project
 
-tpl-compose-up: tpl-up ## Deploy the tpl project
+registry-compose-up: registry-up ## Deploy the registry project
 
-tpl-compose-down: tpl-down # Remove the tpl project
+registry-compose-down: registry-down # Remove the registry project
 
-tpl-compose-recreate: tpl-recreate ## Recreate the tpl project
+registry-compose-recreate: registry-recreate ## Recreate the registry project
 
-tpl-compose-logs: ## Show logs of the tpl project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(TPL)
+registry-compose-logs: ## Show logs of the registry project
+	$(MAKE) docker-project-logs PROJECT_NAME=$(REGISTRY)
 
-tpl-compose-watch: ## Watch logs of the tpl project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(TPL)
+registry-compose-watch: ## Watch logs of the registry project
+	$(MAKE) docker-project-watch PROJECT_NAME=$(REGISTRY)
