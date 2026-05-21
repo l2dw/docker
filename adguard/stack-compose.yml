@@ -48,7 +48,7 @@ services:
           - node.role==${ADGUARD_PLACEMENT_CONSTRAINTS:-manager}
       labels:
         traefik.enable: "true"
-        traefik.http.services.adguard.loadbalancer.server.port: 9000
+        traefik.http.services.adguard.loadbalancer.server.port: 80
         traefik.http.routers.adguard.entrypoints: ${ADGUARD_TRAEFIK_ENTRYPOINTS:-web}
         traefik.http.routers.adguard.rule: Host(`${ADGUARD_DOMAIN:-example.com}`) && PathPrefix(`${ADGUARD_BASE_PATH:-/}`)
         traefik.http.routers.adguard.service: adguard
@@ -56,12 +56,12 @@ services:
         traefik.http.routers.adguard.tls: "${ADGUARD_TRAEFIK_TLS_ENABLED:-false}"
         traefik.http.routers.adguard.tls.certresolver: ${ADGUARD_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
         ## Homepage configuration
-        homepage.group: ${ADGUARD_HOMEPAGE_GROUP:-Infra}
+        homepage.group: ${ADGUARD_HOMEPAGE_GROUP:-}
         homepage.name: ${ADGUARD_HOMEPAGE_NAME:-Adguard}
         homepage.icon: ${ADGUARD_HOMEPAGE_ICON:-adguard.png}
-        homepage.href: ${ADGUARD_HOMEPAGE_HREF:-http://example.com}
+        homepage.href: ${ADGUARD_HOMEPAGE_HREF:-http://adguard.example.com}
         homepage.description: ${ADGUARD_HOMEPAGE_DESCRIPTION:-}
-        homepage.siteMonitor: ${ADGUARD_HOMEPAGE_SITEMONITOR:-http://example.com}
-        homepage.ping: ${ADGUARD_HOMEPAGE_PING:-http://adguard:9000}
+        homepage.siteMonitor: ${ADGUARD_HOMEPAGE_SITEMONITOR:-http://adguard.example.com}
+        homepage.ping: ${ADGUARD_HOMEPAGE_PING:-http://adguard.example.com}
 
 
