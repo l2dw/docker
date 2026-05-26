@@ -112,3 +112,6 @@ git config --global user.name "${ADMIN_USER}"
 git config --global user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 
 sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
+
+## Replace localhost with the IP address in /etc/hosts : 127.0.0.1 localhost
+sudo sed -i "s/127.0.0.1 .*/127.0.0.1 localhost ${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}/g" /etc/hosts
