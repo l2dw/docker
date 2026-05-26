@@ -2,6 +2,7 @@
 sudo sed -i 's/^#DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf
 sudo systemctl restart systemd-resolved
 # sudo systemctl disable systemd-resolved
+sudo rm /etc/resolv.conf
 
 sudo tee /etc/resolv.conf << EOF > /dev/null
 nameserver ${NAMESERVER1}
