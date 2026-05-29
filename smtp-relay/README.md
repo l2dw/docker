@@ -6,24 +6,24 @@
 # Run from devops/docker-templates (parent of the smtp/ folder)
 
 ## 1. copy and adjust .env from .env.example
-make smtp-deploy
-make smtp-remove
-make smtp-redeploy
-make smtp-stack-logs
-make smtp-stack-watch
-make smtp-stack-debug
+make smtp-relay-relay-deploy
+make smtp-relay-remove
+make smtp-relay-redeploy
+make smtp-relay-stack-logs
+make smtp-relay-stack-watch
+make smtp-relay-stack-debug
 # compose
-make smtp-up
-make smtp-down
-make smtp-recreate
-make smtp-compose-logs
-make smtp-compose-watch
-make smtp-test-send
+make smtp-relay-up
+make smtp-relay-down
+make smtp-relay-recreate
+make smtp-relay-compose-logs
+make smtp-relay-compose-watch
+make smtp-relay-test-send
 ```
 
 ## Configuration
 
-Copy `smtp/.env.example` into the parent `devops/docker-templates/.env` (Makefile exports those keys for `make smtp-up` / `make smtp-deploy`). Adjust `SMTP_RELAY_NETWORKS` so it starts with `:` and lists the subnets allowed to submit mail on port 25.
+Copy `smtp/.env.example` into the parent `devops/docker-templates/.env` (Makefile exports those keys for `make smtp-relay-up` / `make smtp-relay-deploy`). Adjust `SMTP_RELAY_NETWORKS` so it starts with `:` and lists the subnets allowed to submit mail on port 25.
 
 The image is [namshi/smtp](https://github.com/namshi/docker-smtp). Compose maps `SMTP_RELAY_*` to `GMAIL_*` (Gmail) or `SMARTHOST_*` (other upstream hosts). Do not set both modes unless you intend Gmail to take precedence.
 
@@ -42,7 +42,7 @@ SMTP_RELAY_HOST=smtp.gmail.com
 SMTP_RELAY_PORT=587
 SMTP_RELAY_USER=you@yourdomain.com
 SMTP_RELAY_PASS=your-app-password
-SMTP_RELAY_SMARTHOST_ALIASES=*.gmail.com
+SMTP_RELAY_ALIASES=*.gmail.com
 ```
 
 
@@ -60,14 +60,14 @@ SMTP_RELAY_SMARTHOST_ALIASES=*.google.com
 
 ## Testing
 
-Run these from `devops/docker-templates` after `make smtp-up` (or `make smtp-deploy` on Swarm).
+Run these from `devops/docker-templates` after `make smtp-relay-up` (or `make smtp-relay-deploy` on Swarm).
 
 ### 1. Container and port
 
 ```sh
 docker ps --filter name=smtp
-make smtp-compose-logs
-# or: docker logs -f smtp-smtp-1
+make smtp-relay-compose-logs
+# or: docker logs -f smtp-relay-smtp-relay-1
 ```
 
 Expect the container **Up** and port **25** published (e.g. `0.0.0.0:25->25/tcp`). Change the host port with `SMTP_RELAY_NODE_PORT` in `.env` if 25 is already in use.
@@ -98,10 +98,10 @@ Clients must be allowed by `SMTP_RELAY_NETWORKS` (must start with `:`). On Docke
 
 ```sh
 export SMTP_HOST=127.0.0.1 SMTP_PORT=25 SMTP_TO=you@example.com SMTP_FROM=you@gmail.com
-make smtp-test-send
+make smtp-relay-test-send
 
 ./bin/send-test-email.sh --from you@gmail.com --to someone@example.com --host 127.0.0.1 --port 25
-make smtp-test-send ARGS='--to someone@example.com'
+make smtp-relay-test-send ARGS='--to someone@example.com'
 ```
 
 CLI flags `--from`, `--to`, `--host`, `--port` override `SMTP_FROM`, `SMTP_TO`, `SMTP_HOST`, `SMTP_PORT`. Optional: `SMTP_SUBJECT`, `SMTP_BODY`. Default sender is `$HOSTNAME@$DOMAIN` (system hostname + `SMTP_MAILNAME` or `local`). Uses `swaks` if installed, otherwise `python3`.
@@ -146,7 +146,7 @@ Success at the relay: `250` after the message body (`.` on its own line). Failur
 While sending, watch logs:
 
 ```sh
-make smtp-compose-watch
+make smtp-relay-compose-watch
 ```
 
 Look for:
@@ -161,7 +161,7 @@ Confirm delivery in the recipient inbox (check spam). Delivery can take a minute
 
 ### 5. Test from an application
 
-Point the app at `host:25` (or the server hostname when remote). TLS is between the relay and the upstream provider, not required on the local hop to this container. Send one message and compare application logs with `make smtp-compose-logs`.
+Point the app at `host:25` (or the server hostname when remote). TLS is between the relay and the upstream provider, not required on the local hop to this container. Send one message and compare application logs with `make smtp-relay-compose-logs`.
 
 ### Checklist
 
@@ -176,6 +176,6 @@ Point the app at `host:25` (or the server hostname when remote). TLS is between 
 ### Common failures
 
 - **Relay rejects the client** — widen `SMTP_RELAY_NETWORKS` to include your Docker bridge or LAN subnet.
-- **Gmail `530 Authentication Required`** — relay accepted mail locally but Gmail rejected AUTH. For `smtp.gmail.com`, set `SMTP_RELAY_SMARTHOST_ALIASES=*.gmail.com` (namshi matches `passwd.client` by host name), plus user/pass; recreate the stack. Check `docker exec smtp-smtp-1 cat /etc/exim4/passwd.client` shows `*.gmail.com:...`. If the file exists and AUTH still fails, regenerate the [App Password](https://myaccount.google.com/apppasswords) (16 characters, no spaces in `.env`).
+- **Gmail `530 Authentication Required`** — relay accepted mail locally but Gmail rejected AUTH. For `smtp.gmail.com`, set `SMTP_RELAY_SMARTHOST_ALIASES=*.gmail.com` (namshi matches `passwd.client` by host name), plus user/pass; recreate the stack. Check `docker exec smtp-relay-smtp-relay-1 cat /etc/exim4/passwd.client` shows `*.gmail.com:...`. If the file exists and AUTH still fails, regenerate the [App Password](https://myaccount.google.com/apppasswords) (16 characters, no spaces in `.env`).
 - **Port 25 in use on the host** — set `SMTP_RELAY_NODE_PORT=2525` and test against that port.
 - **linux/amd64 on Apple Silicon** — image may run under emulation; check logs for crashes or timeouts.

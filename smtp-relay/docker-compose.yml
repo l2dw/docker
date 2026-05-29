@@ -1,0 +1,38 @@
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+
+services:
+  smtp-relay-relay:
+    image: ${SMTP_RELAY_IMAGE:-namshi/smtp:latest}
+    pull_policy: ${SMTP_RELAY_PULL_POLICY:-always}
+    restart: ${SMTP_RELAY_RESTART:-unless-stopped}
+    environment:
+      TZ: ${TZ}
+      MAILNAME: ${SMTP_RELAY_MAILNAME:-smtp.example.com}
+      RELAY_NETWORKS: ${SMTP_RELAY_NETWORKS:-:192.168.31.0/16:10.16.0.0/8}
+      SMARTHOST_ADDRESS: ${SMTP_RELAY_HOST:-}
+      SMARTHOST_PORT: ${SMTP_RELAY_PORT:-}
+      SMARTHOST_USER: ${SMTP_RELAY_USER:-}
+      SMARTHOST_PASSWORD: ${SMTP_RELAY_PASS:-}
+      SMARTHOST_ALIASES: ${SMTP_RELAY_ALIASES:-}
+    mem_limit: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
+    ports:
+      - ${SMTP_RELAY_NODEPORT:-25}:25
+    labels:
+      # traefik.enable: "true"
+      # traefik.tcp.services.smtp-relay-relay.loadbalancer.server.port: 25
+      # traefik.tcp.routers.smtp-relay-relay.entrypoints: ${SMTP_TRAEFIK_ENTRYPOINTS:-web}
+      # traefik.tcp.routers.smtp-relay-relay.rule: Host(`${SMTP_RELAY_DOMAIN:-smtp.example.com}`) && PathPrefix(`${SMTP_RELAY_BASE_PATH:-/}`)
+      # traefik.tcp.routers.smtp-relay-relay.service: smtp-relay-relay
+      ## Homepage configuration
+      homepage.group: ${SMTP_RELAY_HOMEPAGE_GROUP:-}
+      homepage.name: ${SMTP_RELAY_HOMEPAGE_NAME:-smtp}
+      homepage.icon: ${SMTP_RELAY_HOMEPAGE_ICON:-smtp.png}
+      # homepage.href: ${SMTP_RELAY_HOMEPAGE_HREF:-http://smtp.example.com}
+      homepage.description: ${SMTP_RELAY_HOMEPAGE_DESCRIPTION:-}
+      # homepage.siteMonitor: ${SMTP_RELAY_HOMEPAGE_SITEMONITOR:-http://smtp.example.com}
+      homepage.ping: ${SMTP_RELAY_HOMEPAGE_PING:-}

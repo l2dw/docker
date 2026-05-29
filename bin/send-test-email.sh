@@ -22,7 +22,17 @@ Environment (export before running, or pass via make):
   SMTP_FROM     sender (default: `hostname`)
   SMTP_SUBJECT  message subject (default: smtp test)
   SMTP_BODY     message body
+  TZ            timezone for Date header and default body stamp (e.g. America/Montreal)
 EOF
+}
+
+# Local time in TZ (exported by make from .env); avoids UTC-only body timestamps.
+now_local() {
+  TZ=${TZ:-UTC} date '+%Y-%m-%d %H:%M:%S %Z'
+}
+
+mail_date_header() {
+  TZ=${TZ:-UTC} date '+%a, %d %b %Y %H:%M:%S %z'
 }
 
 arg_from=
@@ -84,45 +94,45 @@ if [ -z "$to" ]; then
 fi
 
 if [ -z "$from" ]; then
-  if [ -n "${SMTP_SMARTHOST_USER:-}" ]; then
-    from=$SMTP_SMARTHOST_USER
-  else
     mailname=${SMTP_MAILNAME:-smtp.local}
     from="noreply@${mailname}"
-  fi
 fi
 
 subject=${SMTP_SUBJECT:-smtp test}
-body=${SMTP_BODY:-Test message from send-test-email.sh at $(date -u '+%Y-%m-%d %H:%M:%S UTC').}
+date_hdr=$(mail_date_header)
+body=${SMTP_BODY:-Test message from send-test-email.sh at $(now_local).}
 
 echo "Sending test mail"
 echo "  server:  ${host}:${port}"
 echo "  from:    ${from}"
 echo "  to:      ${to}"
 echo "  subject: ${subject}"
+echo "  date:    ${date_hdr}"
 
 if command -v swaks >/dev/null 2>&1; then
   exec swaks \
     --server "${host}:${port}" \
     --from "$from" \
     --to "$to" \
+    --header "Date: ${date_hdr}" \
     --header "Subject: ${subject}" \
     --body "$body"
 fi
 
 if command -v python3 >/dev/null 2>&1; then
-  exec python3 - "$host" "$port" "$from" "$to" "$subject" "$body" <<'PY'
+  exec python3 - "$host" "$port" "$from" "$to" "$subject" "$body" "$date_hdr" <<'PY'
 import smtplib
 import sys
 from email.message import EmailMessage
 
-host, port_s, from_addr, to_addr, subject, body = sys.argv[1:7]
+host, port_s, from_addr, to_addr, subject, body, date_hdr = sys.argv[1:8]
 port = int(port_s)
 
 msg = EmailMessage()
 msg["From"] = from_addr
 msg["To"] = to_addr
 msg["Subject"] = subject
+msg["Date"] = date_hdr
 msg.set_content(body)
 
 with smtplib.SMTP(host, port, timeout=30) as smtp:

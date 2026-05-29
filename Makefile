@@ -205,65 +205,65 @@ stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — ke
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
 ## —— 🐝 smtp commands ———————————————————————————————————
-SMTP := smtp
-SMTP_SERVICES := smtp
-SMTP_PODS := smtp
+SMTP_RELAY := smtp-relay
+SMTP_RELAY_SERVICES := smtp-relay
+SMTP_RELAY_PODS := smtp-relay
 
-smtp-deploy: ## Deploy the smtp stack
-	$(MAKE) stack-deploy STACK_NAME=$(SMTP)
+smtp-relay-deploy: ## Deploy the smtp stack
+	$(MAKE) stack-deploy STACK_NAME=$(SMTP_RELAY)
 
-smtp-remove: ## Remove the smtp stack
-	$(MAKE) stack-rm STACK_NAME=$(SMTP)
-smtp-redeploy: smtp-remove smtp-deploy ## Recreate the smtp stack
+smtp-relay-remove: ## Remove the smtp stack
+	$(MAKE) stack-rm STACK_NAME=$(SMTP_RELAY)
+smtp-relay-redeploy: smtp-relay-remove smtp-relay-deploy ## Recreate the smtp stack
 
-smtp-stack-deploy: smtp-deploy ## Deploy the smtp stack
-smtp-stack-remove: smtp-remove ## Remove the smtp stack
+smtp-relay-stack-deploy: smtp-relay-deploy ## Deploy the smtp stack
+smtp-relay-stack-remove: smtp-relay-remove ## Remove the smtp stack
 
-smtp-stack-redeploy: smtp-redeploy ## Recreate the smtp stack
+smtp-relay-stack-redeploy: smtp-relay-redeploy ## Recreate the smtp stack
 
-smtp-stack-logs: ## Show logs of the smtp stack
-	$(MAKE) stack-logs STACK_NAME=$(SMTP)
+smtp-relay-stack-logs: ## Show logs of the smtp stack
+	$(MAKE) stack-logs STACK_NAME=$(SMTP_RELAY)
 
-smtp-stack-watch: ## Watch logs of the smtp stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(SMTP)
+smtp-relay-stack-watch: ## Watch logs of the smtp stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(SMTP_RELAY)
 
-smtp-stack-debug: ## Debug smtp swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(SMTP))"
-	@$(DOCKER) stack services $(SMTP) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+smtp-relay-stack-debug: ## Debug smtp swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(SMTP_RELAY))"
+	@$(DOCKER) stack services $(SMTP_RELAY) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${SMTP}_*) ---"
+	@echo "--- docker service ls (${SMTP_RELAY}_*) ---"
 	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(SMTP) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(SMTP)_' \
+		|| $(DOCKER) service ls | grep '$(SMTP_RELAY)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(SMTP))"
-	@$(DOCKER) stack ps $(SMTP) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(SMTP_RELAY))"
+	@$(DOCKER) stack ps $(SMTP_RELAY) --no-trunc
 	@echo
 	@for s in $(SMTP_RELAY_SERVICES); do \
-		echo "==================== $(SMTP)_$$s ===================="; \
-		$(DOCKER) service logs "$(SMTP)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+		echo "==================== $(SMTP_RELAY)_$$s ===================="; \
+		$(DOCKER) service logs "$(SMTP_RELAY)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
-smtp-up: ## Deploy the smtp project
-	$(MAKE) docker-project-up PROJECT_NAME=$(SMTP)
+smtp-relay-up: ## Deploy the smtp project
+	$(MAKE) docker-project-up PROJECT_NAME=$(SMTP_RELAY)
 
-smtp-down: ## Remove the smtp project
-	$(MAKE) docker-project-down PROJECT_NAME=$(SMTP)
+smtp-relay-down: ## Remove the smtp project
+	$(MAKE) docker-project-down PROJECT_NAME=$(SMTP_RELAY)
 
-smtp-recreate: smtp-down smtp-up ## Recreate the smtp project
+smtp-relay-recreate: smtp-relay-down smtp-relay-up ## Recreate the smtp project
 
-smtp-compose-up: smtp-up ## Deploy the smtp project
+smtp-relay-compose-up: smtp-relay-up ## Deploy the smtp project
 
-smtp-compose-down: smtp-down # Remove the smtp project
+smtp-relay-compose-down: smtp-relay-down # Remove the smtp project
 
-smtp-compose-recreate: smtp-recreate ## Recreate the smtp project
+smtp-relay-compose-recreate: smtp-relay-recreate ## Recreate the smtp project
 
-smtp-compose-logs: ## Show logs of the smtp project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(SMTP)
+smtp-relay-compose-logs: ## Show logs of the smtp project
+	$(MAKE) docker-project-logs PROJECT_NAME=$(SMTP_RELAY)
 
-smtp-compose-watch: ## Watch logs of the smtp project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(SMTP)
+smtp-relay-compose-watch: ## Watch logs of the smtp project
+	$(MAKE) docker-project-watch PROJECT_NAME=$(SMTP_RELAY)
 
-smtp-test-send: ## Send test email (SMTP_HOST SMTP_TO … or ARGS=--to …)
-	$(CURDIR)/bin/send-test-email.sh --to $(SMTP_TO) --host $(SMTP_HOST) --port $(SMTP_PORT) --from $(SMTP_FROM)
+send-test-email: ## Send test email (SMTP_HOST SMTP_TO … or ARGS=--to …)
+	$(CURDIR)/bin/send-test-email.sh $(ARGS) --to $(SMTP_RELAY_TO) --host $(SMTP_RELAY_HOST) --port $(SMTP_RELAY_PORT) --from $(SMTP_RELAY_FROM)
