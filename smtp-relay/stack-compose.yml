@@ -32,14 +32,13 @@ services:
           publish:
             - ${SMTP_RELAY_NODEPORT:-25}:25
       labels:
+        # Traefik TCP (add entryPoint smtp :25 — or :587/:465 — in traefik.yml)
         # traefik.enable: "true"
-        # traefik.http.services.smtp.loadbalancer.server.port: 80
-        # traefik.http.routers.smtp.entrypoints: ${SMTP_TRAEFIK_ENTRYPOINTS:-web}
-        # traefik.http.routers.smtp.rule: Host(`${SMTP_DOMAIN:-smtp.example.com}`) && PathPrefix(`${SMTP_BASE_PATH:-/}`)
-        # traefik.http.routers.smtp.service: smtp
-        # traefik.http.routers.smtp.middlewares: "${SMTP_TRAEFIK_MIDDLEWARES:-}"
-        # traefik.http.routers.smtp.tls: "${SMTP_TRAEFIK_TLS_ENABLED:-false}"
-        # traefik.http.routers.smtp.tls.certresolver: ${SMTP_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        # traefik.tcp.services.smtp-relay.loadbalancer.server.port: 25
+        # traefik.tcp.routers.smtp-relay.entrypoints: ${SMTP_RELAY_TRAEFIK_ENTRYPOINTS:-smtp}
+        # traefik.tcp.routers.smtp-relay.rule: HostSNI(`*`)
+        # traefik.tcp.routers.smtp-relay.service: smtp-relay
+        # SMTPS (TLS passthrough on :465): HostSNI(`${SMTP_RELAY_DOMAIN}`) + tls.passthrough=true
         ## Homepage configuration
         homepage.group: ${SMTP_RELAY_HOMEPAGE_GROUP:-}
         homepage.name: ${SMTP_RELAY_HOMEPAGE_NAME:-smtp}
