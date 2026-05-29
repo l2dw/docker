@@ -1,0 +1,52 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+services:
+  smtp:
+    image: ${SMTP_IMAGE:-namshi/smtp:latest}
+    x-pull-policy: always
+    environment:
+      TZ: ${TZ}
+      MAILNAME: ${SMTP_MAILNAME:-smtp.example.com}
+      RELAY_NETWORKS: ${SMTP_RELAY_NETWORKS:-:192.168.31.0/16:10.16.0.0/8}
+      SMARTHOST_ADDRESS: ${SMTP_SMARTHOST_ADDRESS:-}
+      SMARTHOST_PORT: ${SMTP_SMARTHOST_PORT:-587}
+      SMARTHOST_USER: ${SMTP_SMARTHOST_USER:-}
+      SMARTHOST_PASSWORD: ${SMTP_SMARTHOST_PASSWORD:-}
+      SMARTHOST_ALIASES: ${SMTP_SMARTHOST_ALIASES:-}
+    ## Deploy
+    deploy:
+      replicas: ${SMTP_REPLICAS:-1}
+      mode: ${SMTP_SWARM_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${SMTP_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${SMTP_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      ports:
+        - target: 25
+          mode: host
+          publish:
+            - ${SMTP_NODE_PORT:-25}:25
+      labels:
+        # traefik.enable: "true"
+        # traefik.http.services.smtp.loadbalancer.server.port: 80
+        # traefik.http.routers.smtp.entrypoints: ${SMTP_TRAEFIK_ENTRYPOINTS:-web}
+        # traefik.http.routers.smtp.rule: Host(`${SMTP_DOMAIN:-smtp.example.com}`) && PathPrefix(`${SMTP_BASE_PATH:-/}`)
+        # traefik.http.routers.smtp.service: smtp
+        # traefik.http.routers.smtp.middlewares: "${SMTP_TRAEFIK_MIDDLEWARES:-}"
+        # traefik.http.routers.smtp.tls: "${SMTP_TRAEFIK_TLS_ENABLED:-false}"
+        # traefik.http.routers.smtp.tls.certresolver: ${SMTP_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${SMTP_HOMEPAGE_GROUP:-}
+        homepage.name: ${SMTP_HOMEPAGE_NAME:-smtp}
+        homepage.icon: ${SMTP_HOMEPAGE_ICON:-smtp.png}
+        # homepage.href: ${SMTP_HOMEPAGE_HREF:-http://smtp.example.com}
+        homepage.description: ${SMTP_HOMEPAGE_DESCRIPTION:-}
+        # homepage.siteMonitor: ${SMTP_HOMEPAGE_SITEMONITOR:-http://smtp.example.com}
+        homepage.ping: ${SMTP_HOMEPAGE_PING:-}
+
+
