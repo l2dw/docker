@@ -1,0 +1,38 @@
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+
+services:
+
+  postfix-relay:
+    image: ${POSTFIX_IMAGE:-boky/postfix:latest}
+    pull_policy: ${POSTFIX_PULL_POLICY:-always}
+    restart: ${POSTFIX_RESTART:-unless-stopped}
+    environment:
+      TZ: ${TZ}
+      RELAYHOST: ${POSTFIX_RELAYHOST:-}
+      RELAYHOST_USERNAME: ${POSTFIX_RELAYHOST_USERNAME:-}
+      RELAYHOST_PASSWORD: ${POSTFIX_RELAYHOST_PASSWORD:-}
+      ALLOWED_SENDER_DOMAINS: ${POSTFIX_ALLOWED_SENDER_DOMAINS:-}
+    ports:
+      - ${POSTFIX_NODEPORT:-2525}:25
+    mem_limit: ${POSTFIX_MEMORY_LIMIT:-512M}
+    labels:
+      # Traefik TCP (add entryPoint smtp :25 — or :587/:465 — in traefik.yml)
+      # traefik.enable: "true"
+      # traefik.tcp.services.postfix-relay.loadbalancer.server.port: 25
+      # traefik.tcp.routers.postfix-relay.entrypoints: ${POSTFIX_TRAEFIK_ENTRYPOINTS:-smtp}
+      # traefik.tcp.routers.postfix-relay.rule: HostSNI(`*`)
+      # traefik.tcp.routers.postfix-relay.service: postfix-relay
+      # SMTPS (TLS passthrough on :465): HostSNI(`${POSTFIX_DOMAIN}`) + tls.passthrough=true
+      ## Homepage configuration
+      homepage.group: ${POSTFIX_HOMEPAGE_GROUP:-}
+      homepage.name: ${POSTFIX_HOMEPAGE_NAME:-postfix}
+      homepage.icon: ${POSTFIX_HOMEPAGE_ICON:-postfix.png}
+      # homepage.href: ${POSTFIX_HOMEPAGE_HREF:-http://postfix.example.com}
+      homepage.description: ${POSTFIX_HOMEPAGE_DESCRIPTION:-}
+      # homepage.siteMonitor: ${POSTFIX_HOMEPAGE_SITEMONITOR:-http://postfix.example.com}
+      homepage.ping: ${POSTFIX_HOMEPAGE_PING:-}

@@ -205,65 +205,71 @@ stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — ke
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
 ## —— 🐝 smtp commands ———————————————————————————————————
-SMTP_RELAY := smtp-relay
-SMTP_RELAY_SERVICES := smtp-relay
-SMTP_RELAY_PODS := smtp-relay
+POSTFIX_RELAY := postfix-relay
+SMTP_RELAY_SERVICES := postfix-relay
+SMTP_RELAY_PODS := postfix-relay
 
-smtp-relay-deploy: ## Deploy the smtp stack
-	$(MAKE) stack-deploy STACK_NAME=$(SMTP_RELAY)
+postfix-relay-deploy: ## Deploy the smtp stack
+	$(MAKE) stack-deploy STACK_NAME=$(POSTFIX_RELAY)
 
-smtp-relay-remove: ## Remove the smtp stack
-	$(MAKE) stack-rm STACK_NAME=$(SMTP_RELAY)
-smtp-relay-redeploy: smtp-relay-remove smtp-relay-deploy ## Recreate the smtp stack
+postfix-relay-remove: ## Remove the smtp stack
+	$(MAKE) stack-rm STACK_NAME=$(POSTFIX_RELAY)
+postfix-relay-redeploy: postfix-relay-remove postfix-relay-deploy ## Recreate the smtp stack
 
-smtp-relay-stack-deploy: smtp-relay-deploy ## Deploy the smtp stack
-smtp-relay-stack-remove: smtp-relay-remove ## Remove the smtp stack
+postfix-relay-stack-deploy: postfix-relay-deploy ## Deploy the smtp stack
+postfix-relay-stack-remove: postfix-relay-remove ## Remove the smtp stack
 
-smtp-relay-stack-redeploy: smtp-relay-redeploy ## Recreate the smtp stack
+postfix-relay-stack-redeploy: postfix-relay-redeploy ## Recreate the smtp stack
 
-smtp-relay-stack-logs: ## Show logs of the smtp stack
-	$(MAKE) stack-logs STACK_NAME=$(SMTP_RELAY)
+postfix-relay-stack-logs: ## Show logs of the smtp stack
+	$(MAKE) stack-logs STACK_NAME=$(POSTFIX_RELAY)
 
-smtp-relay-stack-watch: ## Watch logs of the smtp stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(SMTP_RELAY)
+postfix-relay-stack-watch: ## Watch logs of the smtp stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(POSTFIX_RELAY)
 
-smtp-relay-stack-debug: ## Debug smtp swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(SMTP_RELAY))"
-	@$(DOCKER) stack services $(SMTP_RELAY) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+postfix-relay-stack-debug: ## Debug smtp swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(POSTFIX_RELAY))"
+	@$(DOCKER) stack services $(POSTFIX_RELAY) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${SMTP_RELAY}_*) ---"
+	@echo "--- docker service ls (${POSTFIX_RELAY}_*) ---"
 	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(SMTP) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(SMTP_RELAY)_' \
+		|| $(DOCKER) service ls | grep '$(POSTFIX_RELAY)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(SMTP_RELAY))"
-	@$(DOCKER) stack ps $(SMTP_RELAY) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(POSTFIX_RELAY))"
+	@$(DOCKER) stack ps $(POSTFIX_RELAY) --no-trunc
 	@echo
 	@for s in $(SMTP_RELAY_SERVICES); do \
-		echo "==================== $(SMTP_RELAY)_$$s ===================="; \
-		$(DOCKER) service logs "$(SMTP_RELAY)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+		echo "==================== $(POSTFIX_RELAY)_$$s ===================="; \
+		$(DOCKER) service logs "$(POSTFIX_RELAY)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
 
-smtp-relay-up: ## Deploy the smtp project
-	$(MAKE) docker-project-up PROJECT_NAME=$(SMTP_RELAY)
+postfix-relay-up: ## Deploy the smtp project
+	$(MAKE) docker-project-up PROJECT_NAME=$(POSTFIX_RELAY)
 
-smtp-relay-down: ## Remove the smtp project
-	$(MAKE) docker-project-down PROJECT_NAME=$(SMTP_RELAY)
+postfix-relay-down: ## Remove the smtp project
+	$(MAKE) docker-project-down PROJECT_NAME=$(POSTFIX_RELAY)
 
-smtp-relay-recreate: smtp-relay-down smtp-relay-up ## Recreate the smtp project
+postfix-relay-recreate: postfix-relay-down postfix-relay-up ## Recreate the smtp project
 
-smtp-relay-compose-up: smtp-relay-up ## Deploy the smtp project
+postfix-relay-compose-up: postfix-relay-up ## Deploy the smtp project
 
-smtp-relay-compose-down: smtp-relay-down # Remove the smtp project
+postfix-relay-compose-down: postfix-relay-down # Remove the smtp project
 
-smtp-relay-compose-recreate: smtp-relay-recreate ## Recreate the smtp project
+postfix-relay-compose-recreate: postfix-relay-recreate ## Recreate the smtp project
 
-smtp-relay-compose-logs: ## Show logs of the smtp project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(SMTP_RELAY)
+postfix-relay-compose-logs: ## Show logs of the smtp project
+	$(MAKE) docker-project-logs PROJECT_NAME=$(POSTFIX_RELAY)
 
-smtp-relay-compose-watch: ## Watch logs of the smtp project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(SMTP_RELAY)
+postfix-relay-compose-watch: ## Watch logs of the smtp project
+	$(MAKE) docker-project-watch PROJECT_NAME=$(POSTFIX_RELAY)
 
 send-test-email: ## Send test email (SMTP_HOST SMTP_TO … or ARGS=--to …)
-	$(CURDIR)/bin/send-test-email.sh $(ARGS) --to $(SMTP_RELAY_TO) --host $(SMTP_RELAY_HOST) --port $(SMTP_RELAY_PORT) --from $(SMTP_RELAY_FROM)
+	$(CURDIR)/bin/send-test-email.sh $(ARGS) --to $(SMTP_TO) --host $(SMTP_HOST) --port $(SMTP_PORT) --from $(SMTP_FROM)
+
+postfix-relay-stack-test-send: ## Test send via Swarm DNS (Docker Desktop: localhost published port may not work)
+	$(DOCKER) run --rm --network $(if $(DEFAULT_NETWORK),$(DEFAULT_NETWORK),dokploy-network) \
+		-v "$(CURDIR)/bin/send-test-email.sh:/send-test-email.sh:ro" \
+		-e TZ="$(TZ)" -e SMTP_SUBJECT="$(SMTP_SUBJECT)" python:3-alpine \
+		sh /send-test-email.sh --to "$(SMTP_TO)" --host postfix-relay --port 25 --from "$(SMTP_FROM)"
