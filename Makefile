@@ -204,20 +204,20 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-## —— 🐝 smtp commands ———————————————————————————————————
+## —— 🐝 postfix-relay commands ———————————————————————————————————
 POSTFIX_RELAY := postfix-relay
-SMTP_RELAY_SERVICES := postfix-relay
-SMTP_RELAY_PODS := postfix-relay
+POSTFIX_RELAY_SERVICES := postfix-relay
+POSTFIX_RELAY_PODS := postfix-relay
 
-postfix-relay-deploy: ## Deploy the smtp stack
+postfix-relay-deploy: ## Deploy the postfix-relay stack
 	$(MAKE) stack-deploy STACK_NAME=$(POSTFIX_RELAY)
 
-postfix-relay-remove: ## Remove the smtp stack
+postfix-relay-remove: ## Remove the postfix-relay stack
 	$(MAKE) stack-rm STACK_NAME=$(POSTFIX_RELAY)
-postfix-relay-redeploy: postfix-relay-remove postfix-relay-deploy ## Recreate the smtp stack
+postfix-relay-redeploy: postfix-relay-remove postfix-relay-deploy ## Recreate the postfix-relay stack
 
-postfix-relay-stack-deploy: postfix-relay-deploy ## Deploy the smtp stack
-postfix-relay-stack-remove: postfix-relay-remove ## Remove the smtp stack
+postfix-relay-stack-deploy: postfix-relay-deploy ## Deploy the postfix-relay stack
+postfix-relay-stack-remove: postfix-relay-remove ## Remove the postfix-relay stack
 
 postfix-relay-stack-redeploy: postfix-relay-redeploy ## Recreate the smtp stack
 
@@ -264,9 +264,6 @@ postfix-relay-compose-logs: ## Show logs of the smtp project
 
 postfix-relay-compose-watch: ## Watch logs of the smtp project
 	$(MAKE) docker-project-watch PROJECT_NAME=$(POSTFIX_RELAY)
-
-send-test-email: ## Send test email (SMTP_HOST SMTP_TO … or ARGS=--to …)
-	$(CURDIR)/bin/send-test-email.sh $(ARGS) --to $(SMTP_TO) --host $(SMTP_HOST) --port $(SMTP_PORT) --from $(SMTP_FROM)
 
 postfix-relay-stack-test-send: ## Test send via Swarm DNS (Docker Desktop: localhost published port may not work)
 	$(DOCKER) run --rm --network $(if $(DEFAULT_NETWORK),$(DEFAULT_NETWORK),dokploy-network) \
