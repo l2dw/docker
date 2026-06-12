@@ -1,10 +1,9 @@
-
 networks:
   default:
     name: ${DEFAULT_NETWORK:-dokploy-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-true}
-
-
+  dokploy-network:
+    external: true
 services:
   smtp-relay-relay:
     image: ${SMTP_RELAY_IMAGE:-namshi/smtp:latest}
@@ -23,18 +22,8 @@ services:
     ports:
       - ${SMTP_RELAY_NODEPORT:-25}:25
     labels:
-      # Traefik TCP (add entryPoint smtp :25 — or :587/:465 — in traefik.yml)
-      # traefik.enable: "true"
-      # traefik.tcp.services.smtp-relay.loadbalancer.server.port: 25
-      # traefik.tcp.routers.smtp-relay.entrypoints: ${SMTP_RELAY_TRAEFIK_ENTRYPOINTS:-smtp}
-      # traefik.tcp.routers.smtp-relay.rule: HostSNI(`*`)
-      # traefik.tcp.routers.smtp-relay.service: smtp-relay
-      # SMTPS (TLS passthrough on :465): HostSNI(`${SMTP_RELAY_DOMAIN}`) + tls.passthrough=true
-      ## Homepage configuration
       homepage.group: ${SMTP_RELAY_HOMEPAGE_GROUP:-}
       homepage.name: ${SMTP_RELAY_HOMEPAGE_NAME:-smtp}
       homepage.icon: ${SMTP_RELAY_HOMEPAGE_ICON:-smtp.png}
-      # homepage.href: ${SMTP_RELAY_HOMEPAGE_HREF:-http://smtp.example.com}
       homepage.description: ${SMTP_RELAY_HOMEPAGE_DESCRIPTION:-}
-      # homepage.siteMonitor: ${SMTP_RELAY_HOMEPAGE_SITEMONITOR:-http://smtp.example.com}
       homepage.ping: ${SMTP_RELAY_HOMEPAGE_PING:-}
