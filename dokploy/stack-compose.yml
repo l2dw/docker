@@ -182,7 +182,7 @@ services:
     command:
       - "--global.sendAnonymousUsage=false"
       - "--api.dashboard=true"
-      - "--api.insecure=true"
+      - "--api.basePath=${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
       - "--entrypoints.web.transport.respondingTimeouts.writeTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_WRITE_TIMEOUT:-600s}"
@@ -203,12 +203,11 @@ services:
       - "--providers.file.directory=/etc/dokploy/traefik/dynamic"
       - "--providers.file.watch=true"
       - "--certificatesresolvers.default.acme.tlschallenge=true"
-      - "--certificatesresolvers.default.acme.storage=/etc/dokploy/traefik/dynamic/certificates/acme.json"
+      - "--certificatesresolvers.default.acme.storage=/etc/dokploy/traefik/dynamic/certificates/default.json"
       - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/dynamic/certificates/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/dynamic/certificates/letsencrypt.json"
       - "--certificatesresolvers.letsencrypt.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
-      - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-admin@traefik.dokploy}"
       - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-DEBUG}"
       - "--metrics.prometheus=true"
       - "--accesslog=true"
@@ -255,31 +254,17 @@ services:
         traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent: "true"
         traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
         traefik.http.middlewares.redirect-to-https.redirectscheme.permanent: "true"
-        traefik.http.middlewares.stripprefix-traefik.stripPrefix.prefixes: "${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}"
-        ## After stripping the path prefix, bare `/` hits nothing on :8080; Traefik dashboard UI lives under `/dashboard/`
-        traefik.http.middlewares.traefik-dash-root.replacePathRegex.regex: "^/?$$"
-        traefik.http.middlewares.traefik-dash-root.replacePathRegex.replacement: "/dashboard/"
         # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
         traefik.http.middlewares.basic-auth.basicAuth.users: "${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
-        ## Service configuration
+        ## Dummy port for Swarm provider when routing to api@internal
         traefik.http.services.traefik-dashboard.loadbalancer.server.port: 8080
-        traefik.http.services.traefik-dashboard.loadbalancer.server.scheme: http
-        ## Secure router configuration
-        traefik.http.routers.traefik-dashboard-secure.service: traefik-dashboard
-        traefik.http.routers.traefik-dashboard-secure.entrypoints: websecure
-        traefik.http.routers.traefik-dashboard-secure.tls: "true"
-        traefik.http.routers.traefik-dashboard-secure.tls.certresolver: default
-        traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
-        # traefik.http.routers.traefik-dashboard-secure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
-        # traefik.http.routers.traefik-dashboard-secure.middlewares: "stripprefix-traefik, traefik-dash-root"
-        traefik.http.routers.traefik-dashboard-secure.middlewares: "${DOKPLOY_TRAEFIK_MIDDLEWARES_SECURE:-}"
-        ## Insecure router configuration
-        traefik.http.routers.traefik-dashboard-insecure.entrypoints: web
-        traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/}`)"
-        traefik.http.routers.traefik-dashboard-insecure.service: traefik-dashboard
-        # traefik.http.routers.traefik-dashboard-insecure.rule: "Host(`${DOKPLOY_TRAEFIK_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
-        # traefik.http.routers.traefik-dashboard-insecure.middlewares: "stripprefix-traefik, traefik-dash-root"
-        traefik.http.routers.traefik-dashboard-insecure.middlewares: "${DOKPLOY_TRAEFIK_MIDDLEWARES_INSECURE:-}"
+        # ## Secure router configuration
+        traefik.http.routers.traefik-dashboard.tls: "${DOKPLOY_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.traefik-dashboard.tls.certresolver: ${DOKPLOY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        traefik.http.routers.traefik-dashboard.entrypoints: ${DOKPLOY_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.traefik-dashboard.rule: "Host(`${DOKPLOY_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
+        traefik.http.routers.traefik-dashboard.service: api@internal
+        traefik.http.routers.traefik-dashboard.middlewares: "${DOKPLOY_TRAEFIK_MIDDLEWARES_INSECURE:-}"
 
   traefik-certs-dumper:
     image: ldez/traefik-certs-dumper:v2.8.3
