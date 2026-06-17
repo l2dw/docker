@@ -4,3 +4,4 @@
 !**/.*.example
 **/*.override.*
 **/*.password
+**/*_trash/*
