@@ -115,9 +115,13 @@ services:
     image: dokploy/dokploy:latest
     x-pull-policy: always
     environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
       - ADVERTISE_ADDR=${ADVERTISE_ADDR}
       - DATABASE_URL=${DOKPLOY_DATABASE_URL:-postgres://dokploy:ChangeMe@dokploy-postgresql:5432/dokploy}
       - TZ=${TZ:-America/Toronto}
+      - BASE_PATH=${DOKPLOY_BASE_PATH_PREFIX:-/}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
@@ -146,16 +150,17 @@ services:
       labels:
         traefik.enable: "true"
         traefik.http.services.dokploy.loadbalancer.server.port: 3000
-        traefik.http.routers.dokploy.entrypoints: ${DOKPLOY_TRAEFIK_ENTRYPOINTS:-web}
-        traefik.http.routers.dokploy.rule: Host(`${DOKPLOY_DOMAIN:-dokploy.home}`)
+        traefik.http.routers.dokploy.entrypoints: ${DOKPLOY_ENTRYPOINTS:-web}
+        traefik.http.routers.dokploy.rule: Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)
         traefik.http.routers.dokploy.service: dokploy
-        traefik.http.routers.dokploy.tls: "${DOKPLOY_TRAEFIK_TLS_ENABLED:-false}"
-        traefik.http.routers.dokploy.tls.certresolver: ${DOKPLOY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        traefik.http.routers.dokploy.middlewares: "${DOKPLOY_MIDDLEWARES:-}"
+        traefik.http.routers.dokploy.tls: "${DOKPLOY_TLS_ENABLED:-false}"
+        traefik.http.routers.dokploy.tls.certresolver: ${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}
         ## Homepage configuration
         homepage.group: ${DOKPLOY_HOMEPAGE_GROUP:-Infra}
         homepage.name: ${DOKPLOY_HOMEPAGE_NAME:-Dokploy}
         homepage.icon: ${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}
-        homepage.href: http://${DOKPLOY_DOMAIN:-dokploy.home}/
+        homepage.href: http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_BASE_PATH:-/}
         homepage.description: ${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}
 
   ## traefik
@@ -182,7 +187,7 @@ services:
     command:
       - "--global.sendAnonymousUsage=false"
       - "--api.dashboard=true"
-      - "--api.basePath=${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}"
+      - "--api.basePath=${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
       - "--entrypoints.web.transport.respondingTimeouts.writeTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_WRITE_TIMEOUT:-600s}"
@@ -262,9 +267,9 @@ services:
         traefik.http.routers.traefik-dashboard.tls: "${DOKPLOY_TRAEFIK_TLS_ENABLED:-false}"
         traefik.http.routers.traefik-dashboard.tls.certresolver: ${DOKPLOY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
         traefik.http.routers.traefik-dashboard.entrypoints: ${DOKPLOY_TRAEFIK_ENTRYPOINTS:-web}
-        traefik.http.routers.traefik-dashboard.rule: "Host(`${DOKPLOY_DOMAIN:-traefik.dokploy}`) && PathPrefix(`${DOKPLOY_TRAEFIK_PATH_PREFIX:-/traefik}`)"
+        traefik.http.routers.traefik-dashboard.rule: "PathPrefix(`${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}`)"
         traefik.http.routers.traefik-dashboard.service: api@internal
-        traefik.http.routers.traefik-dashboard.middlewares: "${DOKPLOY_TRAEFIK_MIDDLEWARES_INSECURE:-}"
+        traefik.http.routers.traefik-dashboard.middlewares: "${DOKPLOY_TRAEFIK_MIDDLEWARES:-}"
 
   traefik-certs-dumper:
     image: ldez/traefik-certs-dumper:v2.8.3
