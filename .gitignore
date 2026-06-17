@@ -1,2 +1,6 @@
-**/.env
-**/.env.local
+**/.*
+!/.gitignore
+!/.gitkeep
+!**/.*.example
+**/*.override.*
+**/*.password
