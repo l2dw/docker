@@ -74,6 +74,63 @@ docker-rm: docker-exists-container ## Remove a container
 docker-watch-logs: docker-exists-container ## Watch logs of a container
 	$(DOCKER) logs -f $(CONTAINER_NAME)
 
+# —— 🐝 docker-compose commands ———————————————————————————————————
+.docker-exists-project: # Check if a docker-compose project exists
+	@# Check if the project name is provided
+	@if [ -z "$(PROJECT_NAME)" ]; then \
+		echo "Project name is not provided"; \
+		exit 1; \
+	fi;
+	@# Check if the folder exists
+	@if [ ! -d "$(PROJECT_NAME)" ]; then \
+		echo "Folder $(PROJECT_NAME) does not exist"; \
+		exit 1; \
+	fi;
+docker-project-up: .docker-exists-project # Deploy a docker-compose stack
+	@# if not set variable DOCKER_COMPOSE_FILE, use the docker-compose.yml file in the project folder
+	@if [ -z "$(DOCKER_COMPOSE_FILE)" ]; then \
+		DOCKER_COMPOSE_FILE=$(PROJECT_NAME)/docker-compose.yml; \
+	fi;
+	@# Check if the DOCKER_COMPOSE_FILE exists or is a symlink
+	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
+		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
+		exit 1; \
+	fi;
+	$(DOCKER_COMPOSE) up -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE) -d
+
+docker-project-down: .docker-exists-project # Remove a docker-compose stack
+	@# if not set variable DOCKER_COMPOSE_FILE, use the docker-compose.yml file in the project folder
+	@if [ -z "$(DOCKER_COMPOSE_FILE)" ]; then \
+		DOCKER_COMPOSE_FILE=$(PROJECT_NAME)/docker-compose.yml; \
+	fi;
+	@# Check if the DOCKER_COMPOSE_FILE exists or is a symlink
+	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
+		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
+		exit 1; \
+	fi;
+	$(DOCKER_COMPOSE) down -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE)
+
+docker-project-recreate: docker-project-down docker-project-up # Recreate a docker-compose project
+
+docker-project-restart: .check-project-name # Restart a docker-compose project
+	@# Check if the project name is provided
+	@if [ -z "$(PROJECT_NAME)" ]; then \
+		echo "Project name is not provided"; \
+		exit 1; \
+	fi;
+	@# Check if the docker-compose.yml file exists or is a symlink
+	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
+		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
+		exit 1; \
+	fi;
+	$(DOCKER_COMPOSE) restart -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE)
+
+docker-project-logs: .docker-exists-project ## Show logs of a docker-compose project
+	$(DOCKER_COMPOSE) logs $(DOCKER_COMPOSE_FILE)
+
+docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose project
+	$(DOCKER_COMPOSE) logs -f  -f $(DOCKER_COMPOSE_FILE)
+
 ## —— 🐝 swarm commands ———————————————————————————————————
 swarm-init: ## Initialize the swarm
 	$(DOCKER_SWARM) init --advertise-addr $(IP_ADDRESS)

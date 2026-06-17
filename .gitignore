@@ -3,3 +3,5 @@
 !/.gitkeep
 !**/.*.example
 **/*.override.*
+**/*.password
+**/*_trash/*
