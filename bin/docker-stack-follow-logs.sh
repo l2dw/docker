@@ -22,7 +22,12 @@ fi
 
 while IFS= read -r svc || [ -n "$svc" ]; do
 	[ -z "$svc" ] && continue
-	$DOCKER service logs "$svc" --follow --tail "$TAIL_LINES" $EXTRA &
+	if [ -n "$EXTRA" ]; then
+		set -- $EXTRA
+		"$DOCKER" service logs "$svc" --follow --tail "$TAIL_LINES" "$@" &
+	else
+		"$DOCKER" service logs "$svc" --follow --tail "$TAIL_LINES" &
+	fi
 done <<EOF
 $svc_list
 EOF
