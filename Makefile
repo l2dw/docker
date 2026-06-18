@@ -3,10 +3,13 @@ VERSION := v$(shell date +%Y.%m.%d)
 DATETIME := $(shell date '+%Y.%m.%d %H:%M:%S')
 ENV=prod
 
+<<<<<<< HEAD
 # APPDATA_DIR=/appdata
 # CONF_DIR=/infra
 # INFRA_DIR=/infra
 # LOGS_DIR=$(APPDATA_DIR)/logs
+=======
+>>>>>>> master
 BIN_DIR=./bin
 # BACKUPS_DIR=$(APPDATA_DIR)/backups
 
@@ -38,8 +41,7 @@ MAKE            = make
 
 # Misc
 .DEFAULT_GOAL = help
-.PHONY        : # Not needed here, but you can put your all your targets to be sure
-                # there is no name conflict between your files and your targets.
+# .PHONY: help
 
 ## —— 🐝 The Makefile 🐝 ———————————————————————————————————
 help: ## Outputs this help screen
@@ -47,8 +49,11 @@ help: ## Outputs this help screen
 		| awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' \
 		| sed -e 's/\[32m##/[33m/'
 
-
 ## —— 🐝 Docker commands ———————————————————————————————————
+docker-login: ## Login to the Docker registry
+	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY_HOST)' as $(DOCKER_REGISTRY_USER)"
+	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) -u $(DOCKER_REGISTRY_USER) -p $(DOCKER_REGISTRY_PASS)
+
 docker-ps: ## List all running containers
 	$(DOCKER) ps
 docker-all: ## List all containers
@@ -101,49 +106,55 @@ docker-watch-logs: docker-exists-container ## Watch logs of a container
 		exit 1; \
 	fi;
 docker-project-up: .docker-exists-project # Deploy a docker-compose stack
-	@# if not set variable DOCKER_COMPOSE_FILE, use the docker-compose.yml file in the project folder
-	@if [ -z "$(DOCKER_COMPOSE_FILE)" ]; then \
-		DOCKER_COMPOSE_FILE=$(PROJECT_NAME)/docker-compose.yml; \
-	fi;
-	@# Check if the DOCKER_COMPOSE_FILE exists or is a symlink
-	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
-		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
-		exit 1; \
-	fi;
-	$(DOCKER_COMPOSE) up -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE) -d
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" up -d; \
+	"$$@"
 
 docker-project-down: .docker-exists-project # Remove a docker-compose stack
-	@# if not set variable DOCKER_COMPOSE_FILE, use the docker-compose.yml file in the project folder
-	@if [ -z "$(DOCKER_COMPOSE_FILE)" ]; then \
-		DOCKER_COMPOSE_FILE=$(PROJECT_NAME)/docker-compose.yml; \
-	fi;
-	@# Check if the DOCKER_COMPOSE_FILE exists or is a symlink
-	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
-		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
-		exit 1; \
-	fi;
-	$(DOCKER_COMPOSE) down -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE)
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" down; \
+	"$$@"
 
 docker-project-recreate: docker-project-down docker-project-up # Recreate a docker-compose project
 
-docker-project-restart: .check-project-name # Restart a docker-compose project
-	@# Check if the project name is provided
-	@if [ -z "$(PROJECT_NAME)" ]; then \
-		echo "Project name is not provided"; \
-		exit 1; \
-	fi;
-	@# Check if the docker-compose.yml file exists or is a symlink
-	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
-		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
-		exit 1; \
-	fi;
-	$(DOCKER_COMPOSE) restart -p $(PROJECT_NAME) -f $(DOCKER_COMPOSE_FILE)
+docker-project-restart: .docker-exists-project # Restart a docker-compose project
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" restart; \
+	"$$@"
 
 docker-project-logs: .docker-exists-project ## Show logs of a docker-compose project
-	$(DOCKER_COMPOSE) logs $(DOCKER_COMPOSE_FILE)
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" logs; \
+	"$$@"
 
 docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose project
-	$(DOCKER_COMPOSE) logs -f  -f $(DOCKER_COMPOSE_FILE)
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" logs -f; \
+	"$$@"
 
 ## —— 🐝 swarm commands ———————————————————————————————————
 swarm-init: ## Initialize the swarm
@@ -180,28 +191,27 @@ swarm-unlock-key: ## Show the unlock key
 # Default: no detach flag (CLI without `--detach` rejects it). STACK_DEPLOY_WAIT=1 passes --detach=false only if `docker stack deploy --help` lists `--detach`; else prints a stderr note so older hosts remain usable.
 STACK_DEPLOY_WAIT ?= 1
 
-stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/stack-compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
-	@stk='$(STACK_NAME)'; compose='$(STACK_FILE)'; ovr='$(STACK_OVERRIDE)'; \
-	if [ -z "$$compose" ] && [ -f "$$stk/stack-compose.yml" ]; then compose="$$stk/stack-compose.yml"; fi; \
+stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
+	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(STACK_NAME)')"; \
 	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
-		echo "STACK_FILE is unset and not found at $$stk/stack-compose.yml — set STACK_FILE or create that file."; exit 1; \
+		echo "STACK_FILE is unset and no compose file found under $(STACK_NAME)/ (stack-compose.yml or docker-compose.yml)."; exit 1; \
 	fi; \
-	if [ -z "$$ovr" ] && { [ -f "$$stk/stack-compose.override.yml" ] || [ -L "$$stk/stack-compose.override.yml" ]; }; then ovr="$$stk/stack-compose.override.yml"; fi; \
+	if [ -n "$$env_file" ]; then set -a && . "$$env_file" && set +a; fi; \
 	set -- -c "$$compose"; \
-	if [ -n "$$ovr" ] && [ -f "$$ovr" ]; then set -- "$$@" -c "$$ovr"; fi; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -c "$$override"; fi; \
 	deploy_extra=""; \
 	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) \
 	  if $(DOCKER) stack deploy --help 2>/dev/null | grep -q -- '--detach'; then \
 	    deploy_extra='--detach=false'; \
 	  else \
-	    echo >&2 "Note: $(DOCKER) stack deploy has no --detach on this host — cannot wait for rollout; use docker stack ps $$stk."; \
+	    echo >&2 "Note: $(DOCKER) stack deploy has no --detach on this host — cannot wait for rollout; use docker stack ps $(STACK_NAME)."; \
 	  fi ;; \
 	esac; \
 	set +e; \
-	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$deploy_extra; \
+	$(DOCKER) stack deploy "$$@" "$(STACK_NAME)" --with-registry-auth $$deploy_extra; \
 	rc=$$?; \
 	if [ "$$rc" -ne 0 ]; then \
-	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$deploy_extra; \
+	$(DOCKER) stack deploy "$$@" "$(STACK_NAME)" --with-registry-auth $$deploy_extra; \
 	rc=$$?; \
 	fi; \
 	set -e; \
@@ -223,7 +233,6 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
-
 
 ## —— Infrastructure 🐳 ————————————————————————————————————————————————————————————————
 commit-changes: ## Commit changes to the infrastructure
@@ -308,3 +317,8 @@ services-list: ## List services
 	else \
 		docker exec -i "$$cid" psql -U postgres -d postgres; \
 	fi'
+
+# —— 🐝 git commands ———————————————————————————————————
+push-udem: ## Push changes to the UDEM repository
+	## push the current branch to the UDEM repository
+	git push ti-udem $(CURRENT_BRANCH)
