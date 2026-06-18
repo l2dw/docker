@@ -301,3 +301,8 @@ services-list: ## List services
 	else \
 		docker exec -i "$$cid" psql -U postgres -d postgres; \
 	fi'
+
+# —— 🐝 git commands ———————————————————————————————————
+push-udem: ## Push changes to the UDEM repository
+	## push the current branch to the UDEM repository
+	git push ti-udem $(CURRENT_BRANCH)
