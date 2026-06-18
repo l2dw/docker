@@ -34,8 +34,12 @@ MAKE            = make
 
 # Misc
 .DEFAULT_GOAL = help
+<<<<<<< HEAD
 .PHONY        : # Not needed here, but you can put your all your targets to be sure
                 # there is no name conflict between your files and your targets.
+=======
+# .PHONY: help
+>>>>>>> master
 
 ## —— 🐝 The Makefile 🐝 ———————————————————————————————————
 help: ## Outputs this help screen
@@ -44,6 +48,10 @@ help: ## Outputs this help screen
 		| sed -e 's/\[32m##/[33m/'
 
 ## —— 🐝 Docker commands ———————————————————————————————————
+docker-login: ## Login to the Docker registry
+	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY_HOST)' as $(DOCKER_REGISTRY_USER)"
+	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) -u $(DOCKER_REGISTRY_USER) -p $(DOCKER_REGISTRY_PASS)
+
 docker-ps: ## List all running containers
 	$(DOCKER) ps
 docker-all: ## List all containers
@@ -293,12 +301,16 @@ services-list: ## List services
 		exit 1; \
 	fi; \
 	echo "Using postgresql task container: $$cid"; \
-	# Use -it only when we have a TTY (prevents failures when run over non-interactive SSH).\n\
 	if [ -t 0 ] && [ -t 1 ]; then \
 		docker exec -it "$$cid" psql -U postgres -d postgres; \
 	else \
 		docker exec -i "$$cid" psql -U postgres -d postgres; \
 	fi'
+
+# —— 🐝 git commands ———————————————————————————————————
+push-udem: ## Push changes to the UDEM repository
+	## push the current branch to the UDEM repository
+	git push ti-udem $(CURRENT_BRANCH)
 
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
