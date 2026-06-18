@@ -34,12 +34,7 @@ MAKE            = make
 
 # Misc
 .DEFAULT_GOAL = help
-<<<<<<< HEAD
-.PHONY        : # Not needed here, but you can put your all your targets to be sure
-                # there is no name conflict between your files and your targets.
-=======
 # .PHONY: help
->>>>>>> master
 
 ## —— 🐝 The Makefile 🐝 ———————————————————————————————————
 help: ## Outputs this help screen
