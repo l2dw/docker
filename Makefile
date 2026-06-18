@@ -3,13 +3,6 @@ VERSION := v$(shell date +%Y.%m.%d)
 DATETIME := $(shell date '+%Y.%m.%d %H:%M:%S')
 ENV=prod
 
-<<<<<<< HEAD
-# APPDATA_DIR=/appdata
-# CONF_DIR=/infra
-# INFRA_DIR=/infra
-# LOGS_DIR=$(APPDATA_DIR)/logs
-=======
->>>>>>> master
 BIN_DIR=./bin
 # BACKUPS_DIR=$(APPDATA_DIR)/backups
 
