@@ -101,7 +101,7 @@ fi
 ## Git config
 rm -f /home/${ADMIN_USER}/.gitconfig
 if [ -f ${INFRA_DIR}/etc/.gitconfig ]; then
-	ln -s ${INFRA_DIR}/etc/.gitconfig /home/${ADMIN_USER}/.gitconfig
+	cp ${INFRA_DIR}/etc/.gitconfig /home/${ADMIN_USER}/.gitconfig
 else
     touch /home/${ADMIN_USER}/.gitconfig
     chmod 0644 /home/${ADMIN_USER}/.gitconfig
