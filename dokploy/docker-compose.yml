@@ -4,111 +4,336 @@ networks:
     external: true
 
 volumes:
-  postgresql_data:
-    name: ${POSTGRES_DATA_VOLUME_NAME:-postgresql_data}
-    external: ${POSTGRES_DATA_VOLUME_EXTERNAL:-false}
-  postgresql_logs:
-    name: ${POSTGRES_LOGS_VOLUME_NAME:-postgresql_logs}
-    external: ${POSTGRES_LOGS_VOLUME_EXTERNAL:-false}
-  redis_data:
-    name: ${REDIS_DATA_VOLUME_NAME:-redis_data}
-    external: ${REDIS_DATA_VOLUME_EXTERNAL:-false}
-  redis_logs:
-    name: ${REDIS_LOGS_VOLUME_NAME:-redis_logs}
-    external: ${REDIS_LOGS_VOLUME_EXTERNAL:-false}
-  dokploy_data:
-    name: ${DOKPROY_DATA_VOLUME_NAME:-dokploy_data}
-    external: ${DOKPROY_DATA_VOLUME_EXTERNAL:-false}
-  dokploy_logs:
-    name: ${DOKPROY_LOGS_VOLUME_NAME:-dokploy_logs}
-    external: ${DOKPROY_LOGS_VOLUME_EXTERNAL:-false}
-  traefik_config:
-    name: ${TRAEFIK_CONFIG_VOLUME_NAME:-traefik_config}
-    external: ${TRAEFIK_CONFIG_VOLUME_EXTERNAL:-false}
-  traefik_logs:
-    name: ${TRAEFIK_LOGS_VOLUME_NAME:-traefik_logs}
-    external: ${TRAEFIK_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-postgresql_data:
+    name: ${DOKPLOY_POSTGRES_DATA_VOLUME_NAME:-dokploy-postgresql_data}
+    external: ${DOKPLOY_POSTGRES_DATA_VOLUME_EXTERNAL:-false}
+  dokploy-postgresql_logs:
+    name: ${DOKPLOY_POSTGRES_LOGS_VOLUME_NAME:-dokploy-postgresql_logs}
+    external: ${DOKPLOY_POSTGRES_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-redis_data:
+    name: ${DOKPLOY_REDIS_DATA_VOLUME_NAME:-dokploy-redis_data}
+    external: ${DOKPLOY_REDIS_DATA_VOLUME_EXTERNAL:-false}
+  dokploy-redis_logs:
+    name: ${DOKPLOY_REDIS_LOGS_VOLUME_NAME:-dokploy-redis_logs}
+    external: ${DOKPLOY_REDIS_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-data:
+    name: ${DOKPLOY_DATA_VOLUME_NAME:-dokploy-data}
+    external: ${DOKPLOY_DATA_VOLUME_EXTERNAL:-false}
+  dokploy-logs:
+    name: ${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}
+    external: ${DOKPLOY_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_config:
+    name: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME:-dokploy-traefik_config}
+    external: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_logs:
+    name: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}
+    external: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_certs:
+    name: ${DOKPLOY_TRAEFIK_CERTS_VOLUME_NAME:-dokploy-traefik_certs}
+    external: ${DOKPLOY_TRAEFIK_CERTS_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_rules:
+    name: ${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}
+    external: ${DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL:-false}
+  ## Single-file mount (traefik.yml), not a directory — empty named volumes behave like dirs; bind or pre-create the file when external.
+  dokploy-certificates:
+    name: ${DOKPLOY_CERTIFICATES_VOLUME_NAME:-dokploy-certificates}
+    external: ${DOKPLOY_CERTIFICATES_VOLUME_EXTERNAL:-false}
+  dokploy-waf_logs:
+    name: ${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}
+    external: ${DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL:-false}
+
 services:
-  dokploy-postgresql:
-    image: ${POSTGRES_IMAGE:-ghcr.io/baosystems/postgis:16-3.5}
-    restart: always
+  postgresql:
+    # Swarm rejects compose `platform` (docker stack deploy). On ARM hosts use a multi-arch image (default postgres:16) or Postgres/PostGIS on amd64/non-Swarm.
+    image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
+    x-pull-policy: always
     user: postgres
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-amukds4wi9001583845717ad2}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-dokploy}
+      - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
+      - POSTGRES_USER=${DOKPLOY_POSTGRES_USER:-dokploy}
+      - POSTGRES_DB=${DOKPLOY_POSTGRES_DB:-dokploy}
+      - TZ=${TZ:-America/Toronto}
     volumes:
-      - ${POSTGRES_DATA_DIR:-postgresql_data}:/var/lib/postgresql/data
-      - ${POSTGRES_LOGS_DIR:-postgresql_logs}:/var/log/postgresql
+      - ${DOKPLOY_POSTGRES_DATA_DIR:-dokploy-postgresql_data}:/var/lib/postgresql/data
+      - ${DOKPLOY_POSTGRES_LOGS_DIR:-dokploy-postgresql_logs}:/var/log/postgresql
     networks:
       default:
-    # deploy:
-    #   mode: replicated
-    #   replicas: 1
-    #   placement:
-    #     constraints:
-    #       - node.role == manager
-    #   restart_policy:
-    #     condition: on-failure
-    #     delay: 5s
-    #   update_config:
-    #     order: start-first
-    #     failure_action: rollback
+        aliases:
+          - dokploy-postgresql
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        # bind-mounted PGDATA: start-first runs two tasks on the same path and corrupts/shuts down postgres
+        order: stop-first
+        failure_action: rollback
 
   ## redis
-  dokploy-redis:
-    image: ${REDIS_IMAGE:-redis:latest}
-    restart: always
-    pull_policy: always
+  redis:
+    image: ${DOKPLOY_REDIS_IMAGE:-redis:latest}
     user: redis
     environment:
-      - REDIS_PASSWORD
+      - REDIS_PASSWORD=${DOKPLOY_REDIS_PASSWORD}
+      - TZ=${TZ:-America/Toronto}
+    command: redis-server --maxmemory-policy noeviction --maxmemory ${DOKPLOY_REDIS_MAXMEMORY:-512mb}
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
     volumes:
-      - ${REDIS_DATA_DIR:-redis_data}:/data
-      - ${REDIS_LOGS_DIR:-redis_logs}:/var/log/redis
+      - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:/data
+      - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:/var/log/redis
     networks:
       default:
-    # deploy:
-    #   mode: replicated
-    #   replicas: 1
-    #   placement:
-    #     constraints:
-    #       - node.role == manager
-    #   restart_policy:
-    #     condition: on-failure
-    #     delay: 5s
-    #   update_config:
-    #     order: start-first
-    #     failure_action: rollback
+        aliases:
+          - dokploy-redis
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
 
   ## dokploy
   ## On manager node create dirs first: sudo mkdir -p /etc/dokploy /root/.docker
   dokploy:
     image: dokploy/dokploy:latest
-    restart: always
-    pull_policy: always
-    networks:
-      default: {}
+    x-pull-policy: always
+    privileged: ${DOKPLOY_PRIVILEGED:-false}
     environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
       - ADVERTISE_ADDR=${ADVERTISE_ADDR}
-      - DATABASE_URL=${DOKPROY_DATABASE_URL:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-amukds4wi9001583845717ad2}@dokploy-postgresql:5432/${POSTGRES_DB:-dokploy}}
+      - DATABASE_URL=${DOKPLOY_DATABASE_URL:-postgres://dokploy:ChangeMe@postgresql:5432/dokploy}
+      - REDIS_URL=${DOKPLOY_REDIS_URL:-redis://redis:6379}
+      - TZ=${TZ:-America/Toronto}
+      - BASE_PATH=${DOKPLOY_BASE_PATH:-}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${DOKPROY_DATA_DIR:-dokploy_data}:/etc/dokploy
-      - ${DOKPROY_LOGS_DIR:-dokploy_logs}:/etc/dokploy/logs
-      - ${TRAEFIK_CONFIG_DIR:-traefik_config}:/etc/dokploy/traefik
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
+      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
+      - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
+    depends_on:
+      - postgresql
+      - redis
+    # networks:
+    #   default:
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        # start-first + host ports = two tasks compete for the same PublishedPort on one node
+        order: stop-first
+        failure_action: rollback
+      # labels:
+      #   - "traefik.enable=true"
+      #   - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
+      #   - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
+      #   - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
+      #   - "traefik.http.routers.dokploy-server.service=dokploy-server"
+      #   - "traefik.http.routers.dokploy-server.middlewares=${DOKPLOY_MIDDLEWARES:-}"
+      #   - "traefik.http.routers.dokploy-server.tls=${DOKPLOY_TLS_ENABLED:-false}"
+      #   - "traefik.http.routers.dokploy-server.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
+      #   ## Homepage configuration
+      #   - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
+      #   - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
+      #   - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}"
+      #   - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_BASE_PATH:-/}"
+      #   - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
+      - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
+      - "traefik.http.routers.dokploy-server.service=dokploy-server"
+      - "traefik.http.routers.dokploy-server.middlewares=${DOKPLOY_MIDDLEWARES:-}"
+      - "traefik.http.routers.dokploy-server.tls=${DOKPLOY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.dokploy-server.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
+      ## Homepage configuration
+      - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
+      - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
+      - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}"
+      - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_BASE_PATH:-/}"
+      - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
 
   ## traefik
-  dokploy-traefik:
+  traefik:
     image: traefik:latest
-    restart: always
-    pull_policy: always
+    x-pull-policy: always
+    privileged: ${DOKPLOY_TRAEFIK_PRIVILEGED:-false}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+    ports:
+      - target: ${DOKPLOY_TRAEFIK_PORT_TARGET:-80}
+        published: ${DOKPLOY_TRAEFIK_PORT_PUBLISHED:-80}
+        protocol: ${DOKPLOY_TRAEFIK_PORT_PROTOCOL:-tcp}
+        mode: ${DOKPLOY_TRAEFIK_PORT_MODE:-host}
+    volumes:
+      - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/etc/dokploy/logs/traefik
+      - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
+      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/dokploy/traefik/dynamic/certificates
+      - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/dokploy/traefik/dynamic/rules
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    command:
+      - "--global.sendAnonymousUsage=false"
+      - "--api.dashboard=true"
+      - "--api.basePath=${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
+      - "--entrypoints.web.transport.respondingTimeouts.writeTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_WRITE_TIMEOUT:-600s}"
+      - "--entrypoints.web.transport.respondingTimeouts.idleTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_IDLE_TIMEOUT:-180s}"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
+      - "--entrypoints.websecure.transport.respondingTimeouts.writeTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_WRITE_TIMEOUT:-600s}"
+      - "--entrypoints.websecure.transport.respondingTimeouts.idleTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_IDLE_TIMEOUT:-180s}"
+      - "--serversTransport.insecureSkipVerify=true"
+      - "--providers.swarm=true"
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.network=dokploy-network"
+      - "--providers.swarm.watch=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.watch=true"
+      - "--providers.file.directory=/etc/dokploy/traefik/dynamic"
+      - "--providers.file.watch=true"
+      - "--certificatesresolvers.default.acme.tlschallenge=true"
+      - "--certificatesresolvers.default.acme.storage=/etc/dokploy/traefik/dynamic/certificates/default.json"
+      - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-cenadmin@listes.umontreal.ca}"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/dokploy/traefik/dynamic/certificates/letsencrypt.json"
+      - "--certificatesresolvers.letsencrypt.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-cenadmin@listes.umontreal.ca}"
+      - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-INFO}"
+      - "--metrics.prometheus=true"
+      - "--accesslog=true"
+      - "--accesslog.filePath=/etc/dokploy/logs/traefik/access.log"
+      - "--accesslog.format=${DOKPLOY_TRAEFIK_ACCESS_LOG_FORMAT:-json}"
+      - "--accesslog.fields.defaultMode=keep"
+      - "--accesslog.fields.names.RequestHost=keep"
+      - "--accesslog.fields.names.RequestPath=keep"
+      - "--accesslog.fields.names.RequestScheme=keep"
+      - "--accesslog.fields.names.RequestMethod=keep"
+      - "--accesslog.fields.names.RequestProtocol=keep"
+      - "--accesslog.fields.names.RequestPort=keep"
+      - "--accesslog.fields.names.RequestQuery=keep"
+      - "--accesslog.fields.names.DownstreamURL=keep"
+      - "--accesslog.fields.names.UserAgent=keep"
+      - "--accesslog.fields.names.Duration=keep"
+      - "--experimental.plugins.traefik-modsecurity-plugin.moduleName=github.com/acouvreur/traefik-modsecurity-plugin"
+      - "--experimental.plugins.traefik-modsecurity-plugin.version=v1.3.0"
+      - "--experimental.plugins.rewritebody.moduleName=github.com/traefik/plugin-rewritebody"
+      - "--experimental.plugins.rewritebody.version=v0.3.1"
+      - "${DOKPLOY_TRAEFIK_COMMAND:-}"
     networks:
       default:
-    ports:
-      - "${TRAEFIK_PORT_HTTP:-80}:80"
-      - "${TRAEFIK_PORT_HTTPS:-443}:443"
+        aliases:
+          - dokploy-traefik
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      # Swarm: these are SERVICE labels (Spec.Labels), not task/container labels — they will not
+      # appear on `docker container inspect`. Check: `docker service inspect dokploy_dokploy-traefik --format '{{json .Spec.Labels}}'`
+      # Traefik Swarm provider reads service labels (enable providers.docker.swarmMode if using file provider defaults).
+      # labels:
+      #   - "traefik.enable=true"
+      #   ## Middleware configuration
+      #   - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme=https"
+      #   - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent=true"
+      #   - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      #   - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+      #   # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
+      #   - "traefik.http.middlewares.basic-auth.basicAuth.users=${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
+      #   ## Dummy port for Swarm provider when routing to api@internal
+      #   - "traefik.http.services.dokploy-traefik.loadbalancer.server.port=8080"
+      #   # ## Secure router configuration
+      #   - "traefik.http.routers.dokploy-traefik.tls=${DOKPLOY_TRAEFIK_TLS_ENABLED:-false}"
+      #   - "traefik.http.routers.dokploy-traefik.tls.certresolver=${DOKPLOY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      #   - "traefik.http.routers.dokploy-traefik.entrypoints=${DOKPLOY_TRAEFIK_ENTRYPOINTS:-web}"
+      #   - "traefik.http.routers.dokploy-traefik.rule=PathPrefix(`${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}`)"
+      #   - "traefik.http.routers.dokploy-traefik.service=api@internal"
+      #   - "traefik.http.routers.dokploy-traefik.middlewares=${DOKPLOY_TRAEFIK_MIDDLEWARES:-}"
+    labels:
+      - "traefik.enable=true"
+      ## Middleware configuration
+      - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+      # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
+      - "traefik.http.middlewares.basic-auth.basicAuth.users=${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
+      ## Dummy port for Swarm provider when routing to api@internal
+      - "traefik.http.services.dokploy-traefik.loadbalancer.server.port=8080"
+      # ## Secure router configuration
+      - "traefik.http.routers.dokploy-traefik.tls=${DOKPLOY_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.dokploy-traefik.tls.certresolver=${DOKPLOY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.routers.dokploy-traefik.entrypoints=${DOKPLOY_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.dokploy-traefik.rule=PathPrefix(`${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}`)"
+      - "traefik.http.routers.dokploy-traefik.service=api@internal"
+      - "traefik.http.routers.dokploy-traefik.middlewares=${DOKPLOY_TRAEFIK_MIDDLEWARES:-}"
+
+  certs-dumper:
+    image: ldez/traefik-certs-dumper:v2.8.3
+    entrypoint: sh -c '
+      apk add jq ;
+      while ! [ -e /etc/certificates/acme.json ] || ! [ `jq ".[] | .Certificates | length" /etc/certificates/acme.json` != 0 ]; do sleep 1 ; done
+      && traefik-certs-dumper file --version v2 --watch --source /etc/certificates/acme.json --dest /etc/certificates '
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=false"
+    depends_on:
+      - traefik
     volumes:
-      - ${TRAEFIK_CONFIG_DIR:-traefik_config}:/etc/dokploy/traefik
-      - ${TRAEFIK_LOGS_DIR:-traefik_logs}:/var/log/traefik
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/certificates
+
+  waf:
+    image: owasp/modsecurity-crs:apache
+    volumes:
+      - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=false"
