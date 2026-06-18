@@ -99,11 +99,13 @@ if [ ! -L /home/${ADMIN_USER}/bin ] && [ ! -d /home/${ADMIN_USER}/bin ]; then
 fi
 
 ## Git config
-if [ ! -f /home/${ADMIN_USER}/.gitconfig ]; then
-    echo "Creating gitconfig in /home/${ADMIN_USER}..."
-    sudo touch /home/${ADMIN_USER}/.gitconfig
-    sudo chmod 0644 /home/${ADMIN_USER}/.gitconfig
-    sudo chown ${ADMIN_USER}:${ADMIN_USER} /home/${ADMIN_USER}/.gitconfig
+rm -f /home/${ADMIN_USER}/.gitconfig
+if [ -f ${INFRA_DIR}/etc/.gitconfig ]; then
+	ln -s ${INFRA_DIR}/etc/.gitconfig /home/${ADMIN_USER}/.gitconfig
+else
+    touch /home/${ADMIN_USER}/.gitconfig
+    chmod 0644 /home/${ADMIN_USER}/.gitconfig
+    chown ${ADMIN_USER}:${ADMIN_USER} /home/${ADMIN_USER}/.gitconfig
 fi
 
 git config --global http.sslVerify false
