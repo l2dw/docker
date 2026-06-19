@@ -184,6 +184,8 @@ swarm-unlock-key: ## Show the unlock key
 # Default: no detach flag (CLI without `--detach` rejects it). STACK_DEPLOY_WAIT=1 passes --detach=false only if `docker stack deploy --help` lists `--detach`; else prints a stderr note so older hosts remain usable.
 STACK_DEPLOY_WAIT ?= 1
 
+STACK_EXTRA ?=
+
 stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
 	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(STACK_NAME)')"; \
 	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
@@ -192,6 +194,9 @@ stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{
 	if [ -n "$$env_file" ]; then set -a && . "$$env_file" && set +a; fi; \
 	set -- -c "$$compose"; \
 	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -c "$$override"; fi; \
+	for extra in $(STACK_EXTRA); do \
+		if [ -n "$$extra" ] && [ -f "$$extra" ]; then set -- "$$@" -c "$$extra"; fi; \
+	done; \
 	deploy_extra=""; \
 	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) \
 	  if $(DOCKER) stack deploy --help 2>/dev/null | grep -q -- '--detach'; then \

@@ -180,7 +180,7 @@ services:
       - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
 
   ## traefik
-  traefik:
+  dokploy-traefik:
     image: traefik:latest
     x-pull-policy: always
     privileged: ${DOKPLOY_TRAEFIK_PRIVILEGED:-false}
@@ -321,7 +321,7 @@ services:
       labels:
         - "traefik.enable=false"
     depends_on:
-      - traefik
+      - dokploy-traefik
     volumes:
       - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/certificates
 
