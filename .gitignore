@@ -4,4 +4,10 @@
 !**/.*.example
 **/*.override.*
 **/*.password
-**/*_trash/*
+**/*.backup
+**/*_trash
+var/
+logs/
+backups/
+appdata/
+certs/
