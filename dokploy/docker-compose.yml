@@ -308,10 +308,24 @@ services:
 
   certs-dumper:
     image: ldez/traefik-certs-dumper:v2.8.3
-    entrypoint: sh -c '
-      apk add jq ;
-      while ! [ -e /etc/certificates/acme.json ] || ! [ `jq ".[] | .Certificates | length" /etc/certificates/acme.json` != 0 ]; do sleep 1 ; done
-      && traefik-certs-dumper file --version v2 --watch --source /etc/certificates/acme.json --dest /etc/certificates '
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        apk add --no-cache jq
+        dest="/etc/certificates"
+        started=""
+        while true; do
+          for f in "$$dest"/*.json; do
+            [ -f "$$f" ] || continue
+            case " $$started " in *" $$f "*) continue ;; esac
+            [ -s "$$f" ] || continue
+            [ "$$(jq -r '[.[].Certificates | length] | add // 0' "$$f" 2>/dev/null)" = "0" ] && continue
+            traefik-certs-dumper file --version v2 --watch --source "$$f" --dest "$$dest" &
+            started="$$started $$f"
+          done
+          sleep 5
+        done
     deploy:
       mode: replicated
       replicas: 1
