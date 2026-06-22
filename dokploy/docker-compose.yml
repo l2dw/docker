@@ -48,6 +48,7 @@ services:
     image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
     x-pull-policy: always
     user: postgres
+    privileged: ${DOKPLOY_POSTGRES_PRIVILEGED:-false}
     environment:
       - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
       - POSTGRES_USER=${DOKPLOY_POSTGRES_USER:-dokploy}
@@ -89,6 +90,7 @@ services:
       timeout: 10s
       retries: 10
       start_period: 10s
+    privileged: ${DOKPLOY_REDIS_PRIVILEGED:-false}
     volumes:
       - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:/data
       - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:/var/log/redis
@@ -120,11 +122,16 @@ services:
       - HTTP_PROXY=${HTTP_PROXY}
       - HTTPS_PROXY=${HTTPS_PROXY}
       - NO_PROXY=${NO_PROXY}
+      # Node fetch needs this to honor HTTP(S)_PROXY (corporate proxy); avoids update-check timeouts.
+      - NODE_USE_ENV_PROXY=1
       - ADVERTISE_ADDR=${ADVERTISE_ADDR}
       - DATABASE_URL=${DOKPLOY_DATABASE_URL:-postgres://dokploy:ChangeMe@postgresql:5432/dokploy}
       - REDIS_URL=${DOKPLOY_REDIS_URL:-redis://redis:6379}
       - TZ=${TZ:-America/Toronto}
       - BASE_PATH=${DOKPLOY_BASE_PATH:-}
+      # Must match Traefik router Host rules (infra/traefik/dynamic/dokploy.yml) for login/session.
+      - ALLOWED_ORIGINS=${DOKPLOY_ALLOWED_ORIGINS}
+      - BETTER_AUTH_TRUSTED_ORIGINS=${DOKPLOY_BETTER_AUTH_TRUSTED_ORIGINS}
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
