@@ -45,7 +45,7 @@ volumes:
 services:
   postgresql:
     # Swarm rejects compose `platform` (docker stack deploy). On ARM hosts use a multi-arch image (default postgres:16) or Postgres/PostGIS on amd64/non-Swarm.
-    image: ${DOKPLOY_POSTGRES_IMAGE:-postgres:16}
+    image: ${DOKPLOY_POSTGRES_IMAGE:-docker.io/postgres:16}
     x-pull-policy: always
     user: postgres
     privileged: ${DOKPLOY_POSTGRES_PRIVILEGED:-false}
@@ -78,7 +78,7 @@ services:
 
   ## redis
   redis:
-    image: ${DOKPLOY_REDIS_IMAGE:-redis:latest}
+    image: ${DOKPLOY_REDIS_IMAGE:-docker.io/redis:7}
     user: redis
     environment:
       - REDIS_PASSWORD=${DOKPLOY_REDIS_PASSWORD}
@@ -115,7 +115,7 @@ services:
   ## dokploy
   ## On manager node create dirs first: sudo mkdir -p /etc/dokploy /root/.docker
   dokploy:
-    image: dokploy/dokploy:latest
+    image: ${DOKPLOY_DOKPLOY_IMAGE:-docker.io/dokploy/dokploy:latest}
     x-pull-policy: always
     privileged: ${DOKPLOY_PRIVILEGED:-false}
     environment:
@@ -188,7 +188,7 @@ services:
 
   ## traefik
   traefik:
-    image: traefik:latest
+    image: docker.io/traefik:latest
     x-pull-policy: always
     privileged: ${DOKPLOY_TRAEFIK_PRIVILEGED:-false}
     environment:
