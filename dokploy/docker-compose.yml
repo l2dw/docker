@@ -1,7 +1,8 @@
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    # Literal boolean required: podman-compose treats external: "true" (env string) as a dict and crashes.
+    external: true
 
 volumes:
   dokploy-postgresql_data:
