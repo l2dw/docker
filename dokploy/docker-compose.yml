@@ -211,6 +211,7 @@ services:
     command:
       - "--global.sendAnonymousUsage=false"
       - "--api.dashboard=true"
+      - "--api.insecure=true"
       - "--api.basePath=${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
@@ -297,6 +298,15 @@ services:
         - "traefik.http.routers.dokploy-traefik.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}`)"
         - "traefik.http.routers.dokploy-traefik.service=api@internal"
         - "traefik.http.routers.dokploy-traefik.middlewares=${DOKPLOY_TRAEFIK_MIDDLEWARES:-}"
+        ## Homepage configuration
+        - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
+        - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Traefik}"
+        - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-traefik.png}"
+        - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+        - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Traefik is a modern HTTP reverse proxy and load balancer.}"
+        - "homepage.siteMonitor=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+        - "homepage.widget.type=traefik"
+        - "homepage.widget.url=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
     labels:
       - "traefik.enable=true"
       ## Middleware configuration
@@ -316,6 +326,15 @@ services:
       - "traefik.http.routers.dokploy-traefik.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}`)"
       - "traefik.http.routers.dokploy-traefik.service=api@internal"
       - "traefik.http.routers.dokploy-traefik.middlewares=${DOKPLOY_TRAEFIK_MIDDLEWARES:-}"
+      ## Homepage configuration
+      - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
+      - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Traefik}"
+      - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-traefik.png}"
+      - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+      - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Traefik is a modern HTTP reverse proxy and load balancer.}"
+      - "homepage.siteMonitor=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+      - "homepage.widget.type=traefik"
+      - "homepage.widget.url=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
 
   certs-dumper:
     image: ldez/traefik-certs-dumper:v2.8.3
