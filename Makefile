@@ -347,19 +347,17 @@ DOKPLOY_SERVICES_SHORT := dokploy postgresql redis traefik
 		echo "Otherwise join/init: make swarm-init"; \
 		exit 1; \
 	fi
+dokploy-pull-images: ## Pull images for the dokploy stack
+	$(MAKE) docker-pull-images PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-stack-up: .dokploy-stack-setup ## Deploy the dokploy stack
 	$(MAKE) stack-deploy STACK_NAME=$(DOKPLOY_STACK_NAME)
-
 dokploy-stack-down: ## Remove the dokploy stack
 	$(MAKE) stack-rm STACK_NAME=$(DOKPLOY_STACK_NAME)
-
 dokploy-stack-recreate: dokploy-stack-down dokploy-stack-up ## Recreate the dokploy stack
-
 dokploy-stack-logs: ## Show logs of the dokploy stack
 	$(MAKE) stack-logs STACK_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-stack-watch-logs: ## Watch logs of the dokploy stack
 	$(MAKE) stack-watch-logs STACK_NAME=$(DOKPLOY_STACK_NAME)
-
 dokploy-debug: ## Debug dokploy swarm stack: services, tasks (states/errors), traefik ports
 	@echo "--- docker stack services ($(DOKPLOY_STACK_NAME))"
 	@$(DOCKER) stack services $(DOKPLOY_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
@@ -374,14 +372,14 @@ dokploy-debug: ## Debug dokploy swarm stack: services, tasks (states/errors), tr
 	@echo
 	@echo "--- traefik published ports ---"
 	@$(DOCKER) service inspect $(DOKPLOY_STACK_NAME)_dokploy-traefik --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(no traefik service or inspect failed)"
-
 dokploy-debug-logs: ## Tail recent logs for each dokploy service (e.g. services at 0/1)
 	@for s in $(DOKPLOY_SERVICES_SHORT); do \
 		echo "==================== $(DOKPLOY_STACK_NAME)_$$s ===================="; \
 		$(DOCKER) service logs "$(DOKPLOY_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
-
+dokploy-compose-upgrade: ## Upgrade the dokploy stack
+	make docker-project-upgrade PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-up: ## Deploy the dokploy stack
 	make docker-project-up PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-down: ## Remove the dokploy stack
