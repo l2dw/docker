@@ -302,43 +302,55 @@ services-list: ## List services
 		docker exec -i "$$cid" psql -U postgres -d postgres; \
 	fi'
 
-# —— 🐝 git commands ———————————————————————————————————
+## —— 🐝 git commands ———————————————————————————————————
 push-udem: ## Push changes to the UDEM repository
 	## push the current branch to the UDEM repository
 	git push ti-udem $(CURRENT_BRANCH)
 
-# —— 🐝 minio-client commands ———————————————————————————————————
-MINIO_CLIENT_STACK_NAME := minio-client
-MINIO_CLIENT_STACK_SERVICES := minio-client
+## —— 🐝 s3-client commands ———————————————————————————————————
+S3_CLIENT_STACK_NAME := s3-client
+S3_CLIENT_STACK_SERVICES := s3-client
 
-minio-client-stack-up: ## Deploy the minio-client stack
-	$(MAKE) stack-deploy STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
+s3-client-stack-up: ## Deploy the s3-client stack
+	$(MAKE) stack-deploy STACK_NAME=$(S3_CLIENT_STACK_NAME)
 
-minio-client-stack-down: ## Remove the minio-client stack
-	$(MAKE) stack-rm STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
+s3-client-stack-down: ## Remove the s3-client stack
+	$(MAKE) stack-rm STACK_NAME=$(S3_CLIENT_STACK_NAME)
 
-minio-client-stack-recreate: minio-client-stack-down minio-client-stack-up ## Recreate the minio-client stack
+s3-client-stack-recreate: s3-client-stack-down s3-client-stack-up ## Recreate the s3-client stack
 
-minio-client-stack-logs: ## Show logs of the minio-client stack
-	$(MAKE) stack-logs STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
+s3-client-stack-logs: ## Show logs of the s3-client stack
+	$(MAKE) stack-logs STACK_NAME=$(S3_CLIENT_STACK_NAME)
 
-minio-client-stack-watch: ## Watch logs of the minio-client stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(MINIO_CLIENT_STACK_NAME)
+s3-client-stack-watch: ## Watch logs of the s3-client stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(S3_CLIENT_STACK_NAME)
 
-minio-client-stack-debug: ## Debug minio-client swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(MINIO_CLIENT_STACK_NAME))"
-	@$(DOCKER) stack services $(MINIO_CLIENT_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+s3-client-stack-debug: ## Debug s3-client swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(S3_CLIENT_STACK_NAME))"
+	@$(DOCKER) stack services $(S3_CLIENT_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${MINIO_CLIENT_STACK_NAME}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(MINIO_CLIENT_STACK_NAME) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(MINIO_CLIENT_STACK_NAME)_' \
+	@echo "--- docker service ls (${S3_CLIENT_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(S3_CLIENT_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(S3_CLIENT_STACK_NAME)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(MINIO_CLIENT_STACK_NAME))"
-	@$(DOCKER) stack ps $(MINIO_CLIENT_STACK_NAME) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(S3_CLIENT_STACK_NAME))"
+	@$(DOCKER) stack ps $(S3_CLIENT_STACK_NAME) --no-trunc
 	@echo
-	@for s in $(MINIO_CLIENT_STACK_SERVICES); do \
-		echo "==================== $(MINIO_CLIENT_STACK_NAME)_$$s ===================="; \
-		$(DOCKER) service logs "$(MINIO_CLIENT_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@for s in $(S3_CLIENT_STACK_SERVICES); do \
+		echo "==================== $(S3_CLIENT_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(S3_CLIENT_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
+
+s3-client-compose-up: ## Deploy the s3-client stack
+	make docker-project-up PROJECT_NAME=$(S3_CLIENT_STACK_NAME)
+s3-client-compose-down: ## Remove the s3-client stack
+	make docker-project-down PROJECT_NAME=$(S3_CLIENT_STACK_NAME)
+s3-client-compose-restart: ## Restart the s3-client stack
+	make docker-project-restart PROJECT_NAME=$(S3_CLIENT_STACK_NAME)
+s3-client-compose-recreate: s3-client-compose-down s3-client-compose-up ## Recreate the s3-client stack
+s3-client-compose-logs: ## Show logs of the s3-client stack
+	make docker-project-logs PROJECT_NAME=$(S3_CLIENT_STACK_NAME)
+s3-client-compose-watch-logs: ## Watch logs of the s3-client stack
+	make docker-project-watch PROJECT_NAME=$(S3_CLIENT_STACK_NAME)

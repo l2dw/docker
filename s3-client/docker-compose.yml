@@ -1,0 +1,48 @@
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  s3_client_data:
+    name: ${S3_CLIENT_DATA_VOLUME_NAME:-s3_client_data}
+    external: ${S3_CLIENT_DATA_VOLUME_EXTERNAL:-false}
+  s3_client_config:
+    name: ${S3_CLIENT_CONFIG_VOLUME_NAME:-s3_client_config}
+    external: ${S3_CLIENT_CONFIG_VOLUME_EXTERNAL:-false}
+
+services:
+  s3-client:
+    image: ${S3_CLIENT_IMAGE:-docker.io/minio/mc:latest}
+    x-pull_policy: ${S3_CLIENT_PULL_POLICY:-always}
+    restart: ${S3_CLIENT_RESTART:-unless-stopped}
+    privileged: ${S3_CLIENT_PRIVILEGED:-true}
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["sleep infinity"]
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HTTP_PROXY=${HTTP_PROXY:-$http_proxy}
+      - HTTPS_PROXY=${HTTPS_PROXY:-$https_proxy}
+      - NO_PROXY=${NO_PROXY:-$no_proxy}
+    volumes:
+      - ${S3_CLIENT_DATA_DIR:-s3_client_data}:/data
+      - ${S3_CLIENT_CONFIG_DIR:-s3_client_config}:/root/.mc
+    ## Deploy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==${S3_CLIENT_PLACEMENT_CONSTRAINTS:-manager}
+      labels:
+        ## Homepage configuration
+        homepage.group: ${S3_CLIENT_HOMEPAGE_GROUP:-Infra}
+        homepage.name: ${S3_CLIENT_HOMEPAGE_NAME:-s3-client}
+        homepage.icon: ${S3_CLIENT_HOMEPAGE_ICON:-s3-client.png}
+        homepage.description: ${S3_CLIENT_HOMEPAGE_DESCRIPTION:-S3 Client is a platform for cli tool for s3 management.}
+    labels:
+      ## Homepage configuration
+      homepage.group: ${S3_CLIENT_HOMEPAGE_GROUP:-Infra}
+      homepage.name: ${S3_CLIENT_HOMEPAGE_NAME:-s3-client}
+      homepage.icon: ${S3_CLIENT_HOMEPAGE_ICON:-s3-client.png}
+      homepage.description: ${S3_CLIENT_HOMEPAGE_DESCRIPTION:-S3 Client is a platform for cli tool for s3 management.}
