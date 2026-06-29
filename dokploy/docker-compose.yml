@@ -48,8 +48,7 @@ services:
     # Swarm rejects compose `platform` (docker stack deploy). On ARM hosts use a multi-arch image (default postgres:16) or Postgres/PostGIS on amd64/non-Swarm.
     image: ${DOKPLOY_POSTGRES_IMAGE:-docker.io/postgres:16}
     x-pull-policy: always
-    user: postgres
-    privileged: ${DOKPLOY_POSTGRES_PRIVILEGED:-false}
+    privileged: "${DOKPLOY_POSTGRES_PRIVILEGED:-false}"
     environment:
       - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
       - POSTGRES_USER=${DOKPLOY_POSTGRES_USER:-dokploy}
@@ -91,7 +90,7 @@ services:
       timeout: 10s
       retries: 10
       start_period: 10s
-    privileged: ${DOKPLOY_REDIS_PRIVILEGED:-false}
+    privileged: "${DOKPLOY_REDIS_PRIVILEGED:-false}"
     volumes:
       - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:/data
       - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:/var/log/redis
@@ -118,7 +117,7 @@ services:
   dokploy:
     image: ${DOKPLOY_DOKPLOY_IMAGE:-docker.io/dokploy/dokploy:latest}
     x-pull-policy: always
-    privileged: ${DOKPLOY_PRIVILEGED:-false}
+    privileged: "${DOKPLOY_PRIVILEGED:-false}"
     environment:
       - HTTP_PROXY=${HTTP_PROXY}
       - HTTPS_PROXY=${HTTPS_PROXY}
@@ -191,7 +190,7 @@ services:
   traefik:
     image: docker.io/traefik:latest
     x-pull-policy: always
-    privileged: ${DOKPLOY_TRAEFIK_PRIVILEGED:-false}
+    privileged: "${DOKPLOY_TRAEFIK_PRIVILEGED:-false}"
     environment:
       - TZ=${TZ:-America/Toronto}
       - HTTP_PROXY=${HTTP_PROXY}
@@ -337,7 +336,7 @@ services:
       - "homepage.widget.url=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
 
   certs-dumper:
-    image: ldez/traefik-certs-dumper:v2.8.3
+    image: docker.io/ldez/traefik-certs-dumper:v2.8.3
     entrypoint:
       - sh
       - -ec
@@ -370,7 +369,7 @@ services:
       - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/certificates
 
   waf:
-    image: owasp/modsecurity-crs:apache
+    image: docker.io/owasp/modsecurity-crs:apache
     volumes:
       - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2
     deploy:
