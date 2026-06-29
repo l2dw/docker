@@ -286,6 +286,8 @@ services:
         - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent=true"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+        - "traefik.http.middlewares.forward-https-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+        - "traefik.http.middlewares.forward-https-headers.headers.customrequestheaders.X-Forwarded-Port=443"
         # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
         - "traefik.http.middlewares.basic-auth.basicAuth.users=${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
         ## Dummy port for Swarm provider when routing to api@internal
@@ -314,6 +316,7 @@ services:
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
       - "traefik.http.middlewares.forward-https-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.forward-https-headers.headers.customrequestheaders.X-Forwarded-Port=443"
       # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
       - "traefik.http.middlewares.basic-auth.basicAuth.users=${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
       ## Dummy port for Swarm provider when routing to api@internal
