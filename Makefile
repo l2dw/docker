@@ -52,30 +52,26 @@ docker-ps: ## List all running containers
 docker-all: ## List all containers
 	$(DOCKER) ps -a
 docker-exists-container: ## Check if a container exists
-	@# Check if the container name is provided
 	@if [ -z "$(CONTAINER_NAME)" ]; then \
 		echo "Container name is not provided"; \
 		exit 1; \
-	fi; \
-	@# Check if the container exists
-	@if ! $(DOCKER) ps -a | grep -q $(CONTAINER_NAME); then \
+	fi
+	@if ! $(DOCKER) ps -a --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
 		echo "Container $(CONTAINER_NAME) does not exist"; \
 		exit 1; \
-	fi;
+	fi
 docker-stop: docker-exists-container ## Stop a container
-	@# Check if the container is running
-	@if $(DOCKER) ps | grep -q $(CONTAINER_NAME); then \
-		echo "Container $(CONTAINER_NAME) is already running"; \
+	@if ! $(DOCKER) ps --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
+		echo "Container $(CONTAINER_NAME) is not running"; \
 		exit 0; \
-	fi;
+	fi
 	$(DOCKER) stop $(CONTAINER_NAME)
 
 docker-start: docker-exists-container ## Start a container
-	@# Check if the container is running
-	@if $(DOCKER) ps | grep -q $(CONTAINER_NAME); then \
+	@if $(DOCKER) ps --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
 		echo "Container $(CONTAINER_NAME) is already running"; \
 		exit 0; \
-	fi;
+	fi
 	$(DOCKER) start $(CONTAINER_NAME)
 docker-restart: docker-exists-container ## Restart a container
 	$(DOCKER) restart $(CONTAINER_NAME)
@@ -88,16 +84,14 @@ docker-watch-logs: docker-exists-container ## Watch logs of a container
 
 # —— 🐝 docker-compose commands ———————————————————————————————————
 .docker-exists-project: # Check if a docker-compose project exists
-	@# Check if the project name is provided
 	@if [ -z "$(PROJECT_NAME)" ]; then \
 		echo "Project name is not provided"; \
 		exit 1; \
-	fi;
-	@# Check if the folder exists
+	fi
 	@if [ ! -d "$(PROJECT_NAME)" ]; then \
 		echo "Folder $(PROJECT_NAME) does not exist"; \
 		exit 1; \
-	fi;
+	fi
 
 docker-pull-images: .docker-exists-project # Pull images for a docker-compose stack
 	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
