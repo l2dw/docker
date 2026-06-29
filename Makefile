@@ -26,9 +26,9 @@ IP_ADDRESS 	   = $(shell ./bin/ip_address.sh)
 
 # Executables
 GIT           = git
-DOCKER        	= docker
-DOCKER_COMPOSE  = docker compose
-DOCKER_SWARM    = docker swarm
+DOCKER        	?= docker
+DOCKER_COMPOSE  ?= docker compose
+DOCKER_SWARM    ?= docker swarm
 MAKE            = make
 
 
@@ -52,30 +52,26 @@ docker-ps: ## List all running containers
 docker-all: ## List all containers
 	$(DOCKER) ps -a
 docker-exists-container: ## Check if a container exists
-	@# Check if the container name is provided
 	@if [ -z "$(CONTAINER_NAME)" ]; then \
 		echo "Container name is not provided"; \
 		exit 1; \
-	fi; \
-	@# Check if the container exists
-	@if ! $(DOCKER) ps -a | grep -q $(CONTAINER_NAME); then \
+	fi
+	@if ! $(DOCKER) ps -a --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
 		echo "Container $(CONTAINER_NAME) does not exist"; \
 		exit 1; \
-	fi;
+	fi
 docker-stop: docker-exists-container ## Stop a container
-	@# Check if the container is running
-	@if $(DOCKER) ps | grep -q $(CONTAINER_NAME); then \
-		echo "Container $(CONTAINER_NAME) is already running"; \
+	@if ! $(DOCKER) ps --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
+		echo "Container $(CONTAINER_NAME) is not running"; \
 		exit 0; \
-	fi;
+	fi
 	$(DOCKER) stop $(CONTAINER_NAME)
 
 docker-start: docker-exists-container ## Start a container
-	@# Check if the container is running
-	@if $(DOCKER) ps | grep -q $(CONTAINER_NAME); then \
+	@if $(DOCKER) ps --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
 		echo "Container $(CONTAINER_NAME) is already running"; \
 		exit 0; \
-	fi;
+	fi
 	$(DOCKER) start $(CONTAINER_NAME)
 docker-restart: docker-exists-container ## Restart a container
 	$(DOCKER) restart $(CONTAINER_NAME)
@@ -88,16 +84,26 @@ docker-watch-logs: docker-exists-container ## Watch logs of a container
 
 # —— 🐝 docker-compose commands ———————————————————————————————————
 .docker-exists-project: # Check if a docker-compose project exists
-	@# Check if the project name is provided
 	@if [ -z "$(PROJECT_NAME)" ]; then \
 		echo "Project name is not provided"; \
 		exit 1; \
-	fi;
-	@# Check if the folder exists
+	fi
 	@if [ ! -d "$(PROJECT_NAME)" ]; then \
 		echo "Folder $(PROJECT_NAME) does not exist"; \
 		exit 1; \
-	fi;
+	fi
+
+docker-pull-images: .docker-exists-project # Pull images for a docker-compose stack
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" pull; \
+	"$$@"
+
 docker-project-up: .docker-exists-project # Deploy a docker-compose stack
 	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
 	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
@@ -121,6 +127,8 @@ docker-project-down: .docker-exists-project # Remove a docker-compose stack
 	"$$@"
 
 docker-project-recreate: docker-project-down docker-project-up # Recreate a docker-compose project
+
+docker-project-upgrade: docker-pull-images docker-project-down docker-project-up # Recreate a docker-compose project
 
 docker-project-restart: .docker-exists-project # Restart a docker-compose project
 	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
