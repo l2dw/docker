@@ -318,21 +318,18 @@ push-udem: ## Push changes to the UDEM repository
 # —— 🐝 jenkins-agent commands ———————————————————————————————————
 JENKINS_AGENT_STACK_NAME := jenkins-agent
 JENKINS_AGENT_STACK_SERVICES := jenkins-agent
-
+jenkins-agent-build: ## Build the jenkins-agent image
+	@echo "Building the jenkins-agent image..."
+	$(DOCKER_COMPOSE) -f jenkins-agent/docker-compose.yml build --no-cache
 jenkins-agent-stack-up: ## Deploy the jenkins-agent stack
 	$(MAKE) stack-deploy STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
-
 jenkins-agent-stack-down: ## Remove the jenkins-agent stack
 	$(MAKE) stack-rm STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
-
 jenkins-agent-stack-recreate: jenkins-agent-stack-down jenkins-agent-stack-up ## Recreate the jenkins-agent stack
-
 jenkins-agent-stack-logs: ## Show logs of the jenkins-agent stack
 	$(MAKE) stack-logs STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
-
 jenkins-agent-stack-watch: ## Watch logs of the jenkins-agent stack
 	$(MAKE) stack-watch-logs STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
-
 jenkins-agent-stack-debug: ## Debug jenkins-agent swarm stack: services, tasks (states/errors), traefik ports
 	@echo "--- docker stack services ($(JENKINS_AGENT_STACK_NAME))"
 	@$(DOCKER) stack services $(JENKINS_AGENT_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
@@ -350,3 +347,18 @@ jenkins-agent-stack-debug: ## Debug jenkins-agent swarm stack: services, tasks (
 		$(DOCKER) service logs "$(JENKINS_AGENT_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
+jenkins-agent-stack-upgrade: ## Upgrade the jenkins-agent stack
+	@echo "Upgrading the jenkins-agent stack..."
+	$(MAKE) jenkins-agent-build
+	@# make docker-project-upgrade PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)
+jenkins-agent-compose-up: ## Deploy the jenkins-agent stack
+	make docker-project-up PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)
+jenkins-agent-compose-down: ## Remove the jenkins-agent stack
+	make docker-project-down PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)
+jenkins-agent-compose-restart: ## Restart the jenkins-agent stack
+	make docker-project-restart PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)
+jenkins-agent-compose-recreate: jenkins-agent-compose-down jenkins-agent-compose-up ## Recreate the jenkins-agent stack
+jenkins-agent-compose-logs: ## Show logs of the jenkins-agent stack
+	make docker-project-logs PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)
+jenkins-agent-compose-watch-logs: ## Watch logs of the jenkins-agent stack
+	make docker-project-watch PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)

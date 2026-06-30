@@ -13,7 +13,7 @@ ARG DOCKER_VERSION=27.3.1
 ENV http_proxy=${http_proxy}
 ENV https_proxy=${https_proxy}
 ENV no_proxy=${no_proxy}
-ENV JENKINS_AGENT_WORKDIR=/var/jenkins/agent
+ENV JENKINS_AGENT_WORKDIR=/var/jenkins-agent
 
 RUN apt-get update && apt-get install -y \
     make \
@@ -40,15 +40,19 @@ RUN groupadd -g ${USER_GID} ${USER_NAME} || true
 # Create user if it doesn't exist
 RUN useradd -m -u ${USER_UID} -g ${USER_GID} ${USER_NAME} || true
 
+# Add user to docker group
+RUN usermod -u ${USER_UID} ${USER_NAME} || true
+RUN groupmod -g ${USER_GID} ${USER_NAME} || true
+
 # Add user to root group
 RUN usermod -aG root ${USER_NAME} || true
 RUN usermod -aG docker ${USER_NAME} || true
 RUN echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# Add user to root group
-RUN usermod -aG root jenkins || true
-RUN usermod -aG docker jenkins || true
-RUN echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+# # Add user to root group
+# RUN usermod -aG root jenkins || true
+# RUN usermod -aG docker jenkins || true
+# RUN echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 RUN mkdir -p /home/${USER_NAME} ${JENKINS_AGENT_WORKDIR} && chown -R ${USER_UID}:${USER_GID} /home/${USER_NAME} ${JENKINS_AGENT_WORKDIR}
 
