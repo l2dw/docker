@@ -12,7 +12,6 @@ volumes:
 services:
   jenkins-agent:
     image: ${JENKINS_AGENT_IMAGE:-atelier.cen.umontreal.ca/jenkins/agent:latest}
-    userns_mode: keep-id
     x-pull-policy: ${JENKINS_AGENT_PULL_POLICY:-if_not_present}
     restart: ${JENKINS_AGENT_RESTART:-unless-stopped}
     privileged: ${JENKINS_AGENT_PRIVILEGED:-true}
@@ -29,6 +28,9 @@ services:
         DOCKER_VERSION: ${DOCKER_VERSION:-27.3.1}
     # tty: true
     # stdin_open: true
+    userns_mode: keep-id
+    security_opt:
+      - label=disable
     environment:
       - TZ=${TZ}
       - http_proxy=${HTTP_PROXY}
@@ -47,7 +49,7 @@ services:
       - CONTAINER_HOST=unix:///var/run/docker.sock
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      - ${JENKINS_AGENT_MOUNT_HOME_DIR:-jenkins_agent_home}:/home/${JENKINS_AGENT_USER_NAME:-admin}:z
+      - ${JENKINS_AGENT_MOUNT_HOME_DIR:-jenkins_agent_home}:/home/${JENKINS_AGENT_USER_NAME:-admin}:z:rw
       - ${JENKINS_AGENT_MOUNT_WORKDIR:-jenkins_agent_workdir}:${JENKINS_AGENT_WORKDIR:-/var/jenkins-agent}
     mem_limit: ${JENKINS_AGENT_MEMORY_LIMIT:-512M}
     ## Deploy
