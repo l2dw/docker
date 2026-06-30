@@ -49,7 +49,7 @@ services:
       - CONTAINER_HOST=unix:///var/run/docker.sock
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      - ${JENKINS_AGENT_MOUNT_HOME_DIR:-jenkins_agent_home}:/home/${JENKINS_AGENT_USER_NAME:-admin}:z:rw
+      - ${JENKINS_AGENT_MOUNT_HOME_DIR:-jenkins_agent_home}:/home/${JENKINS_AGENT_USER_NAME:-admin}:rw
       - ${JENKINS_AGENT_MOUNT_WORKDIR:-jenkins_agent_workdir}:${JENKINS_AGENT_WORKDIR:-/var/jenkins-agent}
     mem_limit: ${JENKINS_AGENT_MEMORY_LIMIT:-512M}
     ## Deploy
