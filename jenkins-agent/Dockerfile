@@ -1,4 +1,4 @@
-FROM jenkins/inbound-agent:latest
+FROM docker.io/jenkins/inbound-agent:latest
 
 USER root
 
@@ -57,4 +57,4 @@ RUN echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN mkdir -p /home/${USER_NAME} ${JENKINS_AGENT_WORKDIR} && chown -R ${USER_UID}:${USER_GID} /home/${USER_NAME} ${JENKINS_AGENT_WORKDIR}
 
 USER ${USER_NAME}
-WORKDIR /home/${USER_NAME}
+WORKDIR ${JENKINS_AGENT_WORKDIR}

@@ -320,7 +320,14 @@ JENKINS_AGENT_STACK_NAME := jenkins-agent
 JENKINS_AGENT_STACK_SERVICES := jenkins-agent
 jenkins-agent-build: ## Build the jenkins-agent image
 	@echo "Building the jenkins-agent image..."
-	$(DOCKER_COMPOSE) -f jenkins-agent/docker-compose.yml build --no-cache
+	$(DOCKER) buildx build --push --pull --platform linux/amd64,linux/arm64 \
+		--build-arg HTTP_PROXY=$(HTTP_PROXY) \
+		--build-arg HTTPS_PROXY=$(HTTPS_PROXY) \
+		--build-arg NO_PROXY=$(NO_PROXY) \
+		--build-arg USER_NAME=admin \
+		--build-arg USER_UID=501 \
+		--build-arg USER_GID=100 \
+		-t atelier.cen.umontreal.ca/jenkins/agent:latest jenkins-agent/
 jenkins-agent-stack-up: ## Deploy the jenkins-agent stack
 	$(MAKE) stack-deploy STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
 jenkins-agent-stack-down: ## Remove the jenkins-agent stack
