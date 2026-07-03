@@ -16,7 +16,7 @@ services:
       SMARTHOST_USER: ${SMTP_RELAY_USER:-}
       SMARTHOST_PASSWORD: ${SMTP_RELAY_PASS:-}
       SMARTHOST_ALIASES: ${SMTP_RELAY_ALIASES:-}
-    mem_limit: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
+    # mem_limit: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
     ports:
       - target: ${SMTP_RELAY_PORT_TARGET:-25}
         published: ${SMTP_RELAY_PORT_PUBLISHED:-25}
@@ -26,9 +26,9 @@ services:
     deploy:
       replicas: ${SMTP_RELAY_REPLICAS:-1}
       mode: ${SMTP_RELAY_SWARM_MODE:-replicated}
-      resources:
-        limits:
-          memory: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
+      # resources:
+      #   limits:
+      #     memory: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
       placement:
         constraints:
           - ${SMTP_RELAY_PLACEMENT_CONSTRAINTS:-node.role==manager}
