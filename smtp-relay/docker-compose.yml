@@ -18,10 +18,7 @@ services:
       SMARTHOST_ALIASES: ${SMTP_RELAY_ALIASES:-}
     mem_limit: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
     ports:
-      - target: 25
-        mode: host
-        publish:
-          - ${SMTP_RELAY_NODEPORT:-25}:25
+      - ${SMTP_RELAY_NODEPORT:-25}:25
     ## Deploy
     deploy:
       replicas: ${SMTP_RELAY_REPLICAS:-1}
