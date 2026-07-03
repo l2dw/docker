@@ -1,8 +1,13 @@
-# $(ENV_FILE) is `-include`d as Makefile assignments; all KEY= names are `export`ed so every recipe and
-# subprocess (`docker stack deploy`, etc.) inherits the same values. See `.env.example`.
-ENV_FILE ?= $(CURDIR)/.env
+# include .env.local
+VERSION := v$(shell date +%Y.%m.%d)
+DATETIME := $(shell date '+%Y.%m.%d %H:%M:%S')
+ENV=prod
 
-# ENV_EXPORT_KEYS := $(shell test -f "$(ENV_FILE)" && sed -n '/^[[:space:]]*#/d;/^[[:space:]]*$$/d;/^[A-Za-z_][A-Za-z0-9_]*=/s/=.*$$//p' "$(ENV_FILE)" 2>/dev/null | tr '\n' ' ')
+BIN_DIR=./bin
+# BACKUPS_DIR=$(APPDATA_DIR)/backups
+
+# Export environment variables from .env file if it exists
+ENV_FILE ?= $(CURDIR)/.env
 ENV_EXPORT_KEYS := $(shell test -f "$(ENV_FILE)" && sed -n '/^[[:space:]]*\#/d;/^[[:space:]]*$$/d;/^[A-Za-z_][A-Za-z0-9_]*=/s/=.*$$//p' "$(ENV_FILE)" 2>/dev/null | tr '\n' ' ')
 
 ifneq (,$(wildcard $(ENV_FILE)))
@@ -12,6 +17,8 @@ export $(ENV_EXPORT_KEYS)
 endif
 endif
 
+
+USE_CACHE = "yes"
 # Parameters (Makefile defaults apply only where below; .env overrides by inclusion above)
 SHELL          = sh
 TZ             ?= America/Toronto
@@ -19,51 +26,52 @@ IP_ADDRESS 	   = $(shell ./bin/ip_address.sh)
 
 # Executables
 GIT           = git
-DOCKER        	= docker
-DOCKER_COMPOSE  = docker compose
-DOCKER_SWARM    = docker swarm
+DOCKER        	?= docker
+DOCKER_COMPOSE  ?= docker compose
+DOCKER_SWARM    ?= docker swarm
 MAKE            = make
 
 
 # Misc
 .DEFAULT_GOAL = help
-.PHONY        : dokploy-debug dokploy-debug-logs stack-watch-logs
+# .PHONY: help
 
 ## —— 🐝 The Makefile 🐝 ———————————————————————————————————
 help: ## Outputs this help screen
 	@grep -h -E '(^[a-zA-Z0-9_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' \
 		| sed -e 's/\[32m##/[33m/'
+
 ## —— 🐝 Docker commands ———————————————————————————————————
+docker-login: ## Login to the Docker registry
+	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY_HOST)' as $(DOCKER_REGISTRY_USER)"
+	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) -u $(DOCKER_REGISTRY_USER) -p $(DOCKER_REGISTRY_PASS)
+
 docker-ps: ## List all running containers
 	$(DOCKER) ps
 docker-all: ## List all containers
 	$(DOCKER) ps -a
 docker-exists-container: ## Check if a container exists
-	@# Check if the container name is provided
 	@if [ -z "$(CONTAINER_NAME)" ]; then \
 		echo "Container name is not provided"; \
 		exit 1; \
-	fi; \
-	@# Check if the container exists
-	@if ! $(DOCKER) ps -a | grep -q $(CONTAINER_NAME); then \
+	fi
+	@if ! $(DOCKER) ps -a --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
 		echo "Container $(CONTAINER_NAME) does not exist"; \
 		exit 1; \
-	fi;
+	fi
 docker-stop: docker-exists-container ## Stop a container
-	@# Check if the container is running
-	@if $(DOCKER) ps | grep -q $(CONTAINER_NAME); then \
-		echo "Container $(CONTAINER_NAME) is already running"; \
+	@if ! $(DOCKER) ps --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
+		echo "Container $(CONTAINER_NAME) is not running"; \
 		exit 0; \
-	fi;
+	fi
 	$(DOCKER) stop $(CONTAINER_NAME)
 
 docker-start: docker-exists-container ## Start a container
-	@# Check if the container is running
-	@if $(DOCKER) ps | grep -q $(CONTAINER_NAME); then \
+	@if $(DOCKER) ps --format '{{.Names}}' | grep -qx "$(CONTAINER_NAME)"; then \
 		echo "Container $(CONTAINER_NAME) is already running"; \
 		exit 0; \
-	fi;
+	fi
 	$(DOCKER) start $(CONTAINER_NAME)
 docker-restart: docker-exists-container ## Restart a container
 	$(DOCKER) restart $(CONTAINER_NAME)
@@ -76,54 +84,78 @@ docker-watch-logs: docker-exists-container ## Watch logs of a container
 
 # —— 🐝 docker-compose commands ———————————————————————————————————
 .docker-exists-project: # Check if a docker-compose project exists
-	@# Check if the project name is provided
 	@if [ -z "$(PROJECT_NAME)" ]; then \
 		echo "Project name is not provided"; \
 		exit 1; \
-	fi;
-	@# Check if the folder exists
+	fi
 	@if [ ! -d "$(PROJECT_NAME)" ]; then \
 		echo "Folder $(PROJECT_NAME) does not exist"; \
 		exit 1; \
-	fi;
-docker-project-up: .docker-exists-project # Deploy a docker-compose stack
-	@compose='$(DOCKER_COMPOSE_FILE)'; \
-	if [ -z "$$compose" ]; then compose='$(PROJECT_NAME)/docker-compose.yml'; fi; \
-	if [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; then \
-		echo "docker compose file '$$compose' does not exist"; \
-		exit 1; \
+	fi
+
+docker-pull-images: .docker-exists-project # Pull images for a docker-compose stack
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
-	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose" up -d
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" pull; \
+	"$$@"
+
+docker-project-up: .docker-exists-project # Deploy a docker-compose stack
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" up -d; \
+	"$$@"
 
 docker-project-down: .docker-exists-project # Remove a docker-compose stack
-	@compose='$(DOCKER_COMPOSE_FILE)'; \
-	if [ -z "$$compose" ]; then compose='$(PROJECT_NAME)/docker-compose.yml'; fi; \
-	if [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; then \
-		echo "docker compose file '$$compose' does not exist"; \
-		exit 1; \
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
-	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose" down
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" down; \
+	"$$@"
 
 docker-project-recreate: docker-project-down docker-project-up # Recreate a docker-compose project
 
+docker-project-upgrade: docker-pull-images docker-project-down docker-project-up # Recreate a docker-compose project
+
 docker-project-restart: .docker-exists-project # Restart a docker-compose project
-	@compose='$(DOCKER_COMPOSE_FILE)'; \
-	if [ -z "$$compose" ]; then compose='$(PROJECT_NAME)/docker-compose.yml'; fi; \
-	if [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; then \
-		echo "docker compose file '$$compose' does not exist"; \
-		exit 1; \
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
-	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose" restart
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" restart; \
+	"$$@"
 
 docker-project-logs: .docker-exists-project ## Show logs of a docker-compose project
-	@compose='$(DOCKER_COMPOSE_FILE)'; \
-	if [ -z "$$compose" ]; then compose='$(PROJECT_NAME)/docker-compose.yml'; fi; \
-	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose" logs
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" logs; \
+	"$$@"
 
 docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose project
-	@compose='$(DOCKER_COMPOSE_FILE)'; \
-	if [ -z "$$compose" ]; then compose='$(PROJECT_NAME)/docker-compose.yml'; fi; \
-	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose" logs -f
+	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
+	set -- "$$@" logs -f; \
+	"$$@"
 
 ## —— 🐝 swarm commands ———————————————————————————————————
 swarm-init: ## Initialize the swarm
@@ -160,28 +192,27 @@ swarm-unlock-key: ## Show the unlock key
 # Default: no detach flag (CLI without `--detach` rejects it). STACK_DEPLOY_WAIT=1 passes --detach=false only if `docker stack deploy --help` lists `--detach`; else prints a stderr note so older hosts remain usable.
 STACK_DEPLOY_WAIT ?= 1
 
-stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/stack-compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
-	@stk='$(STACK_NAME)'; compose='$(STACK_FILE)'; ovr='$(STACK_OVERRIDE)'; \
-	if [ -z "$$compose" ] && [ -f "$$stk/stack-compose.yml" ]; then compose="$$stk/stack-compose.yml"; fi; \
+stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
+	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(STACK_NAME)')"; \
 	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
-		echo "STACK_FILE is unset and not found at $$stk/stack-compose.yml — set STACK_FILE or create that file."; exit 1; \
+		echo "STACK_FILE is unset and no compose file found under $(STACK_NAME)/ (stack-compose.yml or docker-compose.yml)."; exit 1; \
 	fi; \
-	if [ -z "$$ovr" ] && { [ -f "$$stk/stack-compose.override.yml" ] || [ -L "$$stk/stack-compose.override.yml" ]; }; then ovr="$$stk/stack-compose.override.yml"; fi; \
+	if [ -n "$$env_file" ]; then set -a && . "$$env_file" && set +a; fi; \
 	set -- -c "$$compose"; \
-	if [ -n "$$ovr" ] && [ -f "$$ovr" ]; then set -- "$$@" -c "$$ovr"; fi; \
+	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -c "$$override"; fi; \
 	deploy_extra=""; \
 	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) \
 	  if $(DOCKER) stack deploy --help 2>/dev/null | grep -q -- '--detach'; then \
 	    deploy_extra='--detach=false'; \
 	  else \
-	    echo >&2 "Note: $(DOCKER) stack deploy has no --detach on this host — cannot wait for rollout; use docker stack ps $$stk."; \
+	    echo >&2 "Note: $(DOCKER) stack deploy has no --detach on this host — cannot wait for rollout; use docker stack ps $(STACK_NAME)."; \
 	  fi ;; \
 	esac; \
 	set +e; \
-	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$deploy_extra; \
+	$(DOCKER) stack deploy "$$@" "$(STACK_NAME)" --with-registry-auth $$deploy_extra; \
 	rc=$$?; \
 	if [ "$$rc" -ne 0 ]; then \
-	$(DOCKER) stack deploy "$$@" "$$stk" --with-registry-auth $$deploy_extra; \
+	$(DOCKER) stack deploy "$$@" "$(STACK_NAME)" --with-registry-auth $$deploy_extra; \
 	rc=$$?; \
 	fi; \
 	set -e; \
@@ -203,6 +234,86 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
+
+## —— Infrastructure 🐳 ————————————————————————————————————————————————————————————————
+commit-changes: ## Commit changes to the infrastructure
+	@echo "Committing changes to the infrastructure..."
+	chmod +x $(BIN_DIR)/*.sh
+	git add .
+	git commit -m "Update infrastructure: $(DATETIME)"
+	git push origin
+
+setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want a real TTY)
+	@echo "Setting up infrastructure..."
+	@$(BIN_DIR)/setup-environment.sh
+	@$(BIN_DIR)/setup-filesystem.sh
+	@$(BIN_DIR)/install-sexy-bash-prompt.sh
+
+update-server: ## Update server
+	@echo "Updating server..."
+	@$(BIN_DIR)/server-update.sh
+
+deploy-infrastructure: ## Deploy infrastructure
+	@echo "Deploying infrastructure..."
+	@$(BIN_DIR)/setup-swarm.sh
+	@$(BIN_DIR)/deploy-infrastructure.sh
+
+fix-dns-resolv: ## Fix DNS resolver
+	@echo "Fixing DNS resolv.conf..."
+	@$(BIN_DIR)/fix-dns-resolv.sh
+
+services-list: ## List services
+	@echo "Listing services..."
+	@docker service ls
+
+.create-db: ## Create database
+	@echo "Creating database..."
+	@# Swarm: task container name isn't stable; exec into the running task container.
+	@# Requires vars: DB_USER, DB_PASS, DB_NAME
+	@bash -lc 'set -euo pipefail; \
+	: "$${DB_USER:?Missing DB_USER}"; : "$${DB_PASS:?Missing DB_PASS}"; : "$${DB_NAME:?Missing DB_NAME}"; \
+	cid="$$(docker ps -q --filter "label=com.docker.swarm.service.name=infrastructure_postgresql" | head -n 1)"; \
+	if [ -z "$$cid" ]; then \
+		echo "Error: no running container found for Swarm service infrastructure_postgresql."; \
+		echo "Hint: run: docker service ps infrastructure_postgresql"; \
+		exit 1; \
+	fi; \
+	echo "Using postgresql task container: $$cid"; \
+	role_exists="$$(docker exec "$$cid" psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '\''$${DB_USER}'\'';")"; \
+	if [ "$$role_exists" != "1" ]; then \
+		echo "Creating role $${DB_USER} ..."; \
+		docker exec "$$cid" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE USER \"$${DB_USER}\" WITH PASSWORD '\''$${DB_PASS}'\'';"; \
+	else \
+		echo "Role $${DB_USER} already exists."; \
+	fi; \
+	db_exists="$$(docker exec "$$cid" psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '\''$${DB_NAME}'\'';")"; \
+	if [ "$$db_exists" != "1" ]; then \
+		echo "Creating database $${DB_NAME} ..."; \
+		docker exec "$$cid" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$${DB_NAME}\" OWNER \"$${DB_USER}\";"; \
+	else \
+		echo "Database $${DB_NAME} already exists."; \
+	fi'
+
+.connect-db: ## Connect to database
+	@echo "Connecting to database with user: postgres"
+	@bash -lc 'set -euo pipefail; \
+	cid="$$(docker ps -q --filter "label=com.docker.swarm.service.name=infrastructure_postgresql" | head -n 1)"; \
+	if [ -z "$$cid" ]; then \
+		echo "Error: no running container found for Swarm service infrastructure_postgresql."; \
+		echo "Hint: run: docker service ps infrastructure_postgresql"; \
+		exit 1; \
+	fi; \
+	echo "Using postgresql task container: $$cid"; \
+	if [ -t 0 ] && [ -t 1 ]; then \
+		docker exec -it "$$cid" psql -U postgres -d postgres; \
+	else \
+		docker exec -i "$$cid" psql -U postgres -d postgres; \
+	fi'
+
+# —— 🐝 git commands ———————————————————————————————————
+push-udem: ## Push changes to the UDEM repository
+	## push the current branch to the UDEM repository
+	git push ti-udem $(CURRENT_BRANCH)
 
 ## —— 🐝 smtp commands ———————————————————————————————————
 SMTP_RELAY := smtp-relay
