@@ -2,12 +2,10 @@ networks:
   default:
     name: ${DEFAULT_NETWORK:-dokploy-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-true}
-  dokploy-network:
-    external: true
 services:
-  smtp-relay-relay:
+  smtp-relay:
     image: ${SMTP_RELAY_IMAGE:-namshi/smtp:latest}
-    pull_policy: ${SMTP_RELAY_PULL_POLICY:-always}
+    x-pull-policy: ${SMTP_RELAY_PULL_POLICY:-always}
     restart: ${SMTP_RELAY_RESTART:-unless-stopped}
     environment:
       TZ: ${TZ}
@@ -21,9 +19,18 @@ services:
     mem_limit: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
     ports:
       - ${SMTP_RELAY_NODEPORT:-25}:25
-    labels:
-      homepage.group: ${SMTP_RELAY_HOMEPAGE_GROUP:-}
-      homepage.name: ${SMTP_RELAY_HOMEPAGE_NAME:-smtp}
-      homepage.icon: ${SMTP_RELAY_HOMEPAGE_ICON:-smtp.png}
-      homepage.description: ${SMTP_RELAY_HOMEPAGE_DESCRIPTION:-}
-      homepage.ping: ${SMTP_RELAY_HOMEPAGE_PING:-}
+    ## Deploy
+    deploy:
+      replicas: ${SMTP_RELAY_REPLICAS:-1}
+      mode: ${SMTP_RELAY_SWARM_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${SMTP_RELAY_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      ports:
+        - target: 25
+          mode: host
+          publish:
+            - ${SMTP_RELAY_NODEPORT:-25}:25
