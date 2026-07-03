@@ -28,4 +28,15 @@ if [ -f "$prj/.env" ]; then
 	env_file="$prj/.env"
 fi
 
-printf 'compose=%q\noverride=%q\nenv_file=%q\n' "$compose" "$override" "$env_file"
+# POSIX sh (dash) lacks printf %q; single-quote escape for eval-safe output.
+shell_quote() {
+	case $1 in
+		*\'*) printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")" ;;
+		*) printf "'%s'" "$1" ;;
+	esac
+}
+
+printf 'compose=%s\noverride=%s\nenv_file=%s\n' \
+	"$(shell_quote "$compose")" \
+	"$(shell_quote "$override")" \
+	"$(shell_quote "$env_file")"
