@@ -19,3 +19,4 @@ fi
 if [ ! -d /logs ] && [ ! -L /logs ]; then
     sudo ln -s "${LOGS_DIR}" /logs
 fi
+

@@ -32,6 +32,9 @@ DOCKER_SWARM    ?= docker swarm
 MAKE            = make
 
 
+SWAP_SIZE ?= 4G
+SWAP_FILE ?= /swapfile
+
 # Misc
 .DEFAULT_GOAL = help
 # .PHONY: help
@@ -254,8 +257,20 @@ setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want
 	fi
 	@$(BIN_DIR)/install-utilities-packages.sh
 	@$(BIN_DIR)/install-docker-ce.sh
-	# @$(BIN_DIR)/fix-dns-resolv.sh
+	@$(BIN_DIR)/fix-dns-resolv.sh
 	@$(BIN_DIR)/server-update.sh
+	@# NFS Volumes
+	@sudo mkdir -p /nfs/${INFRA_NAME}
+	@sudo chown ${ADMIN_USER}:${ADMIN_USER} /nfs/${INFRA_NAME}
+	@mkdir -p /nfs/${INFRA_NAME}/{prod,tools,shares,backups}
+	@if [ ! -f $(SWAP_FILE) ] && [ "$(SWAP_SIZE)" != "0" ]; then \
+		$(MAKE) add-swap-file SWAP_SIZE="$(SWAP_SIZE)" SWAP_FILE="$(SWAP_FILE)"; \
+	fi; \
+	if [ "$(SWAP_SIZE)" == "0" ]; then \
+		@echo "Swap file memory is not needed"; \
+		@# disable all swap
+		@sudo swapoff -a
+	fi
 
 update-server: ## Update server
 	@echo "Updating server..."
@@ -323,3 +338,23 @@ services-list: ## List services
 push-udem: ## Push changes to the UDEM repository
 	## push the current branch to the UDEM repository
 	git push ti-udem $(CURRENT_BRANCH)
+
+#  Add swap file memory, user define size in parameter SWAP_FILE_SIZE; default is 4G
+# if swap file already exists, remove it first
+add-swap-file: ## Add swap file memory
+	@echo "Adding swap file memory..."
+	@# if swap file already exists, remove it first
+	@if [ -f $(SWAP_FILE) ]; then \
+		sudo swapoff $(SWAP_FILE); \
+		sudo rm -f $(SWAP_FILE); \
+	fi
+	@sudo fallocate -l $(SWAP_SIZE) $(SWAP_FILE)
+	@sudo chmod 600 $(SWAP_FILE)
+	@sudo mkswap $(SWAP_FILE)
+	@# add to fstab: check if already exists
+	@if ! grep -q "$(SWAP_FILE)" /etc/fstab; then \
+		echo "$(SWAP_FILE) swap swap defaults 0 0" | sudo tee -a /etc/fstab; \
+	fi
+	@# reload systemd
+	@sudo systemctl daemon-reload && sudo mount -a
+	@sudo swapon -a --show

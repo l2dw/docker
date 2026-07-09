@@ -77,6 +77,11 @@ CERTS_DIR=${CERTS_DIR:-${APPDATA_DIR}/certs}
 BACKUPS_DIR=${BACKUPS_DIR:-${APPDATA_DIR}/backups}
 LOGS_DIR=${LOGS_DIR:-${APPDATA_DIR}/logs}
 
+# Docker registry
+DOCKER_REGISTRY=${DOCKER_REGISTRY:-}
+DOCKER_USER=${DOCKER_USER:-docker}
+DOCKER_PASSWORD=${DOCKER_PASSWORD:-docker}
+
 #
 EOF
 
@@ -100,8 +105,8 @@ fi
 
 ## Git config
 rm -f /home/${ADMIN_USER}/.gitconfig
-if [ -f ${INFRA_DIR}/etc/.gitconfig ]; then
-	cp ${INFRA_DIR}/etc/.gitconfig /home/${ADMIN_USER}/.gitconfig
+if [ -f ${INFRA_DIR}/etc/gitconfig ]; then
+	cp ${INFRA_DIR}/etc/gitconfig /home/${ADMIN_USER}/.gitconfig
 else
     touch /home/${ADMIN_USER}/.gitconfig
     chmod 0644 /home/${ADMIN_USER}/.gitconfig
@@ -117,3 +122,16 @@ sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 
 ## Replace localhost with the IP address in /etc/hosts : 127.0.0.1 localhost
 sudo sed -i "s/127.0.0.1 .*/127.0.0.1 localhost ${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}/g" /etc/hosts
+
+
+echo "==> Configure swap <=="
+echo "======================"
+sudo sysctl vm.swappiness=10
+echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
+
+
+## System daily update
+# Add to crontab to update system once per day at 3:00 AM
+if ! crontab -l | grep -q "apt-get update"; then
+    echo "0 3 * * * apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && apt-get -y autoremove && apt-get autoclean >> /var/log/auto-update.log 2>&1" | sudo crontab -
+fi

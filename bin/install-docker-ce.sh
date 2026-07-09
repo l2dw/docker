@@ -26,7 +26,21 @@ if [ -f /etc/redhat-release ]; then
 fi
 
 # Add admin user to docker group
-sudo usermod -aG docker $ADMIN_USER
+sudo usermod -aG docker $ADMIN_USER || true
 
 # Enable and start docker service
 sudo systemctl enable docker --now
+
+## config in /etc/docker/daemon.json
+sudo mkdir -p /etc/docker/
+sudo tee /etc/docker/daemon.json << EOF > /dev/null
+{
+  "bip": "172.16.17.1/24",
+  "max-concurrent-downloads": 20,
+  "insecure-registries" : [
+    "127.0.0.1:5000",
+    "${DOCKER_REGISTRY_HOST:-registry.${INFRA_NAME}.${INFRA_DOMAIN}:5000}"
+  ]
+}
+EOF
+sudo systemctl daemon-reload && sudo systemctl restart docker
