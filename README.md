@@ -78,9 +78,14 @@ make setup \
     SWAP_SIZE=4G \
     DOCKER_REGISTRY=registry.ocrx.arbutus-cloud:5000 \
     DOCKER_USER=cenadmin \
-    DOCKER_PASSWORD=CenUdeM6500
+    DOCKER_PASSWORD=CenUdeM6500 \
+    UPDATE_DNS_RESOLVERS=1 \
+    NAMESERVER1=134.87.11.3 \
+    NAMESERVER2=192.168.71.1 \
+    NAMESERVER3=8.8.8.8 \
+    SEARCH_DOMAIN=arbutus-cloud
 
-cat /
+cat /etc/resolv.conf
 
 ## Docker
 

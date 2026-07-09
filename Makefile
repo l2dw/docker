@@ -33,7 +33,7 @@ MAKE            = make
 
 
 SWAP_SIZE ?= 4G
-SWAP_FILE ?= /swapfile
+SWAP_FILE ?= /var/0.swap
 
 # Misc
 .DEFAULT_GOAL = help
@@ -47,8 +47,8 @@ help: ## Outputs this help screen
 
 ## —— 🐝 Docker commands ———————————————————————————————————
 docker-login: ## Login to the Docker registry
-	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY_HOST)' as $(DOCKER_REGISTRY_USER)"
-	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) -u $(DOCKER_REGISTRY_USER) -p $(DOCKER_REGISTRY_PASS)
+	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY)' as $(DOCKER_USER)"
+	@$(DOCKER) login $(DOCKER_REGISTRY) -u $(DOCKER_USER) -p $(DOCKER_PASSWORD)
 
 docker-ps: ## List all running containers
 	$(DOCKER) ps
@@ -262,7 +262,7 @@ setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want
 	@# NFS Volumes
 	@sudo mkdir -p /nfs/${INFRA_NAME}
 	@sudo chown ${ADMIN_USER}:${ADMIN_USER} /nfs/${INFRA_NAME}
-	@mkdir -p /nfs/${INFRA_NAME}/{prod,tools,shares,backups}
+	@mkdir -p /nfs/${INFRA_NAME}/prod /nfs/${INFRA_NAME}/tools /nfs/${INFRA_NAME}/shares /nfs/${INFRA_NAME}/backups
 	@if [ ! -f $(SWAP_FILE) ] && [ "$(SWAP_SIZE)" != "0" ]; then \
 		$(MAKE) add-swap-file SWAP_SIZE="$(SWAP_SIZE)" SWAP_FILE="$(SWAP_FILE)"; \
 	elif [ "$(SWAP_SIZE)" = "0" ]; then \
@@ -355,5 +355,5 @@ add-swap-file: ## Add swap file memory
 	fi
 	@# reload systemd
 	@sudo systemctl daemon-reload && sudo mount -a
-	@sudo swapon -a
+	@sleep 2000 && sudo swapon -a
 	@sudo swapon --show
