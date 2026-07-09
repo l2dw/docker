@@ -265,11 +265,9 @@ setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want
 	@mkdir -p /nfs/${INFRA_NAME}/{prod,tools,shares,backups}
 	@if [ ! -f $(SWAP_FILE) ] && [ "$(SWAP_SIZE)" != "0" ]; then \
 		$(MAKE) add-swap-file SWAP_SIZE="$(SWAP_SIZE)" SWAP_FILE="$(SWAP_FILE)"; \
-	fi; \
-	if [ "$(SWAP_SIZE)" == "0" ]; then \
-		@echo "Swap file memory is not needed"; \
-		@# disable all swap
-		@sudo swapoff -a
+	elif [ "$(SWAP_SIZE)" = "0" ]; then \
+		echo "Swap file memory is not needed"; \
+		sudo swapoff -a; \
 	fi
 
 update-server: ## Update server

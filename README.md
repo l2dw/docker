@@ -66,15 +66,21 @@ git fetch origin && git checkout ocrx/infra
 
 make setup \
     INSTANCE_NAME=template \
+    INFRA_NAME=ocrx \
+    INFRA_DOMAIN=arbutus-cloud \
+    ADMIN_USER=ubuntu \
     INFRA_DIR=/home/ubuntu \
     APPDATA_DIR=/appdata \
     CERTS_DIR=/shares/certs \
     BACKUPS_DIR=/backups \
     LOGS_DIR=/appdata/logs \
+    DATA_DIR=/data \
     SWAP_SIZE=4G \
     DOCKER_REGISTRY=registry.ocrx.arbutus-cloud:5000 \
     DOCKER_USER=cenadmin \
     DOCKER_PASSWORD=CenUdeM6500
+
+cat /
 
 ## Docker
 
