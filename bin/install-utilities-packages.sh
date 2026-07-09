@@ -7,7 +7,8 @@ if [ -f /etc/debian_version ]; then
     sudo apt update -y
     sudo apt install -y \
         build-essential \
-        ca-certificates fail2ban \
+        ca-certificates \
+        fail2ban \
         curl \
         wget \
         git \
@@ -18,7 +19,11 @@ if [ -f /etc/debian_version ]; then
         tree \
         tmux \
         dnsutils \
-        net-tools
+        net-tools \
+        nfs-common \
+        apache2-utils \
+        net-tools \
+        nfs-common
 fi
 
 ## if redhat/centos, fedora, or rocky linux, install utilities packages

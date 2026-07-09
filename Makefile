@@ -254,7 +254,7 @@ setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want
 	fi
 	@$(BIN_DIR)/install-utilities-packages.sh
 	@$(BIN_DIR)/install-docker-ce.sh
-	@$(BIN_DIR)/fix-dns-resolv.sh
+	# @$(BIN_DIR)/fix-dns-resolv.sh
 	@$(BIN_DIR)/server-update.sh
 
 update-server: ## Update server

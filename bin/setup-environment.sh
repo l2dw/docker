@@ -88,14 +88,14 @@ export \$(grep -v '^#' /etc/environment | xargs)
 #
 EOF
 
-if [ ! -L /home/${ADMIN_USER}/Makefile ] && [ ! -f /home/${ADMIN_USER}/Makefile ]; then
+if [ -f ${INFRA_DIR}/Makefile ] && [ ! -L /home/${ADMIN_USER}/Makefile ] && [ ! -f /home/${ADMIN_USER}/Makefile ]; then
     echo "Creating symlink for Makefile in /home/${ADMIN_USER}..."
-    sudo ln -s /infra/Makefile /home/${ADMIN_USER}/Makefile
+    sudo ln -s ${INFRA_DIR}/Makefile /home/${ADMIN_USER}/Makefile
 fi
 
-if [ ! -L /home/${ADMIN_USER}/bin ] && [ ! -d /home/${ADMIN_USER}/bin ]; then
+if [ -d ${INFRA_DIR}/bin ] && [ ! -L /home/${ADMIN_USER}/bin ] && [ ! -d /home/${ADMIN_USER}/bin ]; then
     echo "Creating symlink for bin in /home/${ADMIN_USER}..."
-    sudo ln -s /infra/bin /home/${ADMIN_USER}/bin
+    sudo ln -s ${INFRA_DIR}/bin /home/${ADMIN_USER}/bin
 fi
 
 ## Git config
