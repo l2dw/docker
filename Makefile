@@ -355,4 +355,5 @@ add-swap-file: ## Add swap file memory
 	fi
 	@# reload systemd
 	@sudo systemctl daemon-reload && sudo mount -a
-	@sudo swapon -a --show
+	@sudo swapon -a
+	@sudo swapon --show
