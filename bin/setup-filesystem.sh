@@ -3,7 +3,7 @@
 # Setup filesystem
 
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
-ENV_FILE="${ENV_FILE:-${HOME_DIR}/environment}"
+ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
 if [ -f "${ENV_FILE}" ] && [ -r "${ENV_FILE}" ]; then
 	# shellcheck disable=SC1090
 	set -a

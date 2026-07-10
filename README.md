@@ -41,7 +41,7 @@ git fetch origin && git checkout ocrx/infra
 # DOCKER_RUNTIME_SOCKET=/var/run/docker.sock
 
 # FIN
-INSTANCE_NAME=template
+INSTANCE_NAME=pivot
 
 make setup \
     INSTANCE_NAME=${INSTANCE_NAME} \

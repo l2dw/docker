@@ -52,7 +52,7 @@ detect_ip_address() {
 ## how do i get the home directory of the user ${ADMIN_USER}?
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
 echo "Home directory of ${ADMIN_USER}: ${HOME_DIR}"
-ENV_FILE="${ENV_FILE:-${HOME_DIR}/environment}"
+ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
 echo "Writing ${ENV_FILE}..."
 tmp_env="$(mktemp)"
 touch "${ENV_FILE}"
@@ -113,17 +113,17 @@ if [ -f "${BASHRC}" ]; then
 	if ! grep -qF 'INFRA_ENVIRONMENT_V1' "${BASHRC}"; then
 		cat >> "${BASHRC}" << 'EOF'
 
-# INFRA_ENVIRONMENT_V1: load infra variables from ~/environment
-if [ -r "${HOME}/environment" ]; then
+# INFRA_ENVIRONMENT_V1: load infra variables from ${ENV_FILE}
+if [ -r "${ENV_FILE}" ]; then
   set -a
   # shellcheck source=/dev/null
-  . "${HOME}/environment"
+  . "${ENV_FILE}"
   set +a
 fi
 EOF
-		echo "Updated ${BASHRC} to source ~/environment"
+		echo "Updated ${BASHRC} to source ${ENV_FILE}"
 	else
-		echo "${BASHRC} already sources ~/environment"
+		echo "${BASHRC} already sources ${ENV_FILE}"
 	fi
 else
 	echo "Warning: ${BASHRC} not found; skipping ~/.bashrc environment hook" >&2
