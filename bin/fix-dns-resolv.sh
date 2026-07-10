@@ -6,6 +6,12 @@ if [ "${UPDATE_DNS_RESOLVERS}" != "true" ] && [ "${UPDATE_DNS_RESOLVERS}" != "1"
 	exit 0
 fi
 
+# Check if user has sudo privileges (NOPASSWD)
+if ! sudo -n true 2>/dev/null; then
+	echo "Info: passwordless sudo is required (NOPASSWD); skipping DNS resolution fix."
+	exit 0
+fi
+
 NS1="${NAMESERVER1:-${EXTERNAL_IP:-}}"
 NS2="${NAMESERVER2:-${GATEWAY_IP:-}}"
 NS3="${NAMESERVER3:-8.8.8.8}"

@@ -49,23 +49,35 @@ detect_ip_address() {
 	printf '%s' "${addr}"
 }
 
-
-echo "Writing /etc/environment..."
+## how do i get the home directory of the user ${ADMIN_USER}?
+HOME_DIR=$(eval echo "~${ADMIN_USER}")
+echo "Home directory of ${ADMIN_USER}: ${HOME_DIR}"
+ENV_FILE="${ENV_FILE:-${HOME_DIR}/environment}"
+echo "Writing ${ENV_FILE}..."
 tmp_env="$(mktemp)"
-sudo touch /etc/environment
+touch "${ENV_FILE}"
 
 # Keep everything before the marker, replace everything after it.
-sudo awk '
+awk '
   /^# Infra Environment variables[[:space:]]*$/ { exit }
   { print }
-' /etc/environment > "${tmp_env}"
+' "${ENV_FILE}" > "${tmp_env}"
 
 cat >> "${tmp_env}" << EOF
+
+HTTP_PROXY=${http_proxy:-}
+HTTPS_PROXY=${https_proxy:-}
+NO_PROXY=${no_proxy:-}
+
+TZ=${TZ:-America/Montreal}
+DEFAULT_NETWORK_NAME=${DEFAULT_NETWORK_NAME:-dokploy-network}
+DEFAULT_NETWORK_EXTERNAL=${DEFAULT_NETWORK_EXTERNAL:-true}
+DOCKER_RUNTIME_SOCKET=${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}
+
 # Infra Environment variables
 TERM=xterm-256color
 ADMIN_USER=${ADMIN_USER}
 IP_ADDRESS="$(detect_ip_address)"
-TZ=America/Toronto
 #
 INSTANCE_NAME=${INSTANCE_NAME}
 INFRA_NAME=${INFRA_NAME}
@@ -83,48 +95,72 @@ DOCKER_REGISTRY=${DOCKER_REGISTRY:-}
 DOCKER_USER=${DOCKER_USER:-docker}
 DOCKER_PASSWORD=${DOCKER_PASSWORD:-docker}
 
-# DNS (optional; used by fix-dns-resolv.sh)
-UPDATE_DNS_RESOLVERS=${UPDATE_DNS_RESOLVERS:-false}
-NAMESERVER1=${NAMESERVER1:-}
-NAMESERVER2=${NAMESERVER2:-}
-NAMESERVER3=${NAMESERVER3:-8.8.8.8}
-SEARCH_DOMAIN=${SEARCH_DOMAIN:-${INFRA_DOMAIN}}
+# # DNS (optional; used by fix-dns-resolv.sh)
+# UPDATE_DNS_RESOLVERS=${UPDATE_DNS_RESOLVERS:-false}
+# NAMESERVER1=${NAMESERVER1:-}
+# NAMESERVER2=${NAMESERVER2:-}
+# NAMESERVER3=${NAMESERVER3:-8.8.8.8}
+# SEARCH_DOMAIN=${SEARCH_DOMAIN:-${INFRA_DOMAIN}}
 
 #
 EOF
 
-sudo install -m 0644 "${tmp_env}" /etc/environment
+install -m 0644 "${tmp_env}" "${ENV_FILE}"
 rm -f "${tmp_env}"
 
-sudo tee /etc/profile.d/zz-environment.sh << EOF > /dev/null
-export \$(grep -v '^#' /etc/environment | xargs)
-#
-EOF
+BASHRC="${HOME}/.bashrc"
+if [ -f "${BASHRC}" ]; then
+	if ! grep -qF 'INFRA_ENVIRONMENT_V1' "${BASHRC}"; then
+		cat >> "${BASHRC}" << 'EOF'
 
-if [ -f ${INFRA_DIR}/Makefile ] && [ ! -L /home/${ADMIN_USER}/Makefile ] && [ ! -f /home/${ADMIN_USER}/Makefile ]; then
-    echo "Creating symlink for Makefile in /home/${ADMIN_USER}..."
-    sudo ln -s ${INFRA_DIR}/Makefile /home/${ADMIN_USER}/Makefile
+# INFRA_ENVIRONMENT_V1: load infra variables from ~/environment
+if [ -r "${HOME}/environment" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  . "${HOME}/environment"
+  set +a
+fi
+EOF
+		echo "Updated ${BASHRC} to source ~/environment"
+	else
+		echo "${BASHRC} already sources ~/environment"
+	fi
+else
+	echo "Warning: ${BASHRC} not found; skipping ~/.bashrc environment hook" >&2
 fi
 
-if [ -d ${INFRA_DIR}/bin ] && [ ! -L /home/${ADMIN_USER}/bin ] && [ ! -d /home/${ADMIN_USER}/bin ]; then
-    echo "Creating symlink for bin in /home/${ADMIN_USER}..."
-    sudo ln -s ${INFRA_DIR}/bin /home/${ADMIN_USER}/bin
+
+if [ -f ${INFRA_DIR}/Makefile ] && [ ! -L ${HOME_DIR}/Makefile ] && [ ! -f ${HOME_DIR}/Makefile ]; then
+    echo "Creating symlink for Makefile in ${HOME_DIR}..."
+    sudo ln -s ${INFRA_DIR}/Makefile ${HOME_DIR}/Makefile
+fi
+
+if [ -d ${INFRA_DIR}/bin ] && [ ! -L ${HOME_DIR}/bin ] && [ ! -d ${HOME_DIR}/bin ]; then
+    echo "Creating symlink for bin in ${HOME_DIR}..."
+    sudo ln -s ${INFRA_DIR}/bin ${HOME_DIR}/bin
 fi
 
 ## Git config
-rm -f /home/${ADMIN_USER}/.gitconfig
+rm -f ${HOME_DIR}/.gitconfig
 if [ -f ${INFRA_DIR}/etc/gitconfig ]; then
-	cp ${INFRA_DIR}/etc/gitconfig /home/${ADMIN_USER}/.gitconfig
+	cp ${INFRA_DIR}/etc/gitconfig ${HOME_DIR}/.gitconfig
 else
-    touch /home/${ADMIN_USER}/.gitconfig
-    chmod 0644 /home/${ADMIN_USER}/.gitconfig
-    chown ${ADMIN_USER}:${ADMIN_USER} /home/${ADMIN_USER}/.gitconfig
+    touch ${HOME_DIR}/.gitconfig
+    chmod 0644 ${HOME_DIR}/.gitconfig
+    chown ${ADMIN_USER}:${ADMIN_USER} ${HOME_DIR}/.gitconfig
 fi
 
 git config --global http.sslVerify false
 git config --global core.autocrlf false
 git config --global user.name "${ADMIN_USER}"
 git config --global user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
+
+
+# Check if user has passwordless sudo privileges (NOPASSWD)
+if ! sudo -n true 2>/dev/null; then
+    echo "Info: passwordless sudo is required (NOPASSWD); skipping hostname configuration."
+    exit 0
+fi
 
 sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 

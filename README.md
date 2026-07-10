@@ -7,11 +7,9 @@
 3. worker-02.ocrx: 128Go - P8-12G
 4. atelier-01.ocrx: 128Go - P2-3G
 
-## Images
+## VMs
 
-### template-ocrx
-
-Création d'une image template pour installer
+### pivot-ocrx
 
 ```sh
 # ssh
@@ -42,30 +40,11 @@ git fetch origin && git checkout ocrx/infra
 # DEFAULT_NETWORK_EXTERNAL=true
 # DOCKER_RUNTIME_SOCKET=/var/run/docker.sock
 
-# INFRA_NAME=ocrx
-# INFRA_DOMAIN=arbutus-cloud
-# ADMIN_USER=ubuntu
-
-# SWAP_FILE=/var/swapfile
-
-
-# INFRA_DIR=/home/ubuntu
-# APPDATA_DIR=/appdata
-# CERTS_DIR=/shares/certs
-# BACKUPS_DIR=/backups
-# LOGS_DIR=/appdata/logs
-
-# # DNS Resolvers
-# UPDATE_DNS_RESOLVERS=false
-# NAMESERVER1=134.87.11.3
-# NAMESERVER2=192.168.71.1
-# NAMESERVER3=8.8.8.8
-# SEARCH_DOMAIN=arbutus-cloud
-
 # FIN
+INSTANCE_NAME=template
 
 make setup \
-    INSTANCE_NAME=template \
+    INSTANCE_NAME=${INSTANCE_NAME} \
     INFRA_NAME=ocrx \
     INFRA_DOMAIN=arbutus-cloud \
     ADMIN_USER=ubuntu \
@@ -85,7 +64,7 @@ make setup \
     NAMESERVER3=8.8.8.8 \
     SEARCH_DOMAIN=arbutus-cloud
 
-cat /etc/resolv.conf
+# cat /etc/resolv.conf
 
 ## Docker
 

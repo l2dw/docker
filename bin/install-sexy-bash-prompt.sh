@@ -17,8 +17,9 @@ else
   make install
 fi
 
-sudo mv ~/.bash_prompt /etc/profile.d/zz-bash_prompt.sh
-sed -i -e /.bash_prompt/d ~/.bashrc
+sed -i 's/\\h/\\H/g' ~/.bash_prompt
 
-## Configure prompt for: ubuntu@pivot.ocrx.arbutus-cloud
-sudo sed -i 's/\\h/\\H/g' /etc/profile.d/zz-bash_prompt.sh
+## Copy prompt to /etc/profile.d/zz-bash_prompt.sh if user has sudo privileges
+if sudo -n true 2>/dev/null; then
+  sudo cp ~/.bash_prompt /etc/profile.d/zz-bash_prompt.sh
+fi

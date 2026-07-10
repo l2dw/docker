@@ -9,7 +9,14 @@ set -euo pipefail
 export DOCKER_CLIENT_TIMEOUT="${DOCKER_CLIENT_TIMEOUT:-300}"
 export COMPOSE_HTTP_TIMEOUT="${COMPOSE_HTTP_TIMEOUT:-300}"
 
-if [ -r /etc/environment ]; then
+USER_ENV_FILE="${USER_ENV_FILE:-${HOME}/environment}"
+if [ -r "${USER_ENV_FILE}" ]; then
+	# shellcheck disable=SC1091
+	set -a
+	# shellcheck source=/dev/null
+	. "${USER_ENV_FILE}"
+	set +a
+elif [ -r /etc/environment ]; then
 	# shellcheck disable=SC1091
 	set -a
 	# shellcheck source=/dev/null
@@ -51,7 +58,7 @@ if [ -n "${DOKPLOY_DATA_DIR:-}" ]; then mkdir_dirs+=("${DOKPLOY_DATA_DIR}"); fi
 if [ -n "${DOKPLOY_LOGS_DIR:-}" ]; then mkdir_dirs+=("${DOKPLOY_LOGS_DIR}"); fi
 if [ -n "${DOCKER_REGISTRY_DATA_DIR:-}" ]; then mkdir_dirs+=("${DOCKER_REGISTRY_DATA_DIR}"); fi
 if [ -n "${DOCKER_REGISTRY_CONF_DIR:-}" ]; then mkdir_dirs+=("${DOCKER_REGISTRY_CONF_DIR}"); fi
-sudo mkdir -p "${mkdir_dirs[@]}"
+mkdir -p "${mkdir_dirs[@]}"
 
 ## Create network if it doesn't exist
 if ! docker network ls | grep -q "${DEFAULT_NETWORK}"; then

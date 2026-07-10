@@ -8,6 +8,12 @@ if command -v docker >/dev/null 2>&1; then
     exit 0
 fi
 
+## Check if user has sudo privileges
+if ! sudo -n true 2>/dev/null; then
+    echo "Info: passwordless sudo is required (NOPASSWD); skipping docker-ce installation."
+    exit 0
+fi
+
 ## if debian/ubuntu
 if [ -f /etc/debian_version ]; then
     sudo apt update -y
@@ -43,4 +49,5 @@ sudo tee /etc/docker/daemon.json << EOF > /dev/null
   ]
 }
 EOF
+
 sudo systemctl daemon-reload && sudo systemctl restart docker
