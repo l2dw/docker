@@ -9,12 +9,16 @@
 
 ## VMs
 
-### pivot-ocrx
+### template-ocrx
 
 ```sh
 # ssh
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@134.87.11.3
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@134.87.9.18
+
+## SSH
+ssh-keygen -t ed25519 -C "ubuntu@ocrx.arbutus-cloud" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
 
 ## Git
 git init
@@ -64,37 +68,11 @@ source ~/.env
 
 ## Docker
 
-
-## SSH
-
-sudo tee ~/.ssh/authorized_keys << FIN > /dev/null
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFDxfUBXOdZmTsLk3jrpkICQrt7o2NEXSXCOjaY9iocy ${ADMIN_USER}@${INFRA_NAME}.${INFRA_DOMAIN}
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII+DXnVWEejLpROErVA1jKTEnhY53kRoPpnMQCn5LDC+ christian.kamgang.simeu@umontreal.ca
-FIN
-
-sudo tee ~/.ssh/id_ed25519 << FIN > /dev/null
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACBQ8X1AVznWZk7C5N466ZCAkK7e6NjRF0lwjo2mPYqHMgAAAKCJPgawiT4G
-sAAAAAtzc2gtZWQyNTUxOQAAACBQ8X1AVznWZk7C5N466ZCAkK7e6NjRF0lwjo2mPYqHMg
-AAAECFtvGaF+VO828EgikIyziJqsZab4ksJ95KWy5cx7No7VDxfUBXOdZmTsLk3jrpkICQ
-rt7o2NEXSXCOjaY9iocyAAAAG2NlbmFkbUBjaHVwaW5qLmJlbHVnYS1jbG91ZAEC
------END OPENSSH PRIVATE KEY-----
-FIN
-sudo chown $ADMIN_USER:$ADMIN_USER -R ~/.ssh/
-sudo chmod 600 -R ~/.ssh/
-sudo chmod 700 ~/.ssh/
-
-
-# ssh-keygen -t ed25519 -C "ubuntu@ocrx.arbutus-cloud" -f ~/.ssh/id_ed25519 -N ""
-# cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
-
-
 ```
 
 ## Création d'une VM
 
-### Manuel
+### Pivot
 
 ```sh
 #ssh vm
