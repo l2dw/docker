@@ -49,10 +49,35 @@ detect_ip_address() {
 	printf '%s' "${addr}"
 }
 
+render_env_bashrc_block() {
+	# Bake the path chosen at setup time; login shells may override via export ENV_FILE=...
+	local default_env_file_quoted
+	default_env_file_quoted="$(printf '%q' "${ENV_FILE}")"
+	cat <<EOF
+# INFRA ENVIRONMENT VARIABLES: load infra variables (override: export ENV_FILE=/path)
+ENV_FILE=\${ENV_FILE:-${default_env_file_quoted}}
+if [ -r "\${ENV_FILE}" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  . "\${ENV_FILE}"
+  set +a
+fi
+EOF
+}
+
 ## how do i get the home directory of the user ${ADMIN_USER}?
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
-echo "Home directory of ${ADMIN_USER}: ${HOME_DIR}"
 ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
+
+# # Re-run: pick up values already written when make omits them.
+# if [ -r "${ENV_FILE}" ]; then
+# 	# shellcheck disable=SC1090
+# 	set -a
+# 	. "${ENV_FILE}"
+# 	set +a
+# fi
+
+echo "Home directory of ${ADMIN_USER}: ${HOME_DIR}"
 echo "Writing ${ENV_FILE}..."
 tmp_env="$(mktemp)"
 touch "${ENV_FILE}"
@@ -75,6 +100,7 @@ DEFAULT_NETWORK_EXTERNAL=${DEFAULT_NETWORK_EXTERNAL:-true}
 DOCKER_RUNTIME_SOCKET=${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}
 
 # Infra Environment variables
+ENV_FILE=${ENV_FILE}
 TERM=xterm-256color
 ADMIN_USER=${ADMIN_USER}
 IP_ADDRESS="$(detect_ip_address)"
@@ -109,21 +135,23 @@ install -m 0644 "${tmp_env}" "${ENV_FILE}"
 rm -f "${tmp_env}"
 
 BASHRC="${HOME_DIR}/.bashrc"
-if [ -f "${BASHRC}" ]; then
-	if ! grep -qF 'INFRA ENVIRONMENT VARIABLES' "${BASHRC}"; then
-		cat >> "${BASHRC}" << 'EOF'
+ENV_BASHRC_BLOCK="$(render_env_bashrc_block)"
 
-# INFRA ENVIRONMENT VARIABLES: load infra variables from ${ENV_FILE}
-if [ -r "${ENV_FILE}" ]; then
-  set -a
-  # shellcheck source=/dev/null
-  . "${ENV_FILE}"
-  set +a
-fi
-EOF
+if [ -f "${BASHRC}" ]; then
+	if grep -qF 'INFRA ENVIRONMENT VARIABLES' "${BASHRC}"; then
+		tmp_bashrc="$(mktemp)"
+		awk '
+		  /^# INFRA ENVIRONMENT VARIABLES:/ { skip=1; next }
+		  skip && /^fi$/ { skip=0; next }
+		  skip { next }
+		  { print }
+		' "${BASHRC}" > "${tmp_bashrc}"
+		printf '%s\n' "${ENV_BASHRC_BLOCK}" >> "${tmp_bashrc}"
+		mv "${tmp_bashrc}" "${BASHRC}"
 		echo "Updated ${BASHRC} to source ${ENV_FILE}"
 	else
-		echo "${BASHRC} already sources ${ENV_FILE}"
+		printf '\n%s\n' "${ENV_BASHRC_BLOCK}" >> "${BASHRC}"
+		echo "Updated ${BASHRC} to source ${ENV_FILE}"
 	fi
 else
 	echo "Warning: ${BASHRC} not found; skipping ${HOME_DIR}/.bashrc environment hook" >&2

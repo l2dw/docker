@@ -9,7 +9,7 @@ set -euo pipefail
 export DOCKER_CLIENT_TIMEOUT="${DOCKER_CLIENT_TIMEOUT:-300}"
 export COMPOSE_HTTP_TIMEOUT="${COMPOSE_HTTP_TIMEOUT:-300}"
 
-USER_ENV_FILE="${USER_ENV_FILE:-${HOME}/.env}"
+USER_ENV_FILE="${ENV_FILE:-${USER_ENV_FILE:-${HOME}/.env}}"
 if [ -r "${USER_ENV_FILE}" ]; then
 	# shellcheck disable=SC1091
 	set -a
