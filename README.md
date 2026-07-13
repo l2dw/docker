@@ -2,7 +2,7 @@
 
 ## Instances (arbutus.alliancecan.ca)
 
-1. pivot.ocrx: 128Go - P2-3G
+1. pivot.ocrx: 64Go - P2-3G
 2. worker-01.ocrx: 128Go - P8-12G
 3. worker-02.ocrx: 128Go - P8-12G
 4. atelier-01.ocrx: 128Go - P2-3G
@@ -41,7 +41,7 @@ git fetch origin && git checkout ocrx/infra
 # DOCKER_RUNTIME_SOCKET=/var/run/docker.sock
 
 # FIN
-INSTANCE_NAME=pivot
+INSTANCE_NAME=template
 make setup \
     INSTANCE_NAME=${INSTANCE_NAME} \
     INFRA_NAME=ocrx \
@@ -63,7 +63,6 @@ make setup \
     NAMESERVER3=8.8.8.8 \
     SEARCH_DOMAIN=arbutus-cloud
 
-source ~/.env
 # cat /etc/resolv.conf
 
 ## Docker
