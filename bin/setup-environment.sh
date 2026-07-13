@@ -108,12 +108,12 @@ EOF
 install -m 0644 "${tmp_env}" "${ENV_FILE}"
 rm -f "${tmp_env}"
 
-BASHRC="${HOME}/.bashrc"
+BASHRC="${HOME_DIR}/.bashrc"
 if [ -f "${BASHRC}" ]; then
-	if ! grep -qF 'INFRA_ENVIRONMENT_V1' "${BASHRC}"; then
+	if ! grep -qF 'INFRA ENVIRONMENT VARIABLES' "${BASHRC}"; then
 		cat >> "${BASHRC}" << 'EOF'
 
-# INFRA_ENVIRONMENT_V1: load infra variables from ${ENV_FILE}
+# INFRA ENVIRONMENT VARIABLES: load infra variables from ${ENV_FILE}
 if [ -r "${ENV_FILE}" ]; then
   set -a
   # shellcheck source=/dev/null
@@ -126,7 +126,7 @@ EOF
 		echo "${BASHRC} already sources ${ENV_FILE}"
 	fi
 else
-	echo "Warning: ${BASHRC} not found; skipping ~/.bashrc environment hook" >&2
+	echo "Warning: ${BASHRC} not found; skipping ${HOME_DIR}/.bashrc environment hook" >&2
 fi
 
 
