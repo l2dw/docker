@@ -47,11 +47,12 @@ help: ## Outputs this help screen
 		| sed -e 's/\[32m##/[33m/'
 
 ## —— 🐝 Docker commands ———————————————————————————————————
-docker-login: ## Login to the Docker registry (DOCKER_REGISTRY_HOST or DOCKER_REGISTRY)
-	@echo "Logging in to the Docker registry '$(or $(DOCKER_REGISTRY_HOST),$(DOCKER_REGISTRY))' as $(or $(DOCKER_REGISTRY_USER),$(DOCKER_USER))"
-	@$(DOCKER) login $(or $(DOCKER_REGISTRY_HOST),$(DOCKER_REGISTRY)) \
-		-u $(or $(DOCKER_REGISTRY_USER),$(DOCKER_USER)) \
-		-p $(or $(DOCKER_REGISTRY_PASS),$(DOCKER_PASSWORD))
+docker-login: ## Login to the Docker registry (DOCKER_REGISTRY_HOST)
+	@test -n "$(or $(DOCKER_REGISTRY_HOST),)" || (echo "Error: set DOCKER_REGISTRY_HOST in .env" && exit 1)
+	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY_HOST)' as $(DOCKER_REGISTRY_USER)"
+	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) \
+		-u $(DOCKER_REGISTRY_USER) \
+		-p $(DOCKER_REGISTRY_PASS)
 
 docker-ps: ## List all running containers
 	$(DOCKER) ps

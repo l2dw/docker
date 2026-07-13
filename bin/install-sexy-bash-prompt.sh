@@ -17,9 +17,26 @@ else
   make install
 fi
 
-sed -i 's/\\h/\\H/g' ~/.bash_prompt
+if [ ! -f "${HOME}/.bash_prompt" ]; then
+  echo "install-sexy-bash-prompt: ${HOME}/.bash_prompt not found after install" >&2
+  exit 1
+fi
 
-## Copy prompt to /etc/profile.d/zz-bash_prompt.sh if user has sudo privileges
+sed -i 's/\\h/\\H/g' "${HOME}/.bash_prompt"
+
 if sudo -n true 2>/dev/null; then
-  sudo cp ~/.bash_prompt /etc/profile.d/zz-bash_prompt.sh
+  sudo cp "${HOME}/.bash_prompt" /etc/profile.d/zz-bash_prompt.sh
+  echo "install-sexy-bash-prompt: installed system-wide in /etc/profile.d/zz-bash_prompt.sh"
+else
+  BASHRC="${HOME}/.bashrc"
+  if [ -f "${BASHRC}" ] && ! grep -qF 'bash_prompt' "${BASHRC}"; then
+    cat >> "${BASHRC}" << 'EOF'
+
+# sexy-bash-prompt (user install; no passwordless sudo for system-wide profile.d)
+[ -r ~/.bash_prompt ] && . ~/.bash_prompt
+EOF
+    echo "install-sexy-bash-prompt: hooked ~/.bash_prompt in ~/.bashrc"
+  else
+    echo "install-sexy-bash-prompt: ~/.bash_prompt updated; ensure ~/.bashrc sources it" >&2
+  fi
 fi

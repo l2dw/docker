@@ -21,7 +21,7 @@ fi
 INFRA_DIR="${INFRA_DIR:-/infra}"
 APPDATA_DIR="${APPDATA_DIR:-/appdata}"
 CERTS_DIR="${CERTS_DIR:-/etc/certs}"
-DEFAULT_NETWORK="${DEFAULT_NETWORK:-dokploy-network}"
+DEFAULT_NETWORK="${DEFAULT_NETWORK_NAME:-${DEFAULT_NETWORK:-dokploy-network}}"
 APPDATA_VOLUME="${APPDATA_VOLUME:-appdata_volume}"
 CERTS_VOLUME="${CERTS_VOLUME:-certs_volume}"
 
