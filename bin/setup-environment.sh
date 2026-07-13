@@ -69,13 +69,6 @@ EOF
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
 ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
 
-# # Re-run: pick up values already written when make omits them.
-# if [ -r "${ENV_FILE}" ]; then
-# 	# shellcheck disable=SC1090
-# 	set -a
-# 	. "${ENV_FILE}"
-# 	set +a
-# fi
 
 echo "Home directory of ${ADMIN_USER}: ${HOME_DIR}"
 echo "Writing ${ENV_FILE}..."
@@ -157,6 +150,14 @@ else
 	echo "Warning: ${BASHRC} not found; skipping ${HOME_DIR}/.bashrc environment hook" >&2
 fi
 
+## Ensure all environment variables are reloaded in the shell
+if [ -r "${ENV_FILE}" ]; then
+	# shellcheck disable=SC1090
+	set -a
+	. "${ENV_FILE}"
+	set +a
+	echo "Reloaded environment from ${ENV_FILE}"
+fi
 
 if [ -f ${INFRA_DIR}/Makefile ] && [ ! -L ${HOME_DIR}/Makefile ] && [ ! -f ${HOME_DIR}/Makefile ]; then
     echo "Creating symlink for Makefile in ${HOME_DIR}..."
