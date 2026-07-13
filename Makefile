@@ -22,7 +22,7 @@ USE_CACHE = "yes"
 # Parameters (Makefile defaults apply only where below; .env overrides by inclusion above)
 SHELL          = sh
 TZ             ?= America/Toronto
-IP_ADDRESS 	   = $(shell ./bin/ip_address.sh)
+IP_ADDRESS 	   = $(shell ./bin/ip_address.sh 2>/dev/null || true)
 
 # Executables
 GIT           = git
@@ -165,8 +165,14 @@ docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose p
 	"$$@"
 
 ## —— 🐝 swarm commands ———————————————————————————————————
-swarm-init: ## Initialize the swarm
-	$(DOCKER_SWARM) init --advertise-addr $(IP_ADDRESS)
+swarm-init: ## Initialize the swarm (SWARM_ADVERTISE_ADDR overrides auto-detect)
+	@set -e; \
+	addr="$(SWARM_ADVERTISE_ADDR)"; \
+	[ -n "$$addr" ] || addr="$(IP_ADDRESS)"; \
+	[ -n "$$addr" ] || addr="$$(./bin/ip_address.sh)"; \
+	[ -n "$$addr" ] || { echo "Error: no IPv4 for --advertise-addr; set SWARM_ADVERTISE_ADDR=<host-ip>" >&2; exit 1; }; \
+	echo "Initializing swarm with --advertise-addr $$addr"; \
+	$(DOCKER_SWARM) init --advertise-addr "$$addr"
 swarm-info: ## Show swarm info
 	$(DOCKER_SWARM) info
 swarm-leave: ## Leave the swarm

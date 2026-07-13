@@ -34,5 +34,9 @@ get_ip_address() {
 }
 
 # Get the IP address of the current node
-IP_ADDRESS=$(get_ip_address)
+IP_ADDRESS="$(get_ip_address)"
+if [ -z "${IP_ADDRESS}" ]; then
+	echo "Error: no suitable IPv4 address found; set SWARM_ADVERTISE_ADDR or IP_ADDRESS" >&2
+	exit 1
+fi
 echo "${IP_ADDRESS}"
