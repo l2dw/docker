@@ -1,3 +1,4 @@
+#!/bin/bash
 # Pick an IPv4 suitable for docker swarm --advertise-addr when SWARM_ADVERTISE_ADDR is unset.
 get_ip_address() {
 	local addr=""

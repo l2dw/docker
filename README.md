@@ -22,7 +22,7 @@ cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
 
 ## Git
 git init
-git remote add origin https://github.com/ocrx-dev/ocrx-infra.git
+git remote add origin ${GIT_REPO:-https://github.com/ocrx-dev/ocrx-infra.git}
 git fetch origin && git checkout ocrx/infra
 
 ## Packages
@@ -54,9 +54,9 @@ make setup \
     LOGS_DIR=/appdata/logs \
     DATA_DIR=/data \
     SWAP_SIZE=4G \
-    DOCKER_REGISTRY=registry.ocrx.arbutus-cloud:5000 \
-    DOCKER_USER=cenadmin \
-    DOCKER_PASSWORD=CenUdeM6500 \
+    DOCKER_REGISTRY_HOST=registry.ocrx.arbutus-cloud:5000 \
+    DOCKER_REGISTRY_USER=cenadmin \
+    DOCKER_REGISTRY_PASS=${DOCKER_REGISTRY_PASS} \
     UPDATE_DNS_RESOLVERS=1 \
     NAMESERVER1=134.87.11.3 \
     NAMESERVER2=192.168.71.1 \

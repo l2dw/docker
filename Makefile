@@ -26,6 +26,7 @@ IP_ADDRESS 	   = $(shell ./bin/ip_address.sh)
 
 # Executables
 GIT           = git
+CURRENT_BRANCH ?= $(shell $(GIT) rev-parse --abbrev-ref HEAD 2>/dev/null)
 DOCKER        	?= docker
 DOCKER_COMPOSE  ?= docker compose
 DOCKER_SWARM    ?= docker swarm
@@ -46,9 +47,11 @@ help: ## Outputs this help screen
 		| sed -e 's/\[32m##/[33m/'
 
 ## —— 🐝 Docker commands ———————————————————————————————————
-docker-login: ## Login to the Docker registry
-	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY)' as $(DOCKER_USER)"
-	@$(DOCKER) login $(DOCKER_REGISTRY) -u $(DOCKER_USER) -p $(DOCKER_PASSWORD)
+docker-login: ## Login to the Docker registry (DOCKER_REGISTRY_HOST or DOCKER_REGISTRY)
+	@echo "Logging in to the Docker registry '$(or $(DOCKER_REGISTRY_HOST),$(DOCKER_REGISTRY))' as $(or $(DOCKER_REGISTRY_USER),$(DOCKER_USER))"
+	@$(DOCKER) login $(or $(DOCKER_REGISTRY_HOST),$(DOCKER_REGISTRY)) \
+		-u $(or $(DOCKER_REGISTRY_USER),$(DOCKER_USER)) \
+		-p $(or $(DOCKER_REGISTRY_PASS),$(DOCKER_PASSWORD))
 
 docker-ps: ## List all running containers
 	$(DOCKER) ps
@@ -334,7 +337,10 @@ services-list: ## List services
 
 # —— 🐝 git commands ———————————————————————————————————
 push-udem: ## Push changes to the UDEM repository
-	## push the current branch to the UDEM repository
+	@if [ -z "$(CURRENT_BRANCH)" ]; then \
+		echo "Error: could not determine current git branch (CURRENT_BRANCH is empty)"; \
+		exit 1; \
+	fi
 	git push ti-udem $(CURRENT_BRANCH)
 
 #  Add swap file memory, user define size in parameter SWAP_FILE_SIZE; default is 4G

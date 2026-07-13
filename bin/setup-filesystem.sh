@@ -18,32 +18,19 @@ CERTS_DIR="${CERTS_DIR:-$APPDATA_DIR/certs}"
 LOGS_DIR="${LOGS_DIR:-$APPDATA_DIR/logs}"
 BACKUPS_DIR="${BACKUPS_DIR:-$APPDATA_DIR/backups}"
 
-## sudo user has permission to create directories in ${HOME_DIR}?
-if  sudo -n true 2>/dev/null; then
-    sudo mkdir -p "${INFRA_DIR}" "${APPDATA_DIR}" "${CERTS_DIR}" "${LOGS_DIR}" "${BACKUPS_DIR}" "${DATA_DIR}"
-    sudo chown "${ADMIN_USER}:${ADMIN_USER}" "${INFRA_DIR}" "${APPDATA_DIR}" "${BACKUPS_DIR}" "${DATA_DIR}"
-    exit 0
+if sudo -n true 2>/dev/null; then
+	if ! sudo mkdir -p "${INFRA_DIR}" "${APPDATA_DIR}" "${CERTS_DIR}" "${LOGS_DIR}" "${BACKUPS_DIR}" "${DATA_DIR}"; then
+		echo "Error: Failed to create directories: ${INFRA_DIR} ${APPDATA_DIR} ${CERTS_DIR} ${LOGS_DIR} ${BACKUPS_DIR} ${DATA_DIR}" >&2
+		exit 1
+	fi
+	if ! sudo chown "${ADMIN_USER}:${ADMIN_USER}" "${INFRA_DIR}" "${APPDATA_DIR}" "${BACKUPS_DIR}" "${DATA_DIR}"; then
+		echo "Error: Failed to chown directories for ${ADMIN_USER}" >&2
+		exit 1
+	fi
+	exit 0
 fi
 
-
-## if failed, exit with error
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to create directories: ${INFRA_DIR} ${APPDATA_DIR} ${CERTS_DIR} ${LOGS_DIR} ${BACKUPS_DIR} ${DATA_DIR}"
-    echo "Please check if the user ${ADMIN_USER} has permission to create directories."
-    echo "  sudo mkdir -p ${INFRA_DIR} ${APPDATA_DIR} ${CERTS_DIR} ${LOGS_DIR} ${BACKUPS_DIR} ${DATA_DIR}"
-    exit 1
-fi
-
-
-# if [ ! -d /backups ] && [ ! -L /backups ]; then
-#     sudo ln -s "${BACKUPS_DIR}" /backups
-# fi
-
-# if [ ! -d /data ] && [ ! -L /data ]; then
-#     sudo ln -s "${DATA_DIR}" /data
-# fi
-
-# if [ ! -d /logs ] && [ ! -L /logs ]; then
-#     sudo ln -s "${LOGS_DIR}" /logs
-# fi
-
+echo "Error: passwordless sudo is required to create infrastructure directories." >&2
+echo "  sudo mkdir -p ${INFRA_DIR} ${APPDATA_DIR} ${CERTS_DIR} ${LOGS_DIR} ${BACKUPS_DIR} ${DATA_DIR}" >&2
+echo "  sudo chown ${ADMIN_USER}:${ADMIN_USER} ${INFRA_DIR} ${APPDATA_DIR} ${BACKUPS_DIR} ${DATA_DIR}" >&2
+exit 1
