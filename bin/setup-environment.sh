@@ -14,6 +14,12 @@ if [ -z "${ADMIN_USER}" ] || [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ]
     exit 1
 fi
 
+require_passwordless_sudo() {
+	if ! sudo -n true 2>/dev/null; then
+		echo "Error: passwordless sudo is required (NOPASSWD). Verify with: sudo -n true" >&2
+		exit 1
+	fi
+}
 
 # Pick an IPv4 address
 detect_ip_address() {
@@ -69,6 +75,20 @@ EOF
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
 ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
 
+# Re-run: fill missing vars from an existing env file (do not override make exports).
+if [ -r "${ENV_FILE}" ] && { [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ] || [ -z "${ADMIN_USER}" ]; }; then
+	# shellcheck disable=SC1090
+	set -a
+	. "${ENV_FILE}"
+	set +a
+fi
+
+INFRA_DIR="${INFRA_DIR:-/infra}"
+APPDATA_DIR="${APPDATA_DIR:-/appdata}"
+CERTS_DIR="${CERTS_DIR:-${APPDATA_DIR}/certs}"
+BACKUPS_DIR="${BACKUPS_DIR:-${APPDATA_DIR}/backups}"
+LOGS_DIR="${LOGS_DIR:-${APPDATA_DIR}/logs}"
+DATA_DIR="${DATA_DIR:-${APPDATA_DIR}/data}"
 
 echo "Home directory of ${ADMIN_USER}: ${HOME_DIR}"
 echo "Writing ${ENV_FILE}..."
@@ -159,24 +179,26 @@ if [ -r "${ENV_FILE}" ]; then
 	echo "Reloaded environment from ${ENV_FILE}"
 fi
 
-if [ -f ${INFRA_DIR}/Makefile ] && [ ! -L ${HOME_DIR}/Makefile ] && [ ! -f ${HOME_DIR}/Makefile ]; then
+require_passwordless_sudo
+
+if [ -f "${INFRA_DIR}/Makefile" ] && [ ! -L "${HOME_DIR}/Makefile" ] && [ ! -f "${HOME_DIR}/Makefile" ]; then
     echo "Creating symlink for Makefile in ${HOME_DIR}..."
-    sudo ln -s ${INFRA_DIR}/Makefile ${HOME_DIR}/Makefile
+    sudo ln -s "${INFRA_DIR}/Makefile" "${HOME_DIR}/Makefile"
 fi
 
-if [ -d ${INFRA_DIR}/bin ] && [ ! -L ${HOME_DIR}/bin ] && [ ! -d ${HOME_DIR}/bin ]; then
+if [ -d "${INFRA_DIR}/bin" ] && [ ! -L "${HOME_DIR}/bin" ] && [ ! -d "${HOME_DIR}/bin" ]; then
     echo "Creating symlink for bin in ${HOME_DIR}..."
-    sudo ln -s ${INFRA_DIR}/bin ${HOME_DIR}/bin
+    sudo ln -s "${INFRA_DIR}/bin" "${HOME_DIR}/bin"
 fi
 
 ## Git config
-rm -f ${HOME_DIR}/.gitconfig
-if [ -f ${INFRA_DIR}/etc/gitconfig ]; then
-	cp ${INFRA_DIR}/etc/gitconfig ${HOME_DIR}/.gitconfig
+rm -f "${HOME_DIR}/.gitconfig"
+if [ -f "${INFRA_DIR}/etc/gitconfig" ]; then
+	cp "${INFRA_DIR}/etc/gitconfig" "${HOME_DIR}/.gitconfig"
 else
-    touch ${HOME_DIR}/.gitconfig
-    chmod 0644 ${HOME_DIR}/.gitconfig
-    chown ${ADMIN_USER}:${ADMIN_USER} ${HOME_DIR}/.gitconfig
+    touch "${HOME_DIR}/.gitconfig"
+    chmod 0644 "${HOME_DIR}/.gitconfig"
+    sudo chown "${ADMIN_USER}:${ADMIN_USER}" "${HOME_DIR}/.gitconfig"
 fi
 
 git config --global http.sslVerify false
@@ -184,12 +206,6 @@ git config --global core.autocrlf false
 git config --global user.name "${ADMIN_USER}"
 git config --global user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 
-
-# Check if user has passwordless sudo privileges (NOPASSWD)
-if ! sudo -n true 2>/dev/null; then
-    echo "Info: passwordless sudo is required (NOPASSWD); skipping hostname configuration."
-    exit 0
-fi
 
 sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 

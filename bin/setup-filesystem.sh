@@ -2,6 +2,11 @@
 
 # Setup filesystem
 
+if [ -z "${ADMIN_USER:-}" ]; then
+	echo "Error: ADMIN_USER is required" >&2
+	exit 1
+fi
+
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
 ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
 if [ -f "${ENV_FILE}" ] && [ -r "${ENV_FILE}" ]; then
@@ -11,12 +16,13 @@ if [ -f "${ENV_FILE}" ] && [ -r "${ENV_FILE}" ]; then
 	set +a
 fi
 
-# Create directories (CERTS_DIR: bind mount for Traefik ACME /certs in docker-compose)
+# Defaults when not passed on the command line or stored in the env file yet.
+INFRA_DIR="${INFRA_DIR:-/infra}"
 APPDATA_DIR="${APPDATA_DIR:-/appdata}"
-DATA_DIR="${DATA_DIR:-$APPDATA_DIR/data}"
-CERTS_DIR="${CERTS_DIR:-$APPDATA_DIR/certs}"
-LOGS_DIR="${LOGS_DIR:-$APPDATA_DIR/logs}"
-BACKUPS_DIR="${BACKUPS_DIR:-$APPDATA_DIR/backups}"
+DATA_DIR="${DATA_DIR:-${APPDATA_DIR}/data}"
+CERTS_DIR="${CERTS_DIR:-${APPDATA_DIR}/certs}"
+LOGS_DIR="${LOGS_DIR:-${APPDATA_DIR}/logs}"
+BACKUPS_DIR="${BACKUPS_DIR:-${APPDATA_DIR}/backups}"
 
 if sudo -n true 2>/dev/null; then
 	if ! sudo mkdir -p "${INFRA_DIR}" "${APPDATA_DIR}" "${CERTS_DIR}" "${LOGS_DIR}" "${BACKUPS_DIR}" "${DATA_DIR}"; then
