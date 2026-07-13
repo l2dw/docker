@@ -263,9 +263,8 @@ setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want
 	@$(BIN_DIR)/fix-dns-resolv.sh
 	@$(BIN_DIR)/server-update.sh
 	@# NFS Volumes
-	@sudo mkdir -p /nfs/${INFRA_NAME}
-	@sudo chown ${ADMIN_USER}:${ADMIN_USER} /nfs/${INFRA_NAME}
-	@mkdir -p /nfs/${INFRA_NAME}/prod /nfs/${INFRA_NAME}/tools /nfs/${INFRA_NAME}/shares /nfs/${INFRA_NAME}/backups
+	@sudo mkdir -p /nfs/${INFRA_NAME}/prod /nfs/${INFRA_NAME}/tools /nfs/${INFRA_NAME}/shares /nfs/${INFRA_NAME}/backups
+	@sudo chown ${ADMIN_USER}:${ADMIN_USER} /nfs/${INFRA_NAME}/prod /nfs/${INFRA_NAME}/tools /nfs/${INFRA_NAME}/shares /nfs/${INFRA_NAME}/backups
 	@if [ ! -f $(SWAP_FILE) ] && [ "$(SWAP_SIZE)" != "0" ]; then \
 		$(MAKE) add-swap-file SWAP_SIZE="$(SWAP_SIZE)" SWAP_FILE="$(SWAP_FILE)"; \
 	elif [ "$(SWAP_SIZE)" = "0" ]; then \

@@ -65,7 +65,7 @@ fi
 EOF
 }
 
-## how do i get the home directory of the user ${ADMIN_USER}?
+# Resolve the admin user's home directory (works when setup runs via sudo/make as another user).
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
 ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
 
@@ -203,8 +203,10 @@ sudo sysctl vm.swappiness=10
 echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
 
 
-## System daily update
-# Add to crontab to update system once per day at 3:00 AM
-if ! crontab -l | grep -q "apt-get update"; then
-    echo "0 3 * * * apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && apt-get -y autoremove && apt-get autoclean >> /var/log/auto-update.log 2>&1" | sudo crontab -
+## System daily update (admin user crontab; commands use sudo for package management)
+if ! crontab -l 2>/dev/null | grep -qF "apt-get update"; then
+	(
+		crontab -l 2>/dev/null
+		echo "0 3 * * * sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get -y upgrade && sudo apt-get -y autoremove && sudo apt-get autoclean >> /var/log/auto-update.log 2>&1"
+	) | crontab -
 fi

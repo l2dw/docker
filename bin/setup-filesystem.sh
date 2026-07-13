@@ -27,10 +27,9 @@ if sudo -n true 2>/dev/null; then
 		echo "Error: Failed to chown directories for ${ADMIN_USER}" >&2
 		exit 1
 	fi
-	exit 0
+else
+	echo "Error: passwordless sudo is required to create infrastructure directories." >&2
+	echo "  sudo mkdir -p ${INFRA_DIR} ${APPDATA_DIR} ${CERTS_DIR} ${LOGS_DIR} ${BACKUPS_DIR} ${DATA_DIR}" >&2
+	echo "  sudo chown ${ADMIN_USER}:${ADMIN_USER} ${INFRA_DIR} ${APPDATA_DIR} ${BACKUPS_DIR} ${DATA_DIR}" >&2
+	exit 1
 fi
-
-echo "Error: passwordless sudo is required to create infrastructure directories." >&2
-echo "  sudo mkdir -p ${INFRA_DIR} ${APPDATA_DIR} ${CERTS_DIR} ${LOGS_DIR} ${BACKUPS_DIR} ${DATA_DIR}" >&2
-echo "  sudo chown ${ADMIN_USER}:${ADMIN_USER} ${INFRA_DIR} ${APPDATA_DIR} ${BACKUPS_DIR} ${DATA_DIR}" >&2
-exit 1

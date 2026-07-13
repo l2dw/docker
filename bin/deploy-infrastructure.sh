@@ -52,7 +52,13 @@ if [ -n "${DOKPLOY_DATA_DIR:-}" ]; then mkdir_dirs+=("${DOKPLOY_DATA_DIR}"); fi
 if [ -n "${DOKPLOY_LOGS_DIR:-}" ]; then mkdir_dirs+=("${DOKPLOY_LOGS_DIR}"); fi
 if [ -n "${DOCKER_REGISTRY_DATA_DIR:-}" ]; then mkdir_dirs+=("${DOCKER_REGISTRY_DATA_DIR}"); fi
 if [ -n "${DOCKER_REGISTRY_CONF_DIR:-}" ]; then mkdir_dirs+=("${DOCKER_REGISTRY_CONF_DIR}"); fi
-mkdir -p "${mkdir_dirs[@]}"
+
+if sudo -n true 2>/dev/null; then
+	sudo mkdir -p "${mkdir_dirs[@]}"
+else
+	echo "Error: passwordless sudo is required to create bind-mount directories." >&2
+	exit 1
+fi
 
 ## Create network if it doesn't exist
 if ! docker network ls | grep -q "${DEFAULT_NETWORK}"; then
