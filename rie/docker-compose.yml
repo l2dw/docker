@@ -118,11 +118,11 @@ services:
       - NEXT_PUBLIC_POSTHOG_KEY=${RIE_POSTHOG_KEY:-your-posthog-api-key}
       - NEXT_PUBLIC_POSTHOG_HOST=${RIE_POSTHOG_HOST:-https://us.i.posthog.com}
       # SMTP / Email (used by SmtpEmailAdapterLive)
-      - SMTP_HOST=${SMTP_HOST:-"localhost"}
-      - SMTP_PORT=${SMTP_PORT:-"1025"}
-      - SMTP_USER=${SMTP_USER:-""}
-      - SMTP_PASS=${SMTP_PASS:-""}
-      - SMTP_FROM=${SMTP_FROM:-"no-reply@rie.umontreal.ca"}
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-no-reply@rie.umontreal.ca}
       - SIGNUP_ALLOWED_EMAIL_SUFFIXES=${RIE_SIGNUP_ALLOWED_EMAIL_SUFFIXES:-@umontreal.ca}
     labels:
       - "traefik.enable=${RIE_TRAEFIK_ENABLE:-true}"
@@ -237,10 +237,10 @@ services:
       - NEXT_PUBLIC_POSTHOG_KEY=${RIE_POSTHOG_KEY:-your-posthog-api-key}
       - NEXT_PUBLIC_POSTHOG_HOST=${RIE_POSTHOG_HOST:-https://us.i.posthog.com}
       # SMTP / Email (used by SmtpEmailAdapterLive)
-      - SMTP_HOST=${SMTP_HOST:-"localhost"}
-      - SMTP_PORT=${SMTP_PORT:-"1025"}
-      - SMTP_USER=${SMTP_USER:-""}
-      - SMTP_PASS=${SMTP_PASS:-""}
-      - SMTP_FROM=${SMTP_FROM:-"no-reply@rie.umontreal.ca"}
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-no-reply@rie.umontreal.ca}
       - SIGNUP_ALLOWED_EMAIL_SUFFIXES=${RIE_SIGNUP_ALLOWED_EMAIL_SUFFIXES:-@umontreal.ca}
 
