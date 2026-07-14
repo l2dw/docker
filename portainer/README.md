@@ -1,5 +1,17 @@
 # Portainer
 
+Subpath URL: `http://example.com/portainer` — set in `.env`:
+
+```env
+PORTAINER_DOMAIN=example.com
+PORTAINER_BASE_PATH=/portainer
+PORTAINER_TRAEFIK_ENTRYPOINTS=web
+PORTAINER_TRAEFIK_MIDDLEWARES=strip-prefix-portainer@docker
+PORTAINER_TRUSTED_ORIGINS=example.com
+```
+
+Traefik strips `${PORTAINER_BASE_PATH}` before forwarding; Portainer runs with `--base-url=/portainer`.
+
 ## Makefile
 
 ```sh

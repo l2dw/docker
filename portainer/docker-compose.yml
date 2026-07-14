@@ -15,6 +15,12 @@ services:
     x-pull-policy: ${PORTAINER_PULL_POLICY:-always}
     restart: ${PORTAINER_RESTART:-unless-stopped}
     privileged: "${PORTAINER_PRIVILEGED:-true}"
+    command:
+      - -H
+      - unix:///var/run/docker.sock
+      - --http-enabled
+      - --base-url=${PORTAINER_BASE_PATH:-/portainer}
+      - --trusted-origins=${PORTAINER_TRUSTED_ORIGINS:-example.com}
     environment:
       - "TZ=${TZ}"
       - "http_proxy=${HTTP_PROXY}"
@@ -31,7 +37,7 @@ services:
     #     published: ${PORTAINER_PORT_TCP:-9000}
     #     protocol: tcp
     #     mode: ${PORTAINER_PORT_MODE:-host}
-    ## Deploy
+    ## Deploy (Swarm)
     deploy:
       replicas: ${PORTAINER_DEPLOY_REPLICAS:-1}
       placement:
@@ -39,33 +45,34 @@ services:
           - ${PORTAINER_NODE_CONSTRAINTS:-node.role==manager}
       labels:
         - "traefik.enable=${PORTAINER_TRAEFIK_LABELS_SWARM_ENABLE:-false}"
-        - "traefik.http.middlewares.strip-prefix-portainer.stripprefix.prefixes=${PORTAINER_BASE_PATH:-/}"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+        - "traefik.http.middlewares.strip-prefix-portainer.stripprefix.prefixes=${PORTAINER_BASE_PATH:-/portainer}"
         - "traefik.http.routers.portainer.entrypoints=${PORTAINER_TRAEFIK_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-portainer.example.com}`) && PathPrefix(`${PORTAINER_BASE_PATH:-/}`)"
+        - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-example.com}`) && PathPrefix(`${PORTAINER_BASE_PATH:-/portainer}`)"
         - "traefik.http.routers.portainer.service=portainer"
-        - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-strip-prefix-portainer}"
+        - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-strip-prefix-portainer@swarm}"
         - "traefik.http.routers.portainer.tls=${PORTAINER_TRAEFIK_TLS_ENABLED:-false}"
         - "traefik.http.routers.portainer.tls.certresolver=${PORTAINER_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
         ## Homepage configuration
         - "homepage.group=${PORTAINER_HOMEPAGE_GROUP:-Infra}"
         - "homepage.name=${PORTAINER_HOMEPAGE_NAME:-Portainer}"
         - "homepage.icon=${PORTAINER_HOMEPAGE_ICON:-portainer.png}"
-        - "homepage.href=http://${PORTAINER_DOMAIN:-portainer.example.com}"
+        - "homepage.href=${PORTAINER_HOMEPAGE_HREF:-http://example.com/portainer}"
         - "homepage.description=${PORTAINER_HOMEPAGE_DESCRIPTION:-Portainer is a platform for managing Docker containers.}"
+    ## Compose / Docker provider
     labels:
       - "traefik.enable=${PORTAINER_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-      - "traefik.http.middlewares.strip-prefix-portainer.stripprefix.prefixes=${PORTAINER_BASE_PATH:-/}"
+      - "traefik.http.middlewares.strip-prefix-portainer.stripprefix.prefixes=${PORTAINER_BASE_PATH:-/portainer}"
       - "traefik.http.routers.portainer.entrypoints=${PORTAINER_TRAEFIK_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-portainer.example.com}`) && PathPrefix(`${PORTAINER_BASE_PATH:-/}`)"
+      - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-example.com}`) && PathPrefix(`${PORTAINER_BASE_PATH:-/portainer}`)"
       - "traefik.http.routers.portainer.service=portainer"
-      - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-strip-prefix-portainer}"
+      - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-strip-prefix-portainer@docker}"
       - "traefik.http.routers.portainer.tls=${PORTAINER_TRAEFIK_TLS_ENABLED:-false}"
       - "traefik.http.routers.portainer.tls.certresolver=${PORTAINER_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
       - "homepage.group=${PORTAINER_HOMEPAGE_GROUP:-Infra}"
       - "homepage.name=${PORTAINER_HOMEPAGE_NAME:-Portainer}"
       - "homepage.icon=${PORTAINER_HOMEPAGE_ICON:-portainer.png}"
-      - "homepage.href=https://${PORTAINER_DOMAIN:-portainer.example.com}${PORTAINER_BASE_PATH:-/}"
+      - "homepage.href=${PORTAINER_HOMEPAGE_HREF:-http://example.com/portainer}"
       - "homepage.description=${PORTAINER_HOMEPAGE_DESCRIPTION:-Portainer is a platform for managing Docker containers.}"
