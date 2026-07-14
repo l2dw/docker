@@ -136,6 +136,7 @@ services:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
       - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
+      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/dokploy/traefik/dynamic/certificates
       # - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
     depends_on:
       - postgresql
@@ -156,7 +157,7 @@ services:
         order: stop-first
         failure_action: rollback
       labels:
-        - "traefik.enable=true"
+        - "traefik.enable=${TRAEFIK_LABELS_SWARM_ENABLE:-true}"
         - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
         - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
         - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
@@ -171,7 +172,7 @@ services:
         - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_BASE_PATH:-/}"
         - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=${TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
       - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
       - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
@@ -197,9 +198,13 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - NO_PROXY=${NO_PROXY}
     ports:
-      - target: ${DOKPLOY_TRAEFIK_PORT_TARGET:-80}
-        published: ${DOKPLOY_TRAEFIK_PORT_PUBLISHED:-80}
-        protocol: ${DOKPLOY_TRAEFIK_PORT_PROTOCOL:-tcp}
+      - target: 80
+        published: ${DOKPLOY_TRAEFIK_PORT80_PUBLISHED:-80}
+        protocol: ${DOKPLOY_TRAEFIK_PORT80_PROTOCOL:-tcp}
+        mode: ${DOKPLOY_TRAEFIK_PORT_MODE:-host}
+      - target: 443
+        published: ${DOKPLOY_TRAEFIK_PORT443_PUBLISHED:-443}
+        protocol: ${DOKPLOY_TRAEFIK_PORT443_PROTOCOL:-tcp}
         mode: ${DOKPLOY_TRAEFIK_PORT_MODE:-host}
     volumes:
       - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/var/log/traefik
@@ -233,10 +238,13 @@ services:
       - "--providers.docker.watch=${DOKPLOY_TRAEFIK_PROVIDERS_DOCKER:-true}"
       - "--providers.file.directory=/etc/traefik/rules"
       - "--providers.file.watch=true"
-      - "--certificatesresolvers.default.acme.tlschallenge=true"
+      # HTTP-01 on :80 — stable with WebSocket ALPN (http/1.1 only); TLS-ALPN caused failed orders + LE rate limits.
+      - "--certificatesresolvers.default.acme.httpchallenge=true"
+      - "--certificatesresolvers.default.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.default.acme.storage=/etc/traefik/certificates/default.json"
       - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-cenadmin@listes.umontreal.ca}"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/certificates/letsencrypt.json"
       - "--certificatesresolvers.letsencrypt.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-cenadmin@listes.umontreal.ca}"
       - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-INFO}"
@@ -280,7 +288,7 @@ services:
       # appear on `docker container inspect`. Check: `docker service inspect dokploy_dokploy-traefik --format '{{json .Spec.Labels}}'`
       # Traefik Swarm provider reads service labels (enable providers.docker.swarmMode if using file provider defaults).
       labels:
-        - "traefik.enable=true"
+        - "traefik.enable=${TRAEFIK_LABELS_SWARM_ENABLE:-true}"
         ## Middleware configuration
         - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme=https"
         - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent=true"
@@ -309,7 +317,7 @@ services:
         - "homepage.widget.type=traefik"
         - "homepage.widget.url=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=${TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       ## Middleware configuration
       - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme=https"
       - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent=true"
