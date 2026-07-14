@@ -11,47 +11,74 @@ volumes:
   adguard_logs:
     name: ${ADGUARD_LOGS_VOLUME_NAME:-adguard_logs}
     external: ${ADGUARD_LOGS_VOLUME_EXTERNAL:-false}
-  adguard_home:
-    name: ${ADGUARD_HOME_VOLUME_NAME:-adguard_home}
-    external: ${ADGUARD_HOME_VOLUME_EXTERNAL:-false}
-
 services:
   adguard:
     image: ${ADGUARD_IMAGE:-docker.io/adguard/adguardhome:latest}
-    pull_policy: ${ADGUARD_PULL_POLICY:-always}
+    x-pull-policy: ${ADGUARD_PULL_POLICY:-always}
     restart: ${ADGUARD_RESTART:-unless-stopped}
-    privileged: ${ADGUARD_PRIVILEGED:-true}
-    networks:
-      default:
-        aliases:
-          - adguard-${APP_NAME:-adguard}
+    privileged: ${ADGUARD_PRIVILEGED:-false}
     ports:
-      - ${ADGUARD_PORT_TCP:-53}:53/tcp
-      - ${ADGUARD_PORT_UDP:-53}:53/udp
-      - ${ADGUARD_PORT_NODEJS:-34000}:3000/tcp
+      - target: 53
+        published: ${ADGUARD_PORT_TCP:-53}
+        protocol: tcp
+        mode: host
+      - target: 53
+        published: ${ADGUARD_PORT_UDP:-53}
+        protocol: udp
+        mode: host
+      - target: 3000
+        published: ${ADGUARD_PORT_NODEJS:-34070}
+        protocol: tcp
+        mode: host
     environment:
       - TZ=${TZ}
-      - HTTP_PROXY=${HTTP_PROXY}
-      - HTTPS_PROXY=${HTTPS_PROXY}
-      - NO_PROXY=${NO_PROXY}
+      - "http_proxy=${HTTP_PROXY}"
+      - "https_proxy=${HTTPS_PROXY}"
+      - "no_proxy=${NO_PROXY}"
+      - "HTTP_PROXY=${HTTP_PROXY}"
+      - "HTTPS_PROXY=${HTTPS_PROXY}"
+      - "NO_PROXY=${NO_PROXY}"
     volumes:
-      # - ${ADGUARD_MOUNT_HOME:-adguard_home}:/opt/adguardhome
       - ${ADGUARD_MOUNT_CONF:-adguard_conf}:/opt/adguardhome/conf
       - ${ADGUARD_MOUNT_WORK:-adguard_work}:/opt/adguardhome/work
+    ## Deploy
+    deploy:
+      replicas: ${ADGUARD_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${ADGUARD_DEPLOY_CONSTRAINTS:-node.role==manager}
+      labels:
+        - "traefik.enable=${ADGUARD_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.adguard.loadbalancer.server.port=80"
+        - "traefik.http.routers.adguard.entrypoints=${ADGUARD_TRAEFIK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.adguard.rule=Host(`${ADGUARD_DOMAIN:-example.com}`) && PathPrefix(`${ADGUARD_BASE_PATH:-/}`)`"
+        - "traefik.http.routers.adguard.service=adguard"
+        - "traefik.http.routers.adguard.middlewares=${ADGUARD_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.adguard.tls=${ADGUARD_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.adguard.tls.certresolver=${ADGUARD_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+        ## Homepage configuration
+        - "homepage.group=${ADGUARD_HOMEPAGE_GROUP:-}"
+        - "homepage.name=${ADGUARD_HOMEPAGE_NAME:-Adguard}"
+        - "homepage.icon=${ADGUARD_HOMEPAGE_ICON:-adguard.png}"
+        - "homepage.href=${ADGUARD_HOMEPAGE_HREF:-http://adguard.example.com}"
+        - "homepage.description=${ADGUARD_HOMEPAGE_DESCRIPTION:-}"
+        - "homepage.siteMonitor=${ADGUARD_HOMEPAGE_SITEMONITOR:-http://adguard.example.com}"
+        - "homepage.ping=${ADGUARD_HOMEPAGE_PING:-http://adguard.example.com}"
     labels:
-      traefik.enable: "true"
-      traefik.http.services.adguard.loadbalancer.server.port: 80
-      traefik.http.routers.adguard.entrypoints: ${ADGUARD_TRAEFIK_ENTRYPOINTS:-web}
-      traefik.http.routers.adguard.rule: Host(`${ADGUARD_DOMAIN:-example.com}`) && PathPrefix(`${ADGUARD_BASE_PATH:-/}`)
-      traefik.http.routers.adguard.service: adguard
-      traefik.http.routers.adguard.middlewares: "${ADGUARD_TRAEFIK_MIDDLEWARES:-}"
-      traefik.http.routers.adguard.tls: "${ADGUARD_TRAEFIK_TLS_ENABLED:-false}"
-      traefik.http.routers.adguard.tls.certresolver: ${ADGUARD_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+      ## Traefik configuration
+      - "traefik.enable=${ADGUARD_TRAEFIK_LABELS_DOCKER_ENABLE:-false}"
+      - "traefik.http.services.adguard.loadbalancer.server.port=80"
+      - "traefik.http.routers.adguard.entrypoints=${ADGUARD_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.adguard.rule=Host(`${ADGUARD_DOMAIN:-example.com}`) && PathPrefix(`${ADGUARD_BASE_PATH:-/}`)`"
+      - "traefik.http.routers.adguard.service=adguard"
+      - "traefik.http.routers.adguard.middlewares=${ADGUARD_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.adguard.tls=${ADGUARD_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.adguard.tls.certresolver=${ADGUARD_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
-      homepage.group: ${ADGUARD_HOMEPAGE_GROUP:-}
-      homepage.name: ${ADGUARD_HOMEPAGE_NAME:-Adguard}
-      homepage.icon: ${ADGUARD_HOMEPAGE_ICON:-adguard.png}
-      homepage.href: ${ADGUARD_HOMEPAGE_HREF:-http://adguard.example.com}
-      homepage.description: ${ADGUARD_HOMEPAGE_DESCRIPTION:-}
-      homepage.siteMonitor: ${ADGUARD_HOMEPAGE_SITEMONITOR:-http://adguard.example.com}
-      homepage.ping: ${ADGUARD_HOMEPAGE_PING:-http://adguard.example.com}
+      - "homepage.group=${ADGUARD_HOMEPAGE_GROUP:-}"
+      - "homepage.name=${ADGUARD_HOMEPAGE_NAME:-Adguard}"
+      - "homepage.icon=${ADGUARD_HOMEPAGE_ICON:-adguard.png}"
+      - "homepage.href=${ADGUARD_HOMEPAGE_HREF:-http://adguard.example.com}"
+      - "homepage.description=${ADGUARD_HOMEPAGE_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${ADGUARD_HOMEPAGE_SITEMONITOR:-http://adguard.example.com}"
+      - "homepage.ping=${ADGUARD_HOMEPAGE_PING:-http://adguard.example.com}"

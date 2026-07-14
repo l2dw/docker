@@ -315,63 +315,50 @@ push-udem: ## Push changes to the UDEM repository
 	## push the current branch to the UDEM repository
 	git push ti-udem $(CURRENT_BRANCH)
 
-## —— 🐝 adguard commands ———————————————————————————————————
-ADGUARD := adguard
-ADGUARD_SERVICES := adguard
-ADGUARD_PODS := adguard
-
-adguard-deploy: ## Deploy the adguard stack
-	$(MAKE) stack-deploy STACK_NAME=$(ADGUARD)
-
-adguard-remove: ## Remove the adguard stack
-	$(MAKE) stack-rm STACK_NAME=$(ADGUARD)
-adguard-redeploy: adguard-remove adguard-deploy ## Recreate the adguard stack
-
-adguard-stack-deploy: adguard-deploy ## Deploy the adguard stack
-adguard-stack-remove: adguard-remove ## Remove the adguard stack
-
-adguard-stack-redeploy: adguard-redeploy ## Recreate the adguard stack
-
+## —— 🐝 ADGUARD commands ———————————————————————————————————
+ADGUARD_STACK_NAME := adguard
+ADGUARD_SERVICES_SHORT := adguard postgresql redis traefik
+adguard-pull-images: ## Pull images for the adguard stack
+	$(MAKE) docker-pull-images PROJECT_NAME=$(ADGUARD_STACK_NAME)
+adguard-stack-up: .adguard-stack-setup ## Deploy the adguard stack
+	$(MAKE) stack-deploy STACK_NAME=$(ADGUARD_STACK_NAME)
+adguard-stack-down: ## Remove the adguard stack
+	$(MAKE) stack-rm STACK_NAME=$(ADGUARD_STACK_NAME)
+adguard-stack-recreate: adguard-stack-down adguard-stack-up ## Recreate the adguard stack
 adguard-stack-logs: ## Show logs of the adguard stack
-	$(MAKE) stack-logs STACK_NAME=$(ADGUARD)
-
-adguard-stack-watch: ## Watch logs of the adguard stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(ADGUARD)
-
-adguard-stack-debug: ## Debug adguard swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(ADGUARD))"
-	@$(DOCKER) stack services $(ADGUARD) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+	$(MAKE) stack-logs STACK_NAME=$(ADGUARD_STACK_NAME)
+adguard-stack-watch-logs: ## Watch logs of the adguard stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(ADGUARD_STACK_NAME)
+adguard-debug: ## Debug adguard swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(ADGUARD_STACK_NAME))"
+	@$(DOCKER) stack services $(ADGUARD_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
 	@echo
-	@echo "--- docker service ls (${ADGUARD}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(ADGUARD) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(ADGUARD)_' \
+	@echo "--- docker service ls (${ADGUARD_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(ADGUARD_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(ADGUARD_STACK_NAME)_' \
 		|| echo "(could not filter services)"
 	@echo
-	@echo "--- docker stack ps --no-trunc ($(ADGUARD))"
-	@$(DOCKER) stack ps $(ADGUARD) --no-trunc
+	@echo "--- docker stack ps --no-trunc ($(ADGUARD_STACK_NAME))"
+	@$(DOCKER) stack ps $(ADGUARD_STACK_NAME) --no-trunc
 	@echo
-	@for s in $(ADGUARD_SERVICES); do \
-		echo "==================== $(ADGUARD)_$$s ===================="; \
-		$(DOCKER) service logs "$(ADGUARD)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+	@echo "--- traefik published ports ---"
+	@$(DOCKER) service inspect $(ADGUARD_STACK_NAME)_adguard-traefik --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(no traefik service or inspect failed)"
+adguard-debug-logs: ## Tail recent logs for each adguard service (e.g. services at 0/1)
+	@for s in $(ADGUARD_SERVICES_SHORT); do \
+		echo "==================== $(ADGUARD_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(ADGUARD_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
-
-adguard-up: ## Deploy the adguard project
-	$(MAKE) docker-project-up PROJECT_NAME=$(ADGUARD)
-
-adguard-down: ## Remove the adguard project
-	$(MAKE) docker-project-down PROJECT_NAME=$(ADGUARD)
-
-adguard-recreate: adguard-down adguard-up ## Recreate the adguard project
-
-adguard-compose-up: adguard-up ## Deploy the adguard project
-
-adguard-compose-down: adguard-down # Remove the adguard project
-
-adguard-compose-recreate: adguard-recreate ## Recreate the adguard project
-
-adguard-compose-logs: ## Show logs of the adguard project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(ADGUARD)
-
-adguard-compose-watch: ## Watch logs of the adguard project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(ADGUARD)
+adguard-compose-upgrade: ## Upgrade the adguard stack
+	make docker-project-upgrade PROJECT_NAME=$(ADGUARD_STACK_NAME)
+adguard-compose-up: ## Deploy the adguard stack
+	make docker-project-up PROJECT_NAME=$(ADGUARD_STACK_NAME)
+adguard-compose-down: ## Remove the adguard stack
+	make docker-project-down PROJECT_NAME=$(ADGUARD_STACK_NAME)
+adguard-compose-restart: ## Restart the adguard stack
+	make docker-project-restart PROJECT_NAME=$(ADGUARD_STACK_NAME)
+adguard-compose-recreate: adguard-compose-down adguard-compose-up ## Recreate the adguard stack
+adguard-compose-logs: ## Show logs of the adguard stack
+	make docker-project-logs PROJECT_NAME=$(ADGUARD_STACK_NAME)
+adguard-compose-watch-logs: ## Watch logs of the adguard stack
+	make docker-project-watch PROJECT_NAME=$(ADGUARD_STACK_NAME)
