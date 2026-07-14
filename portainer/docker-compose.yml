@@ -1,8 +1,8 @@
 
 networks:
   default:
-    name: ${PORTAINER_NETWORK:-dokploy-network}
-    external: ${PORTAINER_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
 
 volumes:
   portainer_data:
@@ -26,11 +26,11 @@ services:
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${PORTAINER_DATA_DIR:-portainer_data}:/data:z
-    ports:
-      - target: 9000
-        published: ${PORTAINER_PORT_TCP:-9000}
-        protocol: tcp
-        mode: ${PORTAINER_PORT_MODE:-host}
+    # ports:
+    #   - target: 9000
+    #     published: ${PORTAINER_PORT_TCP:-9000}
+    #     protocol: tcp
+    #     mode: ${PORTAINER_PORT_MODE:-host}
     ## Deploy
     deploy:
       replicas: ${PORTAINER_DEPLOY_REPLICAS:-1}
@@ -39,11 +39,12 @@ services:
           - ${PORTAINER_NODE_CONSTRAINTS:-node.role==manager}
       labels:
         - "traefik.enable=${PORTAINER_TRAEFIK_LABELS_SWARM_ENABLE:-false}"
+        - "traefik.http.middlewares.strip-prefix-portainer.stripprefix.prefixes=${PORTAINER_BASE_PATH:-/}"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
         - "traefik.http.routers.portainer.entrypoints=${PORTAINER_TRAEFIK_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-portainer.example.com}`) && PathPrefix(`${PORTAINER_TRAEFIK_PATH_PREFIX:-/}`)"
+        - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-portainer.example.com}`) && PathPrefix(`${PORTAINER_BASE_PATH:-/}`)"
         - "traefik.http.routers.portainer.service=portainer"
-        - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-strip-prefix-portainer}"
         - "traefik.http.routers.portainer.tls=${PORTAINER_TRAEFIK_TLS_ENABLED:-false}"
         - "traefik.http.routers.portainer.tls.certresolver=${PORTAINER_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
         ## Homepage configuration
@@ -55,15 +56,16 @@ services:
     labels:
       - "traefik.enable=${PORTAINER_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.http.middlewares.strip-prefix-portainer.stripprefix.prefixes=${PORTAINER_BASE_PATH:-/}"
       - "traefik.http.routers.portainer.entrypoints=${PORTAINER_TRAEFIK_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-portainer.example.com}`) && PathPrefix(`${PORTAINER_TRAEFIK_PATH_PREFIX:-/}`)"
+      - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-portainer.example.com}`) && PathPrefix(`${PORTAINER_BASE_PATH:-/}`)"
       - "traefik.http.routers.portainer.service=portainer"
-      - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.portainer.middlewares=${PORTAINER_TRAEFIK_MIDDLEWARES:-strip-prefix-portainer}"
       - "traefik.http.routers.portainer.tls=${PORTAINER_TRAEFIK_TLS_ENABLED:-false}"
       - "traefik.http.routers.portainer.tls.certresolver=${PORTAINER_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
       - "homepage.group=${PORTAINER_HOMEPAGE_GROUP:-Infra}"
       - "homepage.name=${PORTAINER_HOMEPAGE_NAME:-Portainer}"
       - "homepage.icon=${PORTAINER_HOMEPAGE_ICON:-portainer.png}"
-      - "homepage.href=http://${PORTAINER_DOMAIN:-portainer.example.com}"
+      - "homepage.href=https://${PORTAINER_DOMAIN:-portainer.example.com}${PORTAINER_BASE_PATH:-/}"
       - "homepage.description=${PORTAINER_HOMEPAGE_DESCRIPTION:-Portainer is a platform for managing Docker containers.}"

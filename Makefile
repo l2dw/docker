@@ -314,3 +314,52 @@ services-list: ## List services
 push-udem: ## Push changes to the UDEM repository
 	## push the current branch to the UDEM repository
 	git push ti-udem $(CURRENT_BRANCH)
+
+
+## —— 🐝 PORTAINER commands ———————————————————————————————————
+PORTAINER_STACK_NAME := portainer
+PORTAINER_SERVICES_SHORT := portainer
+portainer-pull-images: ## Pull images for the portainer stack
+	$(MAKE) docker-pull-images PROJECT_NAME=$(PORTAINER_STACK_NAME)
+portainer-stack-up: .portainer-stack-setup ## Deploy the portainer stack
+	$(MAKE) stack-deploy STACK_NAME=$(PORTAINER_STACK_NAME)
+portainer-stack-down: ## Remove the portainer stack
+	$(MAKE) stack-rm STACK_NAME=$(PORTAINER_STACK_NAME)
+portainer-stack-recreate: portainer-stack-down portainer-stack-up ## Recreate the portainer stack
+portainer-stack-logs: ## Show logs of the portainer stack
+	$(MAKE) stack-logs STACK_NAME=$(PORTAINER_STACK_NAME)
+portainer-stack-watch-logs: ## Watch logs of the portainer stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(PORTAINER_STACK_NAME)
+portainer-debug: ## Debug portainer swarm stack: services, tasks (states/errors), traefik ports
+	@echo "--- docker stack services ($(PORTAINER_STACK_NAME))"
+	@$(DOCKER) stack services $(PORTAINER_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+	@echo
+	@echo "--- docker service ls (${PORTAINER_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(PORTAINER_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(PORTAINER_STACK_NAME)_' \
+		|| echo "(could not filter services)"
+	@echo
+	@echo "--- docker stack ps --no-trunc ($(PORTAINER_STACK_NAME))"
+	@$(DOCKER) stack ps $(PORTAINER_STACK_NAME) --no-trunc
+	@echo
+	@echo "--- traefik published ports ---"
+	@$(DOCKER) service inspect $(PORTAINER_STACK_NAME)_portainer-traefik --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(no traefik service or inspect failed)"
+portainer-debug-logs: ## Tail recent logs for each portainer service (e.g. services at 0/1)
+	@for s in $(PORTAINER_SERVICES_SHORT); do \
+		echo "==================== $(PORTAINER_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(PORTAINER_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+		echo; \
+	done
+portainer-compose-upgrade: ## Upgrade the portainer stack
+	make docker-project-upgrade PROJECT_NAME=$(PORTAINER_STACK_NAME)
+portainer-compose-up: ## Deploy the portainer stack
+	make docker-project-up PROJECT_NAME=$(PORTAINER_STACK_NAME)
+portainer-compose-down: ## Remove the portainer stack
+	make docker-project-down PROJECT_NAME=$(PORTAINER_STACK_NAME)
+portainer-compose-restart: ## Restart the portainer stack
+	make docker-project-restart PROJECT_NAME=$(PORTAINER_STACK_NAME)
+portainer-compose-recreate: portainer-compose-down portainer-compose-up ## Recreate the portainer stack
+portainer-compose-logs: ## Show logs of the portainer stack
+	make docker-project-logs PROJECT_NAME=$(PORTAINER_STACK_NAME)
+portainer-compose-watch-logs: ## Watch logs of the portainer stack
+	make docker-project-watch PROJECT_NAME=$(PORTAINER_STACK_NAME)
