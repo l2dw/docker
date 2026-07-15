@@ -1,51 +1,87 @@
 
 networks:
   default:
-    name: ${DEFAULT_NETWORK:-dokploy-network}
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-true}
 
 volumes:
   registry_data:
     name: ${REGISTRY_DATA_VOLUME_NAME:-registry_data}
     external: ${REGISTRY_DATA_VOLUME_EXTERNAL:-false}
-  # registry_logs:
-  #   name: ${REGISTRY_LOGS_VOLUME_NAME:-registry_logs}
-  #   external: ${REGISTRY_LOGS_VOLUME_EXTERNAL:-false}
+
+# Swarm/Compose secret: file on disk (compose) or pre-created `docker secret` (Swarm external).
+secrets:
+  docker-registry-htpasswd:
+    name: ${REGISTRY_PASSWORD_SECRET_NAME:-docker-registry-htpasswd}
+    file: ${REGISTRY_PASSWORD_FILE_PATH:-./docker-registry-htpasswd}
+    external: ${REGISTRY_PASSWORD_SECRET_EXTERNAL:-false}
 
 services:
   registry:
     image: ${REGISTRY_IMAGE:-docker.io/registry:2}
-    pull_policy: ${REGISTRY_PULL_POLICY:-always}
+    x-pull-policy: ${REGISTRY_PULL_POLICY:-always}
     restart: ${REGISTRY_RESTART:-unless-stopped}
-    privileged: ${REGISTRY_PRIVILEGED:-true}
+    privileged: "${REGISTRY_PRIVILEGED:-true}"
     environment:
-      TZ: ${TZ}
-      REGISTRY_STORAGE_DELETE_ENABLED: ${REGISTRY_STORAGE_DELETE_ENABLED:-true}
-      REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: ${REGISTRY_HEALTH_STORAGEDRIVER_ENABLED:-true}
-      REGISTRY_HTTP_SECRET: ${REGISTRY_HTTP_SECRET:-}
-      REGISTRY_AUTH: ${REGISTRY_AUTH:-htpasswd}
-      REGISTRY_AUTH_HTPASSWD_REALM: ${REGISTRY_AUTH_HTPASSWD_REALM:-Registry Realm}
-      REGISTRY_AUTH_HTPASSWD_PATH: ${REGISTRY_AUTH_HTPASSWD_PATH:-/auth/registry.password}
-
+      - TZ=${TZ}
+      - http_proxy=${HTTP_PROXY}
+      - https_proxy=${HTTPS_PROXY}
+      - no_proxy=${NO_PROXY}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+      - REGISTRY_STORAGE_DELETE_ENABLED=${REGISTRY_STORAGE_DELETE_ENABLED:-true}
+      - REGISTRY_HEALTH_STORAGEDRIVER_ENABLED=${REGISTRY_HEALTH_STORAGEDRIVER_ENABLED:-true}
+      - REGISTRY_HTTP_SECRET=${REGISTRY_HTTP_SECRET:-}
+      - REGISTRY_AUTH=${REGISTRY_AUTH:-htpasswd}
+      - REGISTRY_AUTH_HTPASSWD_REALM=${REGISTRY_AUTH_HTPASSWD_REALM:-Registry Realm}
+      - REGISTRY_AUTH_HTPASSWD_PATH=${REGISTRY_AUTH_HTPASSWD_PATH:-/run/secrets/docker-registry-htpasswd}
+    secrets:
+      - docker-registry-htpasswd
     volumes:
-      - ${REGISTRY_DATA:-registry_data}:/var/lib/registry
-      - ${REGISTRY_PASSWORD_FILE:-./registry.password}:/auth/registry.password
-      # - ${REGISTRY_MOUNT_LOGS:-registry_logs}:/var/log/registry
-      # - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${REGISTRY_DATA_DIR:-registry_data}:/var/lib/registry
+    ports:
+      - target: 5000
+        published: ${REGISTRY_PORT_PUBLISHED:-5000}
+        protocol: tcp
+        mode: ${REGISTRY_PORT_MODE:-host}
+    deploy:
+      replicas: ${REGISTRY_REPLICAS:-1}
+      mode: ${REGISTRY_SWARM_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${REGISTRY_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${REGISTRY_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      labels:
+        - "traefik.enable=${REGISTRY_TRAEFIK_SWARM_LABELS_ENABLED:-false}"
+        - "traefik.http.services.registry.loadbalancer.server.port=5000"
+        - "traefik.http.routers.registry.entrypoints=${REGISTRY_TRAEFIK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.registry.rule=Host(`${REGISTRY_DOMAIN:-registry.example.com}`)"
+        - "traefik.http.routers.registry.service=registry"
+        - "traefik.http.routers.registry.middlewares=${REGISTRY_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.registry.tls=${REGISTRY_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.registry.tls.certresolver=${REGISTRY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+        ## Homepage configuration
+        - "homepage.group=${REGISTRY_HOMEPAGE_GROUP:-}"
+        - "homepage.name=${REGISTRY_HOMEPAGE_NAME:-Registry}"
+        - "homepage.icon=${REGISTRY_HOMEPAGE_ICON:-registry.png}"
+        - "homepage.href=${REGISTRY_HOMEPAGE_HREF:-http://registry.example.com}"
     labels:
-      traefik.enable: "true"
-      traefik.http.services.registry.loadbalancer.server.port: 5000
-      traefik.http.routers.registry.entrypoints: ${REGISTRY_TRAEFIK_ENTRYPOINTS:-web}
-      traefik.http.routers.registry.rule: Host(`${REGISTRY_DOMAIN:-registry.example.com}`) && PathPrefix(`${REGISTRY_BASE_PATH:-/}`)
-      traefik.http.routers.registry.service: registry
-      traefik.http.routers.registry.middlewares: "${REGISTRY_TRAEFIK_MIDDLEWARES:-}"
-      traefik.http.routers.registry.tls: "${REGISTRY_TRAEFIK_TLS_ENABLED:-false}"
-      traefik.http.routers.registry.tls.certresolver: ${REGISTRY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+      - "traefik.enable=${REGISTRY_TRAEFIK_DOCKER_LABELS_ENABLED:-true}"
+      - "traefik.http.services.registry.loadbalancer.server.port=5000"
+      - "traefik.http.routers.registry.entrypoints=${REGISTRY_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.registry.rule=Host(`${REGISTRY_DOMAIN:-registry.example.com}`)"
+      - "traefik.http.routers.registry.service=registry"
+      - "traefik.http.routers.registry.middlewares=${REGISTRY_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.registry.tls=${REGISTRY_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.registry.tls.certresolver=${REGISTRY_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
-      homepage.group: ${REGISTRY_HOMEPAGE_GROUP:-}
-      homepage.name: ${REGISTRY_HOMEPAGE_NAME:-Registry}
-      homepage.icon: ${REGISTRY_HOMEPAGE_ICON:-registry.png}
-      homepage.href: ${REGISTRY_HOMEPAGE_HREF:-http://registry.example.com}
-      homepage.description: ${REGISTRY_HOMEPAGE_DESCRIPTION:-}
-      homepage.siteMonitor: ${REGISTRY_HOMEPAGE_SITEMONITOR:-http://registry.example.com}
-      homepage.ping: ${REGISTRY_HOMEPAGE_PING:-}
+      - "homepage.group=${REGISTRY_HOMEPAGE_GROUP:-}"
+      - "homepage.name=${REGISTRY_HOMEPAGE_NAME:-Registry}"
+      - "homepage.icon=${REGISTRY_HOMEPAGE_ICON:-registry.png}"
+      - "homepage.href=${REGISTRY_HOMEPAGE_HREF:-http://registry.example.com}"
+      - "homepage.description=${REGISTRY_HOMEPAGE_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${REGISTRY_HOMEPAGE_SITEMONITOR:-http://registry.example.com}"
+      - "homepage.ping=${REGISTRY_HOMEPAGE_PING:-}"
