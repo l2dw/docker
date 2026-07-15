@@ -69,11 +69,46 @@ make setup \
 
 ```
 
-## Création d'une VM
-
-### Pivot
+* NFS Volumes
 
 ```sh
-#ssh vm
+# Test before mount -a (should list exports; fails fast if blocked)
+showmount -e "${NFS_HOST}"
+sudo apt install -y nfs-common
 
+# Remove old OCRX NFS lines, then append (avoid duplicates)
+sudo cp /etc/fstab /etc/fstab.bak.$(date +%Y%m%d)
+grep -v "${INFRA_NAME}-appdata" /etc/fstab | sudo tee /etc/fstab.tmp >/dev/null
+sudo mv /etc/fstab.tmp /etc/fstab
+sudo tee -a /etc/fstab << FIN
+# OCRX NFS (pivot LAN — not floating IP)
+${NFS_HOST}:/volumes/${INFRA_NAME}-appdata/data  /appdata      nfs  defaults,_netdev,nfsvers=4.2  0  0
+${NFS_HOST}:/volumes/${INFRA_NAME}-appdata/backups  /backups      nfs  defaults,_netdev,nfsvers=4.2  0  0
+${NFS_HOST}:/volumes/${INFRA_NAME}-appdata/shares  /shares      nfs  defaults,_netdev,nfsvers=4.2  0  0
+FIN
+
+sudo systemctl daemon-reload && sudo mount -a && df -h
+```
+
+* Setup VM
+```sh
+make setup INSTANCE_NAME=worker-2 \
+    UPDATE_DNS_RESOLVERS=1 \
+    NAMESERVER1=192.168.71.213 \
+    NAMESERVER2=192.168.71.1 \
+    NAMESERVER3=8.8.8.8 \
+    SWAP_SIZE=6G \
+    && source ~/.bashrc
+
+make add-swap-file SWAP_SIZE=12G
+
+docker swarm join --token ${SWARM_JOIN_TOKEN} ${SWARM_JOIN_ADDR}
+```
+
+* Swarm
+```sh
+# On leader
+docker node ls
+docker node update --label-add name=atelier-1 6xqkqus6vw8u5zaguzmvyr4ah
+docker node update --label-add role=atelier 6xqkqus6vw8u5zaguzmvyr4ah
 ```
