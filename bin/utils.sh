@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # Track vars exported before defaults (e.g. make) so callers can still load ~/.env for missing ones.
+# Empty values (ADMIN_USER=) are treated as unset — common in partial .env files.
 _ADMIN_USER_EXPLICIT=0
-[ -n "${ADMIN_USER+set}" ] && _ADMIN_USER_EXPLICIT=1
-ADMIN_USER="${ADMIN_USER:-$(whoami)}"
+[ -n "${ADMIN_USER}" ] && _ADMIN_USER_EXPLICIT=1
+ADMIN_USER="${ADMIN_USER:-${SUDO_USER:-$(whoami)}}"
 
 _INSTANCE_NAME_EXPLICIT=0
-[ -n "${INSTANCE_NAME+set}" ] && _INSTANCE_NAME_EXPLICIT=1
+[ -n "${INSTANCE_NAME}" ] && _INSTANCE_NAME_EXPLICIT=1
 INSTANCE_NAME="${INSTANCE_NAME:-$(hostname -s)}"
 
 # Resolve the admin user's home directory (works when setup runs via sudo/make as another user).
@@ -21,6 +22,13 @@ resolve_admin_home() {
 	if [ -z "${_ENV_FILE_WAS_SET}" ]; then
 		ENV_FILE="${HOME_DIR}/.env"
 	fi
+}
+
+# Re-apply identity defaults after sourcing an env file (empty ADMIN_USER= must not win).
+apply_identity_defaults() {
+	ADMIN_USER="${ADMIN_USER:-${SUDO_USER:-$(whoami)}}"
+	INSTANCE_NAME="${INSTANCE_NAME:-$(hostname -s)}"
+	resolve_admin_home
 }
 
 

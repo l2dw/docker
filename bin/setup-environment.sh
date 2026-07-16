@@ -9,7 +9,7 @@ if [ -r "${ENV_FILE}" ] && { [ "${_INSTANCE_NAME_EXPLICIT}" -eq 0 ] || [ -z "${I
 	. "${ENV_FILE}"
 	set +a
 fi
-resolve_admin_home
+apply_identity_defaults
 
 # Setup environment's variables
 
@@ -18,11 +18,18 @@ echo "ADMIN_USER: ${ADMIN_USER}"
 echo "INSTANCE_NAME: ${INSTANCE_NAME}"
 echo "INFRA_NAME: ${INFRA_NAME}"
 echo "INFRA_DOMAIN: ${INFRA_DOMAIN}"
+echo "ENV_FILE: ${ENV_FILE}"
 
 ## Variables are required
-if [ -z "${ADMIN_USER}" ] || [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ]; then
-    echo "Error: Variables are required"
-    exit 1
+missing=""
+[ -z "${ADMIN_USER}" ] && missing="${missing} ADMIN_USER"
+[ -z "${INSTANCE_NAME}" ] && missing="${missing} INSTANCE_NAME"
+[ -z "${INFRA_NAME}" ] && missing="${missing} INFRA_NAME"
+[ -z "${INFRA_DOMAIN}" ] && missing="${missing} INFRA_DOMAIN"
+if [ -n "${missing}" ]; then
+	echo "Error: required variables are missing:${missing}" >&2
+	echo "Hint: pass on the command line (ADMIN_USER=admin ...) or set them in ${ENV_FILE}" >&2
+	exit 1
 fi
 
 
@@ -119,8 +126,7 @@ if [ -r "${ENV_FILE}" ]; then
 	set +a
 	echo "Reloaded environment from ${ENV_FILE}"
 fi
-resolve_admin_home
-
+apply_identity_defaults
 
 if [ -f "${INFRA_DIR}/Makefile" ] && [ ! -L "${HOME_DIR}/Makefile" ] && [ ! -f "${HOME_DIR}/Makefile" ]; then
     echo "Creating symlink for Makefile in ${HOME_DIR}..."

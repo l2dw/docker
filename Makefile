@@ -250,13 +250,6 @@ stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — ke
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
 ## —— Infrastructure 🐳 ————————————————————————————————————————————————————————————————
-commit-changes: ## Commit changes to the infrastructure
-	@echo "Committing changes to the infrastructure..."
-	chmod +x $(BIN_DIR)/*.sh
-	git add .
-	git commit -m "Update infrastructure: $(DATETIME)"
-	git push origin
-
 setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want a real TTY)
 	@echo "Setting up infrastructure..."
 	@$(BIN_DIR)/setup-environment.sh
@@ -302,15 +295,15 @@ services-list: ## List services
 		docker exec -i "$$cid" psql -U postgres -d postgres; \
 	fi'
 
-# —— 🐝 git commands ———————————————————————————————————
-push-udem: ## Push changes to the UDEM repository
-	@if [ -z "$(CURRENT_BRANCH)" ]; then \
-		echo "Error: could not determine current git branch (CURRENT_BRANCH is empty)"; \
-		exit 1; \
-	fi; \
-	git push ti-udem "$(CURRENT_BRANCH)"
-
 #
 add-swap-file: ## Add swap file memory: SWAP_SIZE=4G and SWAP_FILE=/var/0.swap are optional parameters
 	@echo "Adding swap file memory: SWAP_SIZE=$(SWAP_SIZE) and SWAP_FILE=$(SWAP_FILE)..."
 	@$(BIN_DIR)/add-swap-file.sh
+
+# —— 🐝 git commands ———————————————————————————————————
+commit-changes: ## Commit changes to the infrastructure
+	@echo "Committing changes to the infrastructure..."
+	chmod +x $(BIN_DIR)/*.sh
+	git add .
+	git commit -m "Update infrastructure: $(DATETIME)"
+	git push origin

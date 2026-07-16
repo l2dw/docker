@@ -16,7 +16,7 @@ if [ -f "${ENV_FILE}" ] && [ -r "${ENV_FILE}" ]; then
 	. "${ENV_FILE}"
 	set +a
 fi
-resolve_admin_home
+apply_identity_defaults
 
 # Defaults when not passed on the command line or stored in the env file yet.
 INFRA_DIR="${INFRA_DIR:-/infra}"
