@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source "$(dirname "$0")/utils.sh"
+
 # Setup filesystem
 
 if [ -z "${ADMIN_USER:-}" ]; then
@@ -7,14 +9,14 @@ if [ -z "${ADMIN_USER:-}" ]; then
 	exit 1
 fi
 
-HOME_DIR=$(eval echo "~${ADMIN_USER}")
-ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
+resolve_admin_home
 if [ -f "${ENV_FILE}" ] && [ -r "${ENV_FILE}" ]; then
 	# shellcheck disable=SC1090
 	set -a
 	. "${ENV_FILE}"
 	set +a
 fi
+resolve_admin_home
 
 # Defaults when not passed on the command line or stored in the env file yet.
 INFRA_DIR="${INFRA_DIR:-/infra}"

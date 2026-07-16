@@ -40,6 +40,7 @@ if [ -r "${ENV_FILE}" ] && { [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ]
 	. "${ENV_FILE}"
 	set +a
 fi
+resolve_admin_home
 
 INFRA_DIR="${INFRA_DIR:-/infra}"
 APPDATA_DIR="${APPDATA_DIR:-/appdata}"
@@ -118,6 +119,7 @@ if [ -r "${ENV_FILE}" ]; then
 	set +a
 	echo "Reloaded environment from ${ENV_FILE}"
 fi
+resolve_admin_home
 
 
 if [ -f "${INFRA_DIR}/Makefile" ] && [ ! -L "${HOME_DIR}/Makefile" ] && [ ! -f "${HOME_DIR}/Makefile" ]; then

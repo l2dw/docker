@@ -4,8 +4,18 @@ ADMIN_USER="${ADMIN_USER:-$(whoami)}"
 INSTANCE_NAME="${INSTANCE_NAME:-$(hostname -s)}"
 
 # Resolve the admin user's home directory (works when setup runs via sudo/make as another user).
+_ENV_FILE_WAS_SET=
+[ -n "${ENV_FILE+set}" ] && _ENV_FILE_WAS_SET=1
 HOME_DIR=$(eval echo "~${ADMIN_USER}")
 ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
+
+# Recompute paths after ADMIN_USER may have changed (e.g. sourced from ~/.env).
+resolve_admin_home() {
+	HOME_DIR=$(eval echo "~${ADMIN_USER}")
+	if [ -z "${_ENV_FILE_WAS_SET}" ]; then
+		ENV_FILE="${HOME_DIR}/.env"
+	fi
+}
 
 
 # Utility functions
