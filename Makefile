@@ -281,33 +281,9 @@ services-list: ## List services
 	@echo "Listing services..."
 	@docker service ls
 
-.create-db: ## Create database
+.create-db: ## Create database (DB_USER DB_PASS DB_NAME)
 	@echo "Creating database..."
-	@# Swarm: task container name isn't stable; exec into the running task container.
-	@# Requires vars: DB_USER, DB_PASS, DB_NAME
-	@bash -lc 'set -euo pipefail; \
-	: "$${DB_USER:?Missing DB_USER}"; : "$${DB_PASS:?Missing DB_PASS}"; : "$${DB_NAME:?Missing DB_NAME}"; \
-	cid="$$(docker ps -q --filter "label=com.docker.swarm.service.name=infrastructure_postgresql" | head -n 1)"; \
-	if [ -z "$$cid" ]; then \
-		echo "Error: no running container found for Swarm service infrastructure_postgresql."; \
-		echo "Hint: run: docker service ps infrastructure_postgresql"; \
-		exit 1; \
-	fi; \
-	echo "Using postgresql task container: $$cid"; \
-	role_exists="$$(docker exec "$$cid" psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '\''$${DB_USER}'\'';")"; \
-	if [ "$$role_exists" != "1" ]; then \
-		echo "Creating role $${DB_USER} ..."; \
-		docker exec "$$cid" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE USER \"$${DB_USER}\" WITH PASSWORD '\''$${DB_PASS}'\'';"; \
-	else \
-		echo "Role $${DB_USER} already exists."; \
-	fi; \
-	db_exists="$$(docker exec "$$cid" psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '\''$${DB_NAME}'\'';")"; \
-	if [ "$$db_exists" != "1" ]; then \
-		echo "Creating database $${DB_NAME} ..."; \
-		docker exec "$$cid" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$${DB_NAME}\" OWNER \"$${DB_USER}\";"; \
-	else \
-		echo "Database $${DB_NAME} already exists."; \
-	fi'
+	@$(BIN_DIR)/create-db.sh
 
 .connect-db: ## Connect to database
 	@echo "Connecting to database with user: postgres"
