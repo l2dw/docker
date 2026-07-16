@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source "$(dirname "$0")/utils.sh"
+
 # Setup environment's variables
 
 echo "Setting up environment with variables..."
@@ -14,46 +16,6 @@ if [ -z "${ADMIN_USER}" ] || [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ]
     exit 1
 fi
 
-require_passwordless_sudo() {
-	if ! sudo -n true 2>/dev/null; then
-		echo "Error: passwordless sudo is required (NOPASSWD). Verify with: sudo -n true" >&2
-		exit 1
-	fi
-}
-
-# Pick an IPv4 address
-detect_ip_address() {
-	local addr=""
-
-	if command -v ip >/dev/null 2>&1; then
-		# Prefer source IP used for traffic toward the default route (typical cloud / LAN address).
-		for dest in 8.8.8.8 1.1.1.1; do
-			addr="$(ip -4 route get "${dest}" 2>/dev/null | awk '{ for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit } }' || true)"
-			[ -n "${addr}" ] && break
-		done
-
-		# Primary IPv4 on the default-route interface.
-		if [ -z "${addr}" ]; then
-			local dev
-			dev="$(ip -4 route show default 2>/dev/null | awk '{ for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit } }' || true)"
-			if [ -n "${dev}" ]; then
-				addr="$(ip -4 -o addr show dev "${dev}" scope global 2>/dev/null | awk '{ print $4 }' | head -1 | cut -d/ -f1 || true)"
-			fi
-		fi
-
-		# First global IPv4 on any interface.
-		if [ -z "${addr}" ]; then
-			addr="$(ip -4 -o addr show scope global 2>/dev/null | awk '{ print $4 }' | head -1 | cut -d/ -f1 || true)"
-		fi
-	fi
-
-	# Common on minimal systems without full ip(8) output, or non-Linux.
-	if [ -z "${addr}" ] && command -v hostname >/dev/null 2>&1; then
-		addr="$(hostname -I 2>/dev/null | awk '{ print $1 }' || true)"
-	fi
-
-	printf '%s' "${addr}"
-}
 
 render_env_bashrc_block() {
 	# Bake the path chosen at setup time; login shells may override via export ENV_FILE=...
@@ -71,10 +33,6 @@ fi
 EOF
 }
 
-# Resolve the admin user's home directory (works when setup runs via sudo/make as another user).
-HOME_DIR=$(eval echo "~${ADMIN_USER}")
-ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
-
 # Re-run: fill missing vars from an existing env file (do not override make exports).
 if [ -r "${ENV_FILE}" ] && { [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ] || [ -z "${ADMIN_USER}" ]; }; then
 	# shellcheck disable=SC1090
@@ -85,10 +43,10 @@ fi
 
 INFRA_DIR="${INFRA_DIR:-/infra}"
 APPDATA_DIR="${APPDATA_DIR:-/appdata}"
-CERTS_DIR="${CERTS_DIR:-${APPDATA_DIR}/certs}"
+# CERTS_DIR="${CERTS_DIR:-${APPDATA_DIR}/certs}"
 BACKUPS_DIR="${BACKUPS_DIR:-${APPDATA_DIR}/backups}"
 LOGS_DIR="${LOGS_DIR:-${APPDATA_DIR}/logs}"
-DATA_DIR="${DATA_DIR:-${APPDATA_DIR}/data}"
+# DATA_DIR="${DATA_DIR:-${APPDATA_DIR}/data}"
 
 echo "Home directory of ${ADMIN_USER}: ${HOME_DIR}"
 echo "Writing ${ENV_FILE}..."
@@ -102,17 +60,9 @@ awk '
 ' "${ENV_FILE}" > "${tmp_env}"
 
 cat >> "${tmp_env}" << EOF
-
-HTTP_PROXY=${http_proxy:-}
-HTTPS_PROXY=${https_proxy:-}
-NO_PROXY=${no_proxy:-}
-
-TZ=${TZ:-America/Montreal}
-DEFAULT_NETWORK_NAME=${DEFAULT_NETWORK_NAME:-dokploy-network}
-DEFAULT_NETWORK_EXTERNAL=${DEFAULT_NETWORK_EXTERNAL:-true}
-DOCKER_RUNTIME_SOCKET=${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}
-
+# #########################################################
 # Infra Environment variables
+# #########################################################
 ENV_FILE=${ENV_FILE}
 TERM=xterm-256color
 ADMIN_USER=${ADMIN_USER}
@@ -124,24 +74,14 @@ INFRA_DOMAIN=${INFRA_DOMAIN}
 #
 INFRA_DIR=${INFRA_DIR:-/infra}
 APPDATA_DIR=${APPDATA_DIR:-/appdata}
-CERTS_DIR=${CERTS_DIR:-${APPDATA_DIR}/certs}
 BACKUPS_DIR=${BACKUPS_DIR:-${APPDATA_DIR}/backups}
 LOGS_DIR=${LOGS_DIR:-${APPDATA_DIR}/logs}
-DATA_DIR=${DATA_DIR:-${APPDATA_DIR}/data}
 
 # Docker registry
 DOCKER_REGISTRY_HOST=${DOCKER_REGISTRY_HOST:-registry.${INFRA_NAME}.${INFRA_DOMAIN}:5000}
 DOCKER_REGISTRY_USER=${DOCKER_REGISTRY_USER:-docker}
 DOCKER_REGISTRY_PASS=${DOCKER_REGISTRY_PASS:-docker}
 
-# # DNS (optional; used by fix-dns-resolv.sh)
-# UPDATE_DNS_RESOLVERS=${UPDATE_DNS_RESOLVERS:-false}
-# NAMESERVER1=${NAMESERVER1:-}
-# NAMESERVER2=${NAMESERVER2:-}
-# NAMESERVER3=${NAMESERVER3:-8.8.8.8}
-# SEARCH_DOMAIN=${SEARCH_DOMAIN:-${INFRA_DOMAIN}}
-
-#
 EOF
 
 install -m 0644 "${tmp_env}" "${ENV_FILE}"
@@ -179,16 +119,15 @@ if [ -r "${ENV_FILE}" ]; then
 	echo "Reloaded environment from ${ENV_FILE}"
 fi
 
-require_passwordless_sudo
 
 if [ -f "${INFRA_DIR}/Makefile" ] && [ ! -L "${HOME_DIR}/Makefile" ] && [ ! -f "${HOME_DIR}/Makefile" ]; then
     echo "Creating symlink for Makefile in ${HOME_DIR}..."
-    sudo ln -s "${INFRA_DIR}/Makefile" "${HOME_DIR}/Makefile"
+    ln -s "${INFRA_DIR}/Makefile" "${HOME_DIR}/Makefile"
 fi
 
 if [ -d "${INFRA_DIR}/bin" ] && [ ! -L "${HOME_DIR}/bin" ] && [ ! -d "${HOME_DIR}/bin" ]; then
     echo "Creating symlink for bin in ${HOME_DIR}..."
-    sudo ln -s "${INFRA_DIR}/bin" "${HOME_DIR}/bin"
+    ln -s "${INFRA_DIR}/bin" "${HOME_DIR}/bin"
 fi
 
 ## Git config
@@ -198,7 +137,7 @@ if [ -f "${INFRA_DIR}/etc/gitconfig" ]; then
 else
     touch "${HOME_DIR}/.gitconfig"
     chmod 0644 "${HOME_DIR}/.gitconfig"
-    sudo chown "${ADMIN_USER}:${ADMIN_USER}" "${HOME_DIR}/.gitconfig"
+    chown "${ADMIN_USER}:${ADMIN_USER}" "${HOME_DIR}/.gitconfig"
 fi
 
 git config --global http.sslVerify false
@@ -206,6 +145,7 @@ git config --global core.autocrlf false
 git config --global user.name "${ADMIN_USER}"
 git config --global user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 
+require_passwordless_sudo
 
 sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 

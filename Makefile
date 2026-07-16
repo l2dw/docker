@@ -22,15 +22,19 @@ USE_CACHE = "yes"
 # Parameters (Makefile defaults apply only where below; .env overrides by inclusion above)
 SHELL          = sh
 TZ             ?= America/Toronto
-IP_ADDRESS 	   = $(shell ./bin/ip_address.sh)
+IP_ADDRESS 	   = $(shell ./bin/ip_address.sh 2>/dev/null || true)
 
 # Executables
 GIT           = git
+CURRENT_BRANCH ?= $(shell $(GIT) rev-parse --abbrev-ref HEAD 2>/dev/null)
 DOCKER        	?= docker
 DOCKER_COMPOSE  ?= docker compose
 DOCKER_SWARM    ?= docker swarm
 MAKE            = make
 
+
+SWAP_SIZE ?= 4G
+SWAP_FILE ?= /var/0.swap
 
 # Misc
 .DEFAULT_GOAL = help
@@ -43,9 +47,12 @@ help: ## Outputs this help screen
 		| sed -e 's/\[32m##/[33m/'
 
 ## —— 🐝 Docker commands ———————————————————————————————————
-docker-login: ## Login to the Docker registry
+docker-login: ## Login to the Docker registry (DOCKER_REGISTRY_HOST)
+	@test -n "$(or $(DOCKER_REGISTRY_HOST),)" || (echo "Error: set DOCKER_REGISTRY_HOST in .env" && exit 1)
 	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY_HOST)' as $(DOCKER_REGISTRY_USER)"
-	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) -u $(DOCKER_REGISTRY_USER) -p $(DOCKER_REGISTRY_PASS)
+	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) \
+		-u $(DOCKER_REGISTRY_USER) \
+		-p $(DOCKER_REGISTRY_PASS)
 
 docker-ps: ## List all running containers
 	$(DOCKER) ps
@@ -158,8 +165,14 @@ docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose p
 	"$$@"
 
 ## —— 🐝 swarm commands ———————————————————————————————————
-swarm-init: ## Initialize the swarm
-	$(DOCKER_SWARM) init --advertise-addr $(IP_ADDRESS)
+swarm-init: ## Initialize the swarm (SWARM_ADVERTISE_ADDR overrides auto-detect)
+	@set -e; \
+	addr="$(SWARM_ADVERTISE_ADDR)"; \
+	[ -n "$$addr" ] || addr="$(IP_ADDRESS)"; \
+	[ -n "$$addr" ] || addr="$$(./bin/ip_address.sh)"; \
+	[ -n "$$addr" ] || { echo "Error: no IPv4 for --advertise-addr; set SWARM_ADVERTISE_ADDR=<host-ip>" >&2; exit 1; }; \
+	echo "Initializing swarm with --advertise-addr $$addr"; \
+	$(DOCKER_SWARM) init --advertise-addr "$$addr"
 swarm-info: ## Show swarm info
 	$(DOCKER_SWARM) info
 swarm-leave: ## Leave the swarm
@@ -248,6 +261,7 @@ setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want
 	@$(BIN_DIR)/setup-environment.sh
 	@$(BIN_DIR)/setup-filesystem.sh
 	@$(BIN_DIR)/install-sexy-bash-prompt.sh
+	@$(BIN_DIR)/add-swap-file.sh
 
 update-server: ## Update server
 	@echo "Updating server..."
@@ -304,6 +318,7 @@ services-list: ## List services
 		exit 1; \
 	fi; \
 	echo "Using postgresql task container: $$cid"; \
+	# Use -it only when we have a TTY (prevents failures when run over non-interactive SSH).\n\
 	if [ -t 0 ] && [ -t 1 ]; then \
 		docker exec -it "$$cid" psql -U postgres -d postgres; \
 	else \
@@ -312,5 +327,13 @@ services-list: ## List services
 
 # —— 🐝 git commands ———————————————————————————————————
 push-udem: ## Push changes to the UDEM repository
-	## push the current branch to the UDEM repository
+	@if [ -z "$(CURRENT_BRANCH)" ]; then \
+		echo "Error: could not determine current git branch (CURRENT_BRANCH is empty)"; \
+		exit 1; \
+	fi
 	git push ti-udem $(CURRENT_BRANCH)
+
+#
+add-swap-file: ## Add swap file memory: SWAP_SIZE=4G and SWAP_FILE=/var/0.swap are optional parameters
+	@echo "Adding swap file memory: SWAP_SIZE=$(SWAP_SIZE) and SWAP_FILE=$(SWAP_FILE)..."
+	@$(BIN_DIR)/add-swap-file.sh
