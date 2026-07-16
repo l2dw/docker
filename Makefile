@@ -35,6 +35,7 @@ MAKE            = make
 
 SWAP_SIZE ?= 4G
 SWAP_FILE ?= /var/0.swap
+export SWAP_SIZE SWAP_FILE
 
 # Misc
 .DEFAULT_GOAL = help

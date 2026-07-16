@@ -2,6 +2,15 @@
 
 source "$(dirname "$0")/utils.sh"
 
+# Fill missing vars from an existing env file (do not override make exports).
+if [ -r "${ENV_FILE}" ] && { [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ] || [ -z "${ADMIN_USER}" ]; }; then
+	# shellcheck disable=SC1090
+	set -a
+	. "${ENV_FILE}"
+	set +a
+fi
+resolve_admin_home
+
 # Setup environment's variables
 
 echo "Setting up environment with variables..."
@@ -32,15 +41,6 @@ if [ -r "\${ENV_FILE}" ]; then
 fi
 EOF
 }
-
-# Re-run: fill missing vars from an existing env file (do not override make exports).
-if [ -r "${ENV_FILE}" ] && { [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ] || [ -z "${ADMIN_USER}" ]; }; then
-	# shellcheck disable=SC1090
-	set -a
-	. "${ENV_FILE}"
-	set +a
-fi
-resolve_admin_home
 
 INFRA_DIR="${INFRA_DIR:-/infra}"
 APPDATA_DIR="${APPDATA_DIR:-/appdata}"

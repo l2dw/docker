@@ -4,7 +4,7 @@ source "$(dirname "$0")/utils.sh"
 
 ENABLE_SWAP_FILE="${ENABLE_SWAP_FILE:-false}"
 SWAP_FILE="${SWAP_FILE:-/var/0.swap}"
-SWAP_SIZE="${SWAP_SIZE:-2G}"
+SWAP_SIZE="${SWAP_SIZE:-4G}"
 
 if [ "${ENABLE_SWAP_FILE}" != "true" ] && [ "${ENABLE_SWAP_FILE}" != "1" ]; then
 	echo "ENABLE_SWAP_FILE is not set to true|1, skipping swap file creation"
