@@ -1,6 +1,12 @@
 #!/bin/bash
 
+# Track vars exported before defaults (e.g. make) so callers can still load ~/.env for missing ones.
+_ADMIN_USER_EXPLICIT=0
+[ -n "${ADMIN_USER+set}" ] && _ADMIN_USER_EXPLICIT=1
 ADMIN_USER="${ADMIN_USER:-$(whoami)}"
+
+_INSTANCE_NAME_EXPLICIT=0
+[ -n "${INSTANCE_NAME+set}" ] && _INSTANCE_NAME_EXPLICIT=1
 INSTANCE_NAME="${INSTANCE_NAME:-$(hostname -s)}"
 
 # Resolve the admin user's home directory (works when setup runs via sudo/make as another user).

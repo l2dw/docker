@@ -3,7 +3,7 @@
 source "$(dirname "$0")/utils.sh"
 
 # Fill missing vars from an existing env file (do not override make exports).
-if [ -r "${ENV_FILE}" ] && { [ -z "${INSTANCE_NAME}" ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ] || [ -z "${ADMIN_USER}" ]; }; then
+if [ -r "${ENV_FILE}" ] && { [ "${_INSTANCE_NAME_EXPLICIT}" -eq 0 ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ] || [ "${_ADMIN_USER_EXPLICIT}" -eq 0 ]; }; then
 	# shellcheck disable=SC1090
 	set -a
 	. "${ENV_FILE}"
