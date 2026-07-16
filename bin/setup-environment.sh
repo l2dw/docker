@@ -176,7 +176,7 @@ if [ "$(id -un)" != "${ADMIN_USER}" ]; then
 fi
 
 echo "==> System configuration (hostname, hosts, swap, crontab)..."
-if ! require_passwordless_sudo 2>/dev/null; then
+if ! has_passwordless_sudo; then
 	setup_warn "passwordless sudo is not configured; skipping hostname, /etc/hosts, sysctl, and crontab"
 else
 	if ! sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"; then

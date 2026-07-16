@@ -205,7 +205,7 @@ swarm-unlock-key: ## Show the unlock key
 		exit 1; \
 	fi;
 	@# Check if the stack file exists
-	@if [ ! -f "$(STACK_FILE)" ]; then \
+	@if [ ! -f "$(STACK_FILE)" ] && [ ! -L "$(STACK_FILE)" ]; then \
 		echo "Stack file $(STACK_FILE) does not exist"; \
 		exit 1; \
 	fi;
@@ -214,12 +214,12 @@ STACK_DEPLOY_WAIT ?= 1
 
 stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
 	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(STACK_NAME)')"; \
-	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
 		echo "STACK_FILE is unset and no compose file found under $(STACK_NAME)/ (stack-compose.yml or docker-compose.yml)."; exit 1; \
 	fi; \
 	if [ -n "$$env_file" ]; then set -a && . "$$env_file" && set +a; fi; \
 	set -- -c "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -c "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -c "$$override"; fi; \
 	deploy_extra=""; \
 	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) \
 	  if $(DOCKER) stack deploy --help 2>/dev/null | grep -q -- '--detach'; then \

@@ -38,10 +38,14 @@ setup_warn() {
 
 
 # Utility functions
+has_passwordless_sudo() {
+	sudo -n true 2>/dev/null
+}
+
 require_passwordless_sudo() {
-	if ! sudo -n true 2>/dev/null; then
+	if ! has_passwordless_sudo; then
 		echo "Error: passwordless sudo is required (NOPASSWD). Verify with: sudo -n true" >&2
-		exit 1
+		return 1
 	fi
 }
 
