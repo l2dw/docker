@@ -128,57 +128,83 @@ if [ -r "${ENV_FILE}" ]; then
 fi
 apply_identity_defaults
 
+echo "==> Home directory shortcuts..."
 if [ -f "${INFRA_DIR}/Makefile" ] && [ ! -L "${HOME_DIR}/Makefile" ] && [ ! -f "${HOME_DIR}/Makefile" ]; then
-    echo "Creating symlink for Makefile in ${HOME_DIR}..."
-    ln -s "${INFRA_DIR}/Makefile" "${HOME_DIR}/Makefile"
+	echo "Creating symlink for Makefile in ${HOME_DIR}..."
+	if ! ln -s "${INFRA_DIR}/Makefile" "${HOME_DIR}/Makefile"; then
+		setup_warn "could not create ${HOME_DIR}/Makefile symlink"
+	fi
 fi
 
 if [ -d "${INFRA_DIR}/bin" ] && [ ! -L "${HOME_DIR}/bin" ] && [ ! -d "${HOME_DIR}/bin" ]; then
-    echo "Creating symlink for bin in ${HOME_DIR}..."
-    ln -s "${INFRA_DIR}/bin" "${HOME_DIR}/bin"
+	echo "Creating symlink for bin in ${HOME_DIR}..."
+	if ! ln -s "${INFRA_DIR}/bin" "${HOME_DIR}/bin"; then
+		setup_warn "could not create ${HOME_DIR}/bin symlink"
+	fi
 fi
 
-## Git config (write ADMIN_USER's ~/.gitconfig, not the shell user's)
+echo "==> Git configuration..."
 GIT_CONFIG="${HOME_DIR}/.gitconfig"
 rm -f "${GIT_CONFIG}"
 if [ -f "${INFRA_DIR}/etc/gitconfig" ]; then
-	cp "${INFRA_DIR}/etc/gitconfig" "${GIT_CONFIG}"
+	cp "${INFRA_DIR}/etc/gitconfig" "${GIT_CONFIG}" || setup_warn "could not copy ${INFRA_DIR}/etc/gitconfig"
 else
-	touch "${GIT_CONFIG}"
+	touch "${GIT_CONFIG}" || setup_warn "could not create ${GIT_CONFIG}"
 fi
 
-git config --file "${GIT_CONFIG}" http.sslVerify false
-git config --file "${GIT_CONFIG}" core.autocrlf false
-git config --file "${GIT_CONFIG}" user.name "${ADMIN_USER}"
-git config --file "${GIT_CONFIG}" user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
+if command -v git >/dev/null 2>&1; then
+	if ! git config --file "${GIT_CONFIG}" http.sslVerify false; then
+		setup_warn "git config http.sslVerify failed for ${GIT_CONFIG}"
+	fi
+	if ! git config --file "${GIT_CONFIG}" core.autocrlf false; then
+		setup_warn "git config core.autocrlf failed for ${GIT_CONFIG}"
+	fi
+	if ! git config --file "${GIT_CONFIG}" user.name "${ADMIN_USER}"; then
+		setup_warn "git config user.name failed for ${GIT_CONFIG}"
+	fi
+	if ! git config --file "${GIT_CONFIG}" user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"; then
+		setup_warn "git config user.email failed for ${GIT_CONFIG}"
+	fi
+else
+	setup_warn "git is not installed; skipped git configuration"
+fi
 
-chmod 0644 "${GIT_CONFIG}"
+chmod 0644 "${GIT_CONFIG}" 2>/dev/null || setup_warn "could not chmod ${GIT_CONFIG}"
 if [ "$(id -un)" != "${ADMIN_USER}" ]; then
-	chown "${ADMIN_USER}:${ADMIN_USER}" "${GIT_CONFIG}"
+	chown "${ADMIN_USER}:${ADMIN_USER}" "${GIT_CONFIG}" 2>/dev/null \
+		|| setup_warn "could not chown ${GIT_CONFIG} to ${ADMIN_USER}"
 fi
 
-#  Test if sudo is passwordless: if not, exit without error.
-if ! require_passwordless_sudo >/dev/null 2>&1; then
-	echo "Warning: sudo is not passwordless. Please add the user to the sudoers file." >&2
-	exit 0
+echo "==> System configuration (hostname, hosts, swap, crontab)..."
+if ! require_passwordless_sudo 2>/dev/null; then
+	setup_warn "passwordless sudo is not configured; skipping hostname, /etc/hosts, sysctl, and crontab"
+else
+	if ! sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"; then
+		setup_warn "hostnamectl set-hostname failed"
+	fi
+
+	if ! sudo sed -i "s/127.0.0.1 .*/127.0.0.1 localhost ${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}/g" /etc/hosts; then
+		setup_warn "could not update /etc/hosts"
+	fi
+
+	echo "==> Configure swap swappiness..."
+	if ! sudo sysctl vm.swappiness=10; then
+		setup_warn "sysctl vm.swappiness failed"
+	fi
+	if ! grep -qF 'vm.swappiness=10' /etc/sysctl.conf 2>/dev/null; then
+		echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf >/dev/null \
+			|| setup_warn "could not append vm.swappiness to /etc/sysctl.conf"
+	fi
+
+	if ! crontab -l 2>/dev/null | grep -qF "apt-get update"; then
+		if ! (
+			crontab -l 2>/dev/null
+			echo "0 3 * * * sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get -y upgrade && sudo apt-get -y autoremove && sudo apt-get autoclean >> /var/log/auto-update.log 2>&1"
+		) | crontab -; then
+			setup_warn "could not install daily apt crontab for ${ADMIN_USER}"
+		fi
+	fi
 fi
 
-sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
-
-## Replace localhost with the IP address in /etc/hosts : 127.0.0.1 localhost
-sudo sed -i "s/127.0.0.1 .*/127.0.0.1 localhost ${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}/g" /etc/hosts
-
-
-echo "==> Configure swap <=="
-echo "======================"
-sudo sysctl vm.swappiness=10
-echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
-
-
-## System daily update (admin user crontab; commands use sudo for package management)
-if ! crontab -l 2>/dev/null | grep -qF "apt-get update"; then
-	(
-		crontab -l 2>/dev/null
-		echo "0 3 * * * sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get -y upgrade && sudo apt-get -y autoremove && sudo apt-get autoclean >> /var/log/auto-update.log 2>&1"
-	) | crontab -
-fi
+echo "Finished setup-environment."
+exit 0

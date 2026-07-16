@@ -31,6 +31,11 @@ apply_identity_defaults() {
 	resolve_admin_home
 }
 
+# Log a setup problem but keep going (used by make setup steps).
+setup_warn() {
+	echo "Warning: $*" >&2
+}
+
 
 # Utility functions
 require_passwordless_sudo() {
@@ -105,16 +110,16 @@ docker_cmd() {
 	fi
 }
 
+# Return 0 when the Docker CLI provides a usable `docker swarm` subcommand.
+# Podman does not implement Docker Swarm mode; it is not checked here.
 supports_swarm() {
-	## Podman does not support Swarm, so we need to check if it is installed.
-	if podman swarm --help >/dev/null 2>&1; then
-		return true
+	if command -v docker >/dev/null 2>&1 && docker swarm --help >/dev/null 2>&1; then
+		return 0
 	fi
-	if docker swarm --help >/dev/null 2>&1; then
-		return true
+	if sudo docker swarm --help >/dev/null 2>&1; then
+		return 0
 	fi
-	## If neither docker nor podman supports Swarm, return false.
-	return false
+	return 1
 }
 
 # Print docker swarm join commands (only managers can issue tokens).
