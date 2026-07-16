@@ -7,6 +7,13 @@
 
 set -euo pipefail
 
+source "$(dirname "$0")/utils.sh"
+
+if ! supports_swarm; then
+	echo "Podman is installed; skipping Docker Swarm setup because Podman does not support Swarm."
+	exit 0
+fi
+
 ## TODO: checks if node (hostname like "pivot.*") is pivot node and if not, skip swarm setup
 if ! hostname | grep -q "pivot."; then
 	echo "This node is not a pivot node; skipping swarm setup."
@@ -38,7 +45,7 @@ echo "Initializing Docker Swarm..."
 init_args=()
 
 if [ -z "${SWARM_ADVERTISE_ADDR:-}" ]; then
-	SWARM_ADVERTISE_ADDR="$(detect_swarm_advertise_addr)"
+	SWARM_ADVERTISE_ADDR="$(detect_ip_address)"
 fi
 
 if [ -n "${SWARM_ADVERTISE_ADDR}" ]; then
