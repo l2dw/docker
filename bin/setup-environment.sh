@@ -157,7 +157,11 @@ if [ "$(id -un)" != "${ADMIN_USER}" ]; then
 	chown "${ADMIN_USER}:${ADMIN_USER}" "${GIT_CONFIG}"
 fi
 
-require_passwordless_sudo
+#  Test if sudo is passwordless: if not, exit without error.
+if ! require_passwordless_sudo >/dev/null 2>&1; then
+	echo "Warning: sudo is not passwordless. Please add the user to the sudoers file." >&2
+	exit 0
+fi
 
 sudo hostnamectl set-hostname "${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
 
