@@ -151,6 +151,9 @@ docker-project-restart: .docker-exists-project # Restart a docker-compose projec
 
 docker-project-logs: .docker-exists-project ## Show logs of a docker-compose project
 	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
 	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
@@ -159,6 +162,9 @@ docker-project-logs: .docker-exists-project ## Show logs of a docker-compose pro
 
 docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose project
 	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
 	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \

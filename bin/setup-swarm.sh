@@ -14,8 +14,8 @@ if ! supports_swarm; then
 	exit 0
 fi
 
-## TODO: checks if node (hostname like "pivot.*") is pivot node and if not, skip swarm setup
-if ! hostname | grep -q "pivot."; then
+## Only initialize Swarm on pivot nodes (hostname starts with "pivot").
+if ! hostname | grep -qE '^pivot'; then
 	echo "This node is not a pivot node; skipping swarm setup."
 	exit 0
 fi
