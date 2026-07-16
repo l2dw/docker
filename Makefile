@@ -307,8 +307,8 @@ push-udem: ## Push changes to the UDEM repository
 	@if [ -z "$(CURRENT_BRANCH)" ]; then \
 		echo "Error: could not determine current git branch (CURRENT_BRANCH is empty)"; \
 		exit 1; \
-	fi
-	git push ti-udem $(CURRENT_BRANCH)
+	fi; \
+	git push ti-udem "$(CURRENT_BRANCH)"
 
 #
 add-swap-file: ## Add swap file memory: SWAP_SIZE=4G and SWAP_FILE=/var/0.swap are optional parameters
