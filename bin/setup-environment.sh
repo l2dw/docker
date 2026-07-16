@@ -138,20 +138,24 @@ if [ -d "${INFRA_DIR}/bin" ] && [ ! -L "${HOME_DIR}/bin" ] && [ ! -d "${HOME_DIR
     ln -s "${INFRA_DIR}/bin" "${HOME_DIR}/bin"
 fi
 
-## Git config
-rm -f "${HOME_DIR}/.gitconfig"
+## Git config (write ADMIN_USER's ~/.gitconfig, not the shell user's)
+GIT_CONFIG="${HOME_DIR}/.gitconfig"
+rm -f "${GIT_CONFIG}"
 if [ -f "${INFRA_DIR}/etc/gitconfig" ]; then
-	cp "${INFRA_DIR}/etc/gitconfig" "${HOME_DIR}/.gitconfig"
+	cp "${INFRA_DIR}/etc/gitconfig" "${GIT_CONFIG}"
 else
-    touch "${HOME_DIR}/.gitconfig"
-    chmod 0644 "${HOME_DIR}/.gitconfig"
-    chown "${ADMIN_USER}:${ADMIN_USER}" "${HOME_DIR}/.gitconfig"
+	touch "${GIT_CONFIG}"
 fi
 
-git config --global http.sslVerify false
-git config --global core.autocrlf false
-git config --global user.name "${ADMIN_USER}"
-git config --global user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
+git config --file "${GIT_CONFIG}" http.sslVerify false
+git config --file "${GIT_CONFIG}" core.autocrlf false
+git config --file "${GIT_CONFIG}" user.name "${ADMIN_USER}"
+git config --file "${GIT_CONFIG}" user.email "${ADMIN_USER}@${INSTANCE_NAME}.${INFRA_NAME}.${INFRA_DOMAIN}"
+
+chmod 0644 "${GIT_CONFIG}"
+if [ "$(id -un)" != "${ADMIN_USER}" ]; then
+	chown "${ADMIN_USER}:${ADMIN_USER}" "${GIT_CONFIG}"
+fi
 
 require_passwordless_sudo
 

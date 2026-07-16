@@ -21,28 +21,36 @@ fi
 
 echo "Using postgresql task container: ${cid}"
 
-role_exists="$(docker_cmd exec "${cid}" psql -U postgres -d postgres -tAc \
-	"SELECT 1 FROM pg_roles WHERE rolname = :'db_user';" \
-	-v db_user="${DB_USER}")"
+# psql -c does not perform :variable substitution (server parses the string as-is).
+# Pipe SQL on stdin so :'name' (string) and :"name" (identifier) work as documented.
+psql_run() {
+	docker_cmd exec -i "${cid}" psql -U postgres -d postgres "$@"
+}
+
+role_exists="$(psql_run -tA -v db_user="${DB_USER}" <<'EOSQL'
+SELECT 1 FROM pg_roles WHERE rolname = :'db_user';
+EOSQL
+)"
 
 if [ "${role_exists}" != "1" ]; then
 	echo "Creating role ${DB_USER} ..."
-	docker_cmd exec "${cid}" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
-		-v db_user="${DB_USER}" -v db_pass="${DB_PASS}" \
-		-c "CREATE USER :\"db_user\" WITH PASSWORD :'db_pass';"
+	psql_run -v ON_ERROR_STOP=1 -v db_user="${DB_USER}" -v db_pass="${DB_PASS}" <<'EOSQL'
+CREATE USER :"db_user" WITH PASSWORD :'db_pass';
+EOSQL
 else
 	echo "Role ${DB_USER} already exists."
 fi
 
-db_exists="$(docker_cmd exec "${cid}" psql -U postgres -d postgres -tAc \
-	"SELECT 1 FROM pg_database WHERE datname = :'db_name';" \
-	-v db_name="${DB_NAME}")"
+db_exists="$(psql_run -tA -v db_name="${DB_NAME}" <<'EOSQL'
+SELECT 1 FROM pg_database WHERE datname = :'db_name';
+EOSQL
+)"
 
 if [ "${db_exists}" != "1" ]; then
 	echo "Creating database ${DB_NAME} ..."
-	docker_cmd exec "${cid}" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
-		-v db_name="${DB_NAME}" -v db_user="${DB_USER}" \
-		-c "CREATE DATABASE :\"db_name\" OWNER :\"db_user\";"
+	psql_run -v ON_ERROR_STOP=1 -v db_name="${DB_NAME}" -v db_user="${DB_USER}" <<'EOSQL'
+CREATE DATABASE :"db_name" OWNER :"db_user";
+EOSQL
 else
 	echo "Database ${DB_NAME} already exists."
 fi
