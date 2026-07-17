@@ -118,7 +118,7 @@ docker-project-up: .docker-exists-project # Deploy a docker-compose stack
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" up -d; \
 	"$$@"
@@ -129,7 +129,7 @@ docker-project-down: .docker-exists-project # Remove a docker-compose stack
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" down; \
 	"$$@"
@@ -144,7 +144,7 @@ docker-project-restart: .docker-exists-project # Restart a docker-compose projec
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" restart; \
 	"$$@"
@@ -155,7 +155,7 @@ docker-project-logs: .docker-exists-project ## Show logs of a docker-compose pro
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" logs; \
 	"$$@"
@@ -166,7 +166,7 @@ docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose p
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" logs -f; \
 	"$$@"
