@@ -20,25 +20,20 @@ if ! hostname | grep -qE '^pivot'; then
 	exit 0
 fi
 
-## TODO: checks if node is already in the swarm and if so, skip swarm setup
-if docker_cmd info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null | grep -q "active"; then
+## Skip init when this node is already in an active swarm (exact match; "inactive" must not match).
+state="$(docker_cmd info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null || echo inactive)"
+if [ "${state}" = "active" ]; then
 	echo "This node is already in the swarm; skipping swarm setup."
+	if docker_cmd info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then
+		docker_cmd node ls
+	fi
+	print_join_cluster_commands
 	exit 0
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
 	echo "Error: docker not found. Run install-docker-ce.sh first." >&2
 	exit 1
-fi
-
-state="$(docker_cmd info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null || echo inactive)"
-if [ "${state}" = "active" ]; then
-	echo "Docker Swarm is already active on this node; skipping init."
-	if docker_cmd info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then
-		docker_cmd node ls
-	fi
-	print_join_cluster_commands
-	exit 0
 fi
 
 echo "Initializing Docker Swarm..."

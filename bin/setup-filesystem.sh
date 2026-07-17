@@ -10,12 +10,7 @@ if [ -z "${ADMIN_USER:-}" ]; then
 fi
 
 resolve_admin_home
-if [ -f "${ENV_FILE}" ] && [ -r "${ENV_FILE}" ]; then
-	# shellcheck disable=SC1090
-	set -a
-	. "${ENV_FILE}"
-	set +a
-fi
+load_env_preserving_exports "${ENV_FILE}"
 apply_identity_defaults
 
 # Defaults when not passed on the command line or stored in the env file yet.
