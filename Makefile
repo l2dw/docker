@@ -107,7 +107,7 @@ docker-pull-images: .docker-exists-project # Pull images for a docker-compose st
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" pull; \
 	"$$@"
