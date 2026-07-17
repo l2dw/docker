@@ -323,7 +323,7 @@ NETWORK_DRIVER ?= overlay
 dokploy-setup: ## Setup the dokploy stack
 	@# Create network if it doesn't exist
 	@if ! $(DOCKER) network ls | grep -q "dokploy-network"; then \
-		$(DOCKER) network create "dokploy-network" --driver $(NETWORK_DRIVER) \
+		$(DOCKER) network create "dokploy-network" --driver $(NETWORK_DRIVER); \
 	fi;
 	@# Create folder if it doesn't exist
 	@if [ -n "$(DOKPLOY_POSTGRES_DATA_DIR)" ]; then mkdir -p "$(DOKPLOY_POSTGRES_DATA_DIR)"; fi;
