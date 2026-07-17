@@ -136,7 +136,7 @@ services:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
       - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
-      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/dokploy/traefik/dynamic/certificates
+      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/dokploy/traefik/dynamic/certificates:z
       # - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
     depends_on:
       - postgresql
@@ -209,7 +209,7 @@ services:
     volumes:
       - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/var/log/traefik
       # - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/traefik
-      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/traefik/certificates
+      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/traefik/certificates:z
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/traefik/rules
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     command:
@@ -377,12 +377,12 @@ services:
     depends_on:
       - traefik
     volumes:
-      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/certificates
+      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/certificates:z
 
   waf:
     image: ${DOKPLOY_WAF_IMAGE:-docker.io/owasp/modsecurity-crs:apache}
     volumes:
-      - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2
+      - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2:z
     networks:
       default:
     deploy:

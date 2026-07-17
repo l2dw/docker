@@ -481,3 +481,5 @@ dokploy-compose-logs: ## Show logs of the dokploy stack
 	@$(MAKE) docker-project-logs PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-watch-logs: ## Watch logs of the dokploy stack
 	@$(MAKE) docker-project-watch PROJECT_NAME=$(DOKPLOY_STACK_NAME)
+dokploy-compose-status: ## Healthcheck the dokploy stack
+	@$(BIN_DIR)/dokploy-compose-healthcheck.sh
