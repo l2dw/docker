@@ -212,6 +212,7 @@ swarm-unlock-key: ## Show the unlock key
 # Default: no detach flag (CLI without `--detach` rejects it). STACK_DEPLOY_WAIT=1 passes --detach=false only if `docker stack deploy --help` lists `--detach`; else prints a stderr note so older hosts remain usable.
 STACK_DEPLOY_WAIT ?= 1
 
+STACK_EXTRA ?=
 stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
 	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(STACK_NAME)')"; \
 	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
@@ -286,6 +287,7 @@ services-list: ## List services
 
 .connect-db: ## Connect to database
 	@echo "Connecting to database with user: postgres"
+	@# Use -it only when we have a TTY (prevents failures when run over non-interactive SSH).
 	@bash -lc 'set -euo pipefail; \
 	cid="$$(docker ps -q --filter "label=com.docker.swarm.service.name=infrastructure_postgresql" | head -n 1)"; \
 	if [ -z "$$cid" ]; then \
@@ -294,7 +296,6 @@ services-list: ## List services
 		exit 1; \
 	fi; \
 	echo "Using postgresql task container: $$cid"; \
-	# Use -it only when we have a TTY (prevents failures when run over non-interactive SSH).\n\
 	if [ -t 0 ] && [ -t 1 ]; then \
 		docker exec -it "$$cid" psql -U postgres -d postgres; \
 	else \
