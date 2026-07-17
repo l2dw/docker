@@ -268,10 +268,10 @@ update-server: ## Update server
 	@echo "Updating server..."
 	@$(BIN_DIR)/server-update.sh
 
-deploy-infrastructure: ## Deploy infrastructure
-	@echo "Deploying infrastructure..."
-	@$(BIN_DIR)/setup-swarm.sh
-	@$(BIN_DIR)/deploy-infrastructure.sh
+# deploy-infrastructure: ## Deploy infrastructure
+# 	@echo "Deploying infrastructure..."
+# 	@$(BIN_DIR)/setup-swarm.sh
+# 	@$(BIN_DIR)/deploy-infrastructure.sh
 
 fix-dns-resolv: ## Fix DNS resolver
 	@echo "Fixing DNS resolv.conf..."
