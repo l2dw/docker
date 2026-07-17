@@ -3,12 +3,7 @@
 source "$(dirname "$0")/utils.sh"
 
 # Fill missing vars from an existing env file (do not override make exports).
-if [ -r "${ENV_FILE}" ] && { [ "${_INSTANCE_NAME_EXPLICIT}" -eq 0 ] || [ -z "${INFRA_NAME}" ] || [ -z "${INFRA_DOMAIN}" ] || [ "${_ADMIN_USER_EXPLICIT}" -eq 0 ]; }; then
-	# shellcheck disable=SC1090
-	set -a
-	. "${ENV_FILE}"
-	set +a
-fi
+load_env_preserving_exports "${ENV_FILE}"
 apply_identity_defaults
 
 # Setup environment's variables

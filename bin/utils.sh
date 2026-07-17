@@ -31,6 +31,49 @@ apply_identity_defaults() {
 	resolve_admin_home
 }
 
+# Source an env file with set -a, then restore values that were already set in the
+# environment (make/CLI exports). Defaults from whoami/hostname are not treated as
+# exports unless _ADMIN_USER_EXPLICIT / _INSTANCE_NAME_EXPLICIT are set.
+load_env_preserving_exports() {
+	local env_file="${1:-}"
+	[ -n "${env_file}" ] && [ -r "${env_file}" ] || return 0
+
+	local key saved_var
+	local -a keys=(
+		ADMIN_USER INSTANCE_NAME INFRA_NAME INFRA_DOMAIN
+		INFRA_DIR APPDATA_DIR CERTS_DIR BACKUPS_DIR LOGS_DIR DATA_DIR
+		DOCKER_REGISTRY_HOST DOCKER_REGISTRY_USER DOCKER_REGISTRY_PASS
+		TZ ENABLE_SWAP_FILE SWAP_FILE SWAP_SIZE
+	)
+
+	for key in "${keys[@]}"; do
+		case "${key}" in
+			ADMIN_USER)
+				[ "${_ADMIN_USER_EXPLICIT:-0}" -eq 1 ] || continue
+				;;
+			INSTANCE_NAME)
+				[ "${_INSTANCE_NAME_EXPLICIT:-0}" -eq 1 ] || continue
+				;;
+		esac
+		if [ -n "${!key:-}" ]; then
+			printf -v "_keep_${key}" '%s' "${!key}"
+		fi
+	done
+
+	# shellcheck disable=SC1090
+	set -a
+	. "${env_file}"
+	set +a
+
+	for key in "${keys[@]}"; do
+		saved_var="_keep_${key}"
+		if [ -n "${!saved_var:-}" ]; then
+			printf -v "${key}" '%s' "${!saved_var}"
+			export "${key?}"
+		fi
+	done
+}
+
 # Log a setup problem but keep going (used by make setup steps).
 setup_warn() {
 	echo "Warning: $*" >&2
