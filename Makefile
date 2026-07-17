@@ -319,10 +319,11 @@ commit-changes: ## Commit changes to the infrastructure
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
 DOKPLOY_SERVICES_SHORT := dokploy postgresql redis traefik
+NETWORK_DRIVER ?= overlay
 dokploy-setup: ## Setup the dokploy stack
 	@# Create network if it doesn't exist
 	@if ! $(DOCKER) network ls | grep -q "dokploy-network"; then \
-		$(DOCKER) network create "dokploy-network" --driver overlay; \
+		$(DOCKER) network create "dokploy-network" --driver $(NETWORK_DRIVER) \
 	fi;
 	@# Create folder if it doesn't exist
 	@if [ -n "$(DOKPLOY_POSTGRES_DATA_DIR)" ]; then mkdir -p "$(DOKPLOY_POSTGRES_DATA_DIR)"; fi;
@@ -370,7 +371,58 @@ dokploy-setup: ## Setup the dokploy stack
 	@if [ "$(DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}"; then \
 		$(DOCKER) volume create "${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}"; \
 	fi;
-.dokploy-stack-setup: .dokploy-setup
+dokploy-show-setup: ## Show the dokploy setup
+	@echo "================================================"
+	@echo "POSTGRES"
+	@echo "================================================"
+	@echo "DOKPLOY_POSTGRES_DATA_VOLUME_NAME=$(DOKPLOY_POSTGRES_DATA_VOLUME_NAME)"
+	@echo "DOKPLOY_POSTGRES_DATA_VOLUME_EXTERNAL=$(DOKPLOY_POSTGRES_DATA_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_POSTGRES_DATA_DIR=$(DOKPLOY_POSTGRES_DATA_DIR)"
+	@echo "DOKPLOY_POSTGRES_LOGS_VOLUME_NAME=$(DOKPLOY_POSTGRES_LOGS_VOLUME_NAME)"
+	@echo "DOKPLOY_POSTGRES_LOGS_VOLUME_EXTERNAL=$(DOKPLOY_POSTGRES_LOGS_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_POSTGRES_LOGS_DIR=$(DOKPLOY_POSTGRES_LOGS_DIR)"
+	@echo "================================================"
+	@echo "REDIS"
+	@echo "================================================"
+	@echo "DOKPLOY_REDIS_DATA_VOLUME_NAME=$(DOKPLOY_REDIS_DATA_VOLUME_NAME)"
+	@echo "DOKPLOY_REDIS_DATA_VOLUME_EXTERNAL=$(DOKPLOY_REDIS_DATA_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_REDIS_DATA_DIR=$(DOKPLOY_REDIS_DATA_DIR)"
+	@echo "DOKPLOY_REDIS_LOGS_VOLUME_NAME=$(DOKPLOY_REDIS_LOGS_VOLUME_NAME)"
+	@echo "DOKPLOY_REDIS_LOGS_VOLUME_EXTERNAL=$(DOKPLOY_REDIS_LOGS_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_REDIS_LOGS_DIR=$(DOKPLOY_REDIS_LOGS_DIR)"
+	@echo "================================================"
+	@echo "DOKPLOY"
+	@echo "================================================"
+	@echo "DOKPLOY_DATA_VOLUME_NAME=$(DOKPLOY_DATA_VOLUME_NAME)"
+	@echo "DOKPLOY_DATA_VOLUME_EXTERNAL=$(DOKPLOY_DATA_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_DATA_DIR=$(DOKPLOY_DATA_DIR)"
+	@echo "DOKPLOY_LOGS_VOLUME_NAME=$(DOKPLOY_LOGS_VOLUME_NAME)"
+	@echo "DOKPLOY_LOGS_VOLUME_EXTERNAL=$(DOKPLOY_LOGS_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_LOGS_DIR=$(DOKPLOY_LOGS_DIR)"
+	@echo "================================================"
+	@echo "TRAEFIK"
+	@echo "================================================"
+	@echo "DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME=$(DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME)"
+	@echo "DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_EXTERNAL=$(DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_TRAEFIK_CERTIFICATES_DIR=$(DOKPLOY_TRAEFIK_CERTIFICATES_DIR)"
+	@echo "DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME=$(DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME)"
+	@echo "DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL=$(DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_TRAEFIK_CONFIG_DIR=$(DOKPLOY_TRAEFIK_CONFIG_DIR)"
+	@echo "DOKPLOY_TRAEFIK_RULES_VOLUME_NAME=$(DOKPLOY_TRAEFIK_RULES_VOLUME_NAME)"
+	@echo "DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL=$(DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_TRAEFIK_RULES_DIR=$(DOKPLOY_TRAEFIK_RULES_DIR)"
+	@echo "DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME=$(DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME)"
+	@echo "DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL=$(DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_TRAEFIK_LOGS_DIR=$(DOKPLOY_TRAEFIK_LOGS_DIR)"
+	@echo "================================================"
+	@echo "WAF"
+	@echo "================================================"
+	@echo "DOKPLOY_WAF_LOGS_VOLUME_NAME=$(DOKPLOY_WAF_LOGS_VOLUME_NAME)"
+	@echo "DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL=$(DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL)"
+	@echo "DOKPLOY_WAF_LOGS_DIR=$(DOKPLOY_WAF_LOGS_DIR)"
+	@echo "================================================"
+.dokploy-stack-setup:
+	@$(MAKE) dokploy-setup NETWORK_DRIVER=overlay
 	@# Swarm stack deploy needs a manager control plane (ControlAvailable). LocalNodeState can be error when another node is Down while this leader still works.
 	@swarm_ctrl="$$($(DOCKER) info -f '{{.Swarm.ControlAvailable}}' 2>/dev/null)"; \
 	swarm_state="$$($(DOCKER) info -f '{{.Swarm.LocalNodeState}}' 2>/dev/null)"; \
@@ -416,15 +468,16 @@ dokploy-debug-logs: ## Tail recent logs for each dokploy service (e.g. services 
 		echo; \
 	done
 dokploy-compose-upgrade: ## Upgrade the dokploy stack
-	make docker-project-upgrade PROJECT_NAME=$(DOKPLOY_STACK_NAME)
+	@$(MAKE) docker-project-upgrade PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-up: ## Deploy the dokploy stack
-	make docker-project-up PROJECT_NAME=$(DOKPLOY_STACK_NAME)
+	@$(MAKE) dokploy-setup NETWORK_DRIVER=bridge
+	@$(MAKE) docker-project-up PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-down: ## Remove the dokploy stack
-	make docker-project-down PROJECT_NAME=$(DOKPLOY_STACK_NAME)
+	@$(MAKE) docker-project-down PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-restart: ## Restart the dokploy stack
-	make docker-project-restart PROJECT_NAME=$(DOKPLOY_STACK_NAME)
+	@$(MAKE) docker-project-restart PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-recreate: dokploy-compose-down dokploy-compose-up ## Recreate the dokploy stack
 dokploy-compose-logs: ## Show logs of the dokploy stack
-	make docker-project-logs PROJECT_NAME=$(DOKPLOY_STACK_NAME)
+	@$(MAKE) docker-project-logs PROJECT_NAME=$(DOKPLOY_STACK_NAME)
 dokploy-compose-watch-logs: ## Watch logs of the dokploy stack
-	make docker-project-watch PROJECT_NAME=$(DOKPLOY_STACK_NAME)
+	@$(MAKE) docker-project-watch PROJECT_NAME=$(DOKPLOY_STACK_NAME)
