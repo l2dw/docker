@@ -383,6 +383,8 @@ services:
     image: ${DOKPLOY_WAF_IMAGE:-docker.io/owasp/modsecurity-crs:apache}
     volumes:
       - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2
+    networks:
+      default:
     deploy:
       mode: replicated
       replicas: 1
