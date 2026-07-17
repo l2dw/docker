@@ -29,16 +29,16 @@ volumes:
   dokploy-traefik_logs:
     name: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}
     external: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL:-false}
-  dokploy-traefik_certs:
-    name: ${DOKPLOY_TRAEFIK_CERTS_VOLUME_NAME:-dokploy-traefik_certs}
-    external: ${DOKPLOY_TRAEFIK_CERTS_VOLUME_EXTERNAL:-false}
+  dokploy-traefik_certificates:
+    name: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME:-dokploy-traefik_certificates}
+    external: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_EXTERNAL:-false}
   dokploy-traefik_rules:
     name: ${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}
     external: ${DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL:-false}
   ## Single-file mount (traefik.yml), not a directory — empty named volumes behave like dirs; bind or pre-create the file when external.
-  dokploy-certificates:
-    name: ${DOKPLOY_CERTIFICATES_VOLUME_NAME:-dokploy-certificates}
-    external: ${DOKPLOY_CERTIFICATES_VOLUME_EXTERNAL:-false}
+  # dokploy-certificates:
+  #   name: ${DOKPLOY_CERTIFICATES_VOLUME_NAME:-dokploy-certificates}
+  #   external: ${DOKPLOY_CERTIFICATES_VOLUME_EXTERNAL:-false}
   dokploy-waf_logs:
     name: ${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}
     external: ${DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL:-false}
@@ -136,7 +136,7 @@ services:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
       - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
-      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/dokploy/traefik/dynamic/certificates
+      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/dokploy/traefik/dynamic/certificates
       # - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/dokploy/traefik
     depends_on:
       - postgresql
@@ -157,7 +157,7 @@ services:
         order: stop-first
         failure_action: rollback
       labels:
-        - "traefik.enable=${TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
         - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
         - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
         - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
@@ -172,7 +172,7 @@ services:
         - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_BASE_PATH:-/}"
         - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
     labels:
-      - "traefik.enable=${TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
       - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
       - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
@@ -200,16 +200,16 @@ services:
     ports:
       - target: 80
         published: ${DOKPLOY_TRAEFIK_PORT80_PUBLISHED:-80}
-        protocol: ${DOKPLOY_TRAEFIK_PORT80_PROTOCOL:-tcp}
+        protocol: tcp
         mode: ${DOKPLOY_TRAEFIK_PORT_MODE:-host}
       - target: 443
         published: ${DOKPLOY_TRAEFIK_PORT443_PUBLISHED:-443}
-        protocol: ${DOKPLOY_TRAEFIK_PORT443_PROTOCOL:-tcp}
+        protocol: tcp
         mode: ${DOKPLOY_TRAEFIK_PORT_MODE:-host}
     volumes:
       - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/var/log/traefik
       # - ${DOKPLOY_TRAEFIK_CONFIG_DIR:-dokploy-traefik_config}:/etc/traefik
-      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/traefik/certificates
+      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/traefik/certificates
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/traefik/rules
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     command:
@@ -288,7 +288,7 @@ services:
       # appear on `docker container inspect`. Check: `docker service inspect dokploy_dokploy-traefik --format '{{json .Spec.Labels}}'`
       # Traefik Swarm provider reads service labels (enable providers.docker.swarmMode if using file provider defaults).
       labels:
-        - "traefik.enable=${TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_SWARM_ENABLE:-false}"
         ## Middleware configuration
         - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme=https"
         - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent=true"
@@ -317,7 +317,7 @@ services:
         - "homepage.widget.type=traefik"
         - "homepage.widget.url=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
     labels:
-      - "traefik.enable=${TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       ## Middleware configuration
       - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.scheme=https"
       - "traefik.http.middlewares.redirect-to-websecure.redirectscheme.permanent=true"
@@ -377,7 +377,7 @@ services:
     depends_on:
       - traefik
     volumes:
-      - ${DOKPLOY_CERTIFICATES_DIR:-dokploy-certificates}:/etc/certificates
+      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/certificates
 
   waf:
     image: ${DOKPLOY_WAF_IMAGE:-docker.io/owasp/modsecurity-crs:apache}

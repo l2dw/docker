@@ -330,11 +330,58 @@ commit-changes: ## Commit changes to the infrastructure
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
 DOKPLOY_SERVICES_SHORT := dokploy postgresql redis traefik
-.dokploy-stack-setup:
+dokploy-setup: ## Setup the dokploy stack
 	@# Create network if it doesn't exist
 	@if ! $(DOCKER) network ls | grep -q "dokploy-network"; then \
 		$(DOCKER) network create "dokploy-network" --driver overlay; \
 	fi;
+	@# Create folder if it doesn't exist
+	@if [ -n "$(DOKPLOY_POSTGRES_DATA_DIR)" ]; then mkdir -p "$(DOKPLOY_POSTGRES_DATA_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_POSTGRES_LOGS_DIR)" ]; then mkdir -p "$(DOKPLOY_POSTGRES_LOGS_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_REDIS_DATA_DIR)" ]; then mkdir -p "$(DOKPLOY_REDIS_DATA_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_REDIS_LOGS_DIR)" ]; then mkdir -p "$(DOKPLOY_REDIS_LOGS_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_DATA_DIR)" ]; then mkdir -p "$(DOKPLOY_DATA_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_LOGS_DIR)" ]; then mkdir -p "$(DOKPLOY_LOGS_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_TRAEFIK_CERTIFICATES_DIR)" ]; then mkdir -p "$(DOKPLOY_TRAEFIK_CERTIFICATES_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_TRAEFIK_CONFIG_DIR)" ]; then mkdir -p "$(DOKPLOY_TRAEFIK_CONFIG_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_TRAEFIK_RULES_DIR)" ]; then mkdir -p "$(DOKPLOY_TRAEFIK_RULES_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_TRAEFIK_LOGS_DIR)" ]; then mkdir -p "$(DOKPLOY_TRAEFIK_LOGS_DIR)"; fi;
+	@if [ -n "$(DOKPLOY_WAF_LOGS_DIR)" ]; then mkdir -p "$(DOKPLOY_WAF_LOGS_DIR)"; fi;
+	@# Create volume if it doesn't exist
+	@if [ "$(DOKPLOY_POSTGRES_DATA_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_POSTGRES_DATA_VOLUME_NAME:-dokploy-postgresql_data}"; then \
+		$(DOCKER) volume create "${DOKPLOY_POSTGRES_DATA_VOLUME_NAME:-dokploy-postgresql_data}"; \
+	fi;
+	@if [ "$(DOKPLOY_POSTGRES_LOGS_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_POSTGRES_LOGS_VOLUME_NAME:-dokploy-postgresql_logs}"; then \
+		$(DOCKER) volume create "${DOKPLOY_POSTGRES_LOGS_VOLUME_NAME:-dokploy-postgresql_logs}"; \
+	fi;
+	@if [ "$(DOKPLOY_REDIS_DATA_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_REDIS_DATA_VOLUME_NAME:-dokploy-redis_data}"; then \
+		$(DOCKER) volume create "${DOKPLOY_REDIS_DATA_VOLUME_NAME:-dokploy-redis_data}"; \
+	fi;
+	@if [ "$(DOKPLOY_REDIS_LOGS_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_REDIS_LOGS_VOLUME_NAME:-dokploy-redis_logs}"; then \
+		$(DOCKER) volume create "${DOKPLOY_REDIS_LOGS_VOLUME_NAME:-dokploy-redis_logs}"; \
+	fi;
+	@if [ "$(DOKPLOY_DATA_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_DATA_VOLUME_NAME:-dokploy-data}"; then \
+		$(DOCKER) volume create "${DOKPLOY_DATA_VOLUME_NAME:-dokploy-data}"; \
+	fi;
+	@if [ "$(DOKPLOY_LOGS_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}"; then \
+		$(DOCKER) volume create "${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}"; \
+	fi;
+	@if [ "$(DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME:-dokploy-traefik_config}"; then \
+		$(DOCKER) volume create "${DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME:-dokploy-traefik_config}"; \
+	fi;
+	@if [ "$(DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}"; then \
+		$(DOCKER) volume create "${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}"; \
+	fi;
+	@if [ "$(DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}"; then \
+		$(DOCKER) volume create "${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}"; \
+	fi;
+	@if [ "$(DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME:-dokploy-traefik_certificates}"; then \
+		$(DOCKER) volume create "${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME:-dokploy-traefik_certificates}"; \
+	fi;
+	@if [ "$(DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL)" == "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}"; then \
+		$(DOCKER) volume create "${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}"; \
+	fi;
+.dokploy-stack-setup: .dokploy-setup
 	@# Swarm stack deploy needs a manager control plane (ControlAvailable). LocalNodeState can be error when another node is Down while this leader still works.
 	@swarm_ctrl="$$($(DOCKER) info -f '{{.Swarm.ControlAvailable}}' 2>/dev/null)"; \
 	swarm_state="$$($(DOCKER) info -f '{{.Swarm.LocalNodeState}}' 2>/dev/null)"; \
