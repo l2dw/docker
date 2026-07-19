@@ -1,0 +1,41 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  sonatype_data:
+    name: ${SONATYPE_DATA_VOLUME_NAME:-sonatype_data}
+    external: ${SONATYPE_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  sonatype:
+    image: ${SONATYPE_IMAGE:-docker.io/sonatype/nexus3:latest}
+    environment:
+      TZ: ${TZ:-America/Toronto}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
+      http_proxy: ${HTTP_PROXY:-}
+      https_proxy: ${HTTPS_PROXY:-}
+      no_proxy: ${NO_PROXY:-}
+      # Must fit under deploy.resources.limits.memory (default 2G). No nested quotes.
+      INSTALL4J_ADD_VM_PARAMS: ${SONATYPE_INSTALL4J_ADD_VM_PARAMS:--Xms512m -Xmx1g -XX:MaxDirectMemorySize=1g -Djava.util.prefs.userRoot=/nexus-data/javaprefs}
+    volumes:
+      # Nexus writes data + logs under /nexus-data
+      - ${SONATYPE_DATA_DIR:-sonatype_data}:/nexus-data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/service/rest/v1/status >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    deploy:
+      mode: ${SONATYPE_DEPLOY_MODE:-replicated}
+      replicas: ${SONATYPE_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${SONATYPE_MEMORY_LIMIT:-2G}
+      placement:
+        constraints:
+          - ${SONATYPE_PLACEMENT_CONSTRAINTS:-node.role == worker}
