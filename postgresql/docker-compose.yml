@@ -1,0 +1,42 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  postgresql_data:
+    name: ${POSTGRESQL_DATA_VOLUME_NAME:-postgresql_data}
+    external: ${POSTGRESQL_DATA_VOLUME_EXTERNAL:-false}
+  postgresql_logs:
+    name: ${POSTGRESQL_LOGS_VOLUME_NAME:-postgresql_logs}
+    external: ${POSTGRESQL_LOGS_VOLUME_EXTERNAL:-false}
+
+services:
+  postgresql:
+    image: ${POSTGRESQL_IMAGE:-docker.io/postgres:16}
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD:?set POSTGRESQL_PASSWORD in .env}
+      - POSTGRES_USER=${POSTGRESQL_USER:-postgres}
+      - POSTGRES_DB=${POSTGRESQL_DB:-postgres}
+      - TZ=${TZ:-America/Toronto}
+      - PGPASSWORD=${POSTGRESQL_PASSWORD:?set POSTGRESQL_PASSWORD in .env}
+    volumes:
+      - ${POSTGRESQL_DATA_DIR:-postgresql_data}:/var/lib/postgresql/data
+      - ${POSTGRESQL_LOGS_DIR:-postgresql_logs}:/var/log/postgresql
+    networks:
+      default:
+        aliases:
+          - ${POSTGRESQL_NETWORK_ALIAS:-postgresql-server}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    deploy:
+      mode: ${POSTGRESQL_DEPLOY_MODE:-replicated}
+      replicas: ${POSTGRESQL_REPLICAS:-1}
+      endpoint_mode: ${POSTGRESQL_ENDPOINT_MODE:-dnsrr}
+      placement:
+        constraints:
+          - ${POSTGRESQL_PLACEMENT_CONSTRAINTS:-node.role == worker}

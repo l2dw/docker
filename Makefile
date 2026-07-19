@@ -314,3 +314,51 @@ commit-changes: ## Commit changes to the infrastructure
 	git add .
 	git commit -m "Update infrastructure: $(DATETIME)"
 	git push origin
+
+## —— 🐝 POSTGRESQL commands ———————————————————————————————————
+POSTGRESQL_STACK_NAME := postgresql
+POSTGRESQL_SERVICES_SHORT := postgresql
+postgresql-pull-images: ## Pull images for the postgresql stack
+	$(MAKE) docker-pull-images PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-stack-up: ## Deploy the postgresql stack
+	$(MAKE) stack-deploy STACK_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-stack-down: ## Remove the postgresql stack
+	$(MAKE) stack-rm STACK_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-stack-recreate: postgresql-stack-down postgresql-stack-up ## Recreate the postgresql stack
+postgresql-stack-logs: ## Show logs of the postgresql stack
+	$(MAKE) stack-logs STACK_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-stack-watch-logs: ## Watch logs of the postgresql stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-debug: ## Debug postgresql swarm stack: services, tasks, inspect
+	@echo "--- docker stack services ($(POSTGRESQL_STACK_NAME))"
+	@$(DOCKER) stack services $(POSTGRESQL_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+	@echo
+	@echo "--- docker service ls (${POSTGRESQL_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(POSTGRESQL_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(POSTGRESQL_STACK_NAME)_' \
+		|| echo "(could not filter services)"
+	@echo
+	@echo "--- docker stack ps --no-trunc ($(POSTGRESQL_STACK_NAME))"
+	@$(DOCKER) stack ps $(POSTGRESQL_STACK_NAME) --no-trunc
+	@echo
+	@echo "--- postgresql service inspect ---"
+	@$(DOCKER) service inspect $(POSTGRESQL_STACK_NAME)_postgresql --pretty 2>/dev/null || echo "(no postgresql service or inspect failed)"
+postgresql-debug-logs: ## Tail recent logs for each postgresql service (e.g. services at 0/1)
+	@for s in $(POSTGRESQL_SERVICES_SHORT); do \
+		echo "==================== $(POSTGRESQL_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(POSTGRESQL_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+		echo; \
+	done
+postgresql-compose-upgrade: ## Upgrade the postgresql stack
+	make docker-project-upgrade PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-compose-up: ## Deploy the postgresql stack
+	make docker-project-up PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-compose-down: ## Remove the postgresql stack
+	make docker-project-down PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-compose-restart: ## Restart the postgresql stack
+	make docker-project-restart PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-compose-recreate: postgresql-compose-down postgresql-compose-up ## Recreate the postgresql stack
+postgresql-compose-logs: ## Show logs of the postgresql stack
+	make docker-project-logs PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
+postgresql-compose-watch-logs: ## Watch logs of the postgresql stack
+	make docker-project-watch PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
