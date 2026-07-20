@@ -55,3 +55,33 @@ services:
         constraints:
           # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
           - ${BUGSINK_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      labels:
+        - "traefik.http.services.${APP_NAME:-bugsink}.loadbalancer.server.port=80"
+        - "traefik.http.routers.${APP_NAME:-bugsink}.entrypoints=${BUGSINK_TRAEFIK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-bugsink}.rule=Host(`${BUGSINK_DOMAIN:-bugsink.example.com}`) && PathPrefix(`${BUGSINK_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-bugsink}.service=${APP_NAME:-bugsink}"
+        - "traefik.http.routers.${APP_NAME:-bugsink}.middlewares=${BUGSINK_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-bugsink}.tls=${BUGSINK_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-bugsink}.tls.certresolver=${BUGSINK_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+        ## Homepage configuration
+        - "homepage.group=${BUGSINK_HOMEPAGE_GROUP:-}"
+        - "homepage.name=${APP_NAME:-Tpl}"
+        - "homepage.icon=${APP_NAME:-tpl.png}"
+        - "homepage.href=${BUGSINK_HOMEPAGE_HREF:-http://bugsink.example.com}"
+        - "homepage.description=${BUGSINK_HOMEPAGE_DESCRIPTION:-}"
+        - "homepage.siteMonitor=${BUGSINK_HOMEPAGE_SITEMONITOR:-http://bugsink.example.com}"
+        - "homepage.ping=${BUGSINK_HOMEPAGE_PING:-}"
+    labels:
+      - "traefik.http.services.${APP_NAME:-bugsink}.loadbalancer.server.port=80"
+      - "traefik.http.routers.${APP_NAME:-bugsink}.entrypoints=${BUGSINK_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-bugsink}.rule=Host(`${BUGSINK_DOMAIN:-bugsink.example.com}`) && PathPrefix(`${BUGSINK_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-bugsink}.service=${APP_NAME:-bugsink}"
+      - "traefik.http.routers.${APP_NAME:-bugsink}.middlewares=${BUGSINK_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-bugsink}.tls=${BUGSINK_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-bugsink}.tls.certresolver=${BUGSINK_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      ## Homepage configuration
+      - "homepage.group=${BUGSINK_HOMEPAGE_GROUP:-}"
+      - "homepage.name=${BUGSINK_HOMEPAGE_NAME:-Bugsink}"
+      - "homepage.icon=${BUGSINK_HOMEPAGE_ICON:-bugsink.png}"
+      - "homepage.href=${BUGSINK_HOMEPAGE_HREF:-http://bugsink.example.com}"
+      - "homepage.description=${BUGSINK_HOMEPAGE_DESCRIPTION:-}"

@@ -11,9 +11,7 @@ volumes:
 services:
   bugsink:
     image: ${BUGSINK_IMAGE:-bugsink/bugsink:2}
-    x-pull-policy: ${BUGSINK_PULL_POLICY:-always}
     restart: ${BUGSINK_RESTART:-unless-stopped}
-    privileged: ${BUGSINK_PRIVILEGED:-true}
     environment:
       - TZ=${TZ:-America/Montreal}
       - http_proxy=${HTTP_PROXY:-}
@@ -25,7 +23,8 @@ services:
       - SECRET_KEY=${BUGSINK_SECRET_KEY:?set BUGSINK_SECRET_KEY in .env (openssl rand -base64 50)}
       - CREATE_SUPERUSER=${BUGSINK_CREATE_SUPERUSER:-admin@example.org:changeme}
       - PORT=${BUGSINK_PORT:-8000}
-      - DATABASE_URL=${BUGSINK_DATABASE_URL}
+      # For Postgres/MySQL, set BUGSINK_DATABASE_URL in .env and uncomment:
+      # - DATABASE_URL=${BUGSINK_DATABASE_URL}
       - BEHIND_HTTPS_PROXY=${BUGSINK_BEHIND_HTTPS_PROXY:-false}
       - USE_X_FORWARDED_HOST=${BUGSINK_USE_X_FORWARDED_HOST:-false}
       - USE_X_REAL_IP=${BUGSINK_USE_X_REAL_IP:-true}
@@ -34,7 +33,6 @@ services:
       - BASE_URL=${BUGSINK_BASE_URL:-http://localhost:8000}
     volumes:
       - ${BUGSINK_DATA:-bugsink_data}:/data
-    mem_limit: ${BUGSINK_MEMORY_LIMIT:-512M}
     healthcheck:
       test:
         [
@@ -55,3 +53,35 @@ services:
         constraints:
           # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
           - ${BUGSINK_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      labels:
+        - "traefik.enable=${BUGSINK_TRAEFIK_ENABLED:-true}"
+        - "traefik.http.services.bugsink.loadbalancer.server.port=${BUGSINK_PORT:-8000}"
+        - "traefik.http.routers.bugsink.entrypoints=${BUGSINK_TRAEFIK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.bugsink.rule=Host(`${BUGSINK_DOMAIN:-bugsink.example.com}`) && PathPrefix(`${BUGSINK_BASE_PATH:-/}`)"
+        - "traefik.http.routers.bugsink.service=bugsink"
+        - "traefik.http.routers.bugsink.middlewares=${BUGSINK_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.bugsink.tls=${BUGSINK_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.bugsink.tls.certresolver=${BUGSINK_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${BUGSINK_HOMEPAGE_GROUP:-}"
+        - "homepage.name=${BUGSINK_HOMEPAGE_NAME:-Bugsink}"
+        - "homepage.icon=${BUGSINK_HOMEPAGE_ICON:-bugsink.png}"
+        - "homepage.href=${BUGSINK_HOMEPAGE_HREF:-http://bugsink.example.com}"
+        - "homepage.description=${BUGSINK_HOMEPAGE_DESCRIPTION:-}"
+        - "homepage.siteMonitor=${BUGSINK_HOMEPAGE_SITEMONITOR:-http://bugsink.example.com}"
+        - "homepage.ping=${BUGSINK_HOMEPAGE_PING:-}"
+    labels:
+      - "traefik.enable=${BUGSINK_TRAEFIK_ENABLED:-true}"
+      - "traefik.http.services.bugsink.loadbalancer.server.port=${BUGSINK_PORT:-8000}"
+      - "traefik.http.routers.bugsink.entrypoints=${BUGSINK_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.bugsink.rule=Host(`${BUGSINK_DOMAIN:-bugsink.example.com}`) && PathPrefix(`${BUGSINK_BASE_PATH:-/}`)"
+      - "traefik.http.routers.bugsink.service=bugsink"
+      - "traefik.http.routers.bugsink.middlewares=${BUGSINK_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.bugsink.tls=${BUGSINK_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.bugsink.tls.certresolver=${BUGSINK_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${BUGSINK_HOMEPAGE_GROUP:-}"
+      - "homepage.name=${BUGSINK_HOMEPAGE_NAME:-Bugsink}"
+      - "homepage.icon=${BUGSINK_HOMEPAGE_ICON:-bugsink.png}"
+      - "homepage.href=${BUGSINK_HOMEPAGE_HREF:-http://bugsink.example.com}"
+      - "homepage.description=${BUGSINK_HOMEPAGE_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${BUGSINK_HOMEPAGE_SITEMONITOR:-http://bugsink.example.com}"
+      - "homepage.ping=${BUGSINK_HOMEPAGE_PING:-}"
