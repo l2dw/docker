@@ -35,7 +35,6 @@ services:
       - BASE_URL=${BUGSINK_BASE_URL:-http://localhost:8000}
     volumes:
       - ${BUGSINK_DATA:-bugsink_data}:/data
-    mem_limit: ${BUGSINK_MEMORY_LIMIT:-512M}
     healthcheck:
       test:
         [
