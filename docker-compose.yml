@@ -1,1 +1,57 @@
-bugsink/docker-compose.yml
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  bugsink_data:
+    name: ${BUGSINK_DATA_VOLUME_NAME:-bugsink_data}
+    external: ${BUGSINK_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  bugsink:
+    image: ${BUGSINK_IMAGE:-bugsink/bugsink:2}
+    x-pull-policy: ${BUGSINK_PULL_POLICY:-always}
+    restart: ${BUGSINK_RESTART:-unless-stopped}
+    privileged: ${BUGSINK_PRIVILEGED:-true}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - http_proxy=${HTTP_PROXY:-}
+      - https_proxy=${HTTPS_PROXY:-}
+      - no_proxy=${NO_PROXY:-}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
+      - SECRET_KEY=${BUGSINK_SECRET_KEY:?set BUGSINK_SECRET_KEY in .env (openssl rand -base64 50)}
+      - CREATE_SUPERUSER=${BUGSINK_CREATE_SUPERUSER:-admin@example.org:changeme}
+      - PORT=${BUGSINK_PORT:-8000}
+      - DATABASE_URL=${BUGSINK_DATABASE_URL}
+      - BEHIND_HTTPS_PROXY=${BUGSINK_BEHIND_HTTPS_PROXY:-false}
+      - USE_X_FORWARDED_HOST=${BUGSINK_USE_X_FORWARDED_HOST:-false}
+      - USE_X_REAL_IP=${BUGSINK_USE_X_REAL_IP:-true}
+      - USE_X_FORWARDED_FOR=${BUGSINK_USE_X_FORWARDED_FOR:-false}
+      - X_FORWARDED_FOR_PROXY_COUNT=${BUGSINK_X_FORWARDED_FOR_PROXY_COUNT:-1}
+      - BASE_URL=${BUGSINK_BASE_URL:-http://localhost:8000}
+    volumes:
+      - ${BUGSINK_DATA:-bugsink_data}:/data
+    mem_limit: ${BUGSINK_MEMORY_LIMIT:-512M}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import requests; requests.get('http://127.0.0.1:${BUGSINK_PORT:-8000}/health/ready').raise_for_status()\"",
+        ]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+      start_period: 30s
+    deploy:
+      replicas: ${BUGSINK_REPLICAS:-1}
+      mode: ${BUGSINK_SWARM_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${BUGSINK_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
+          - ${BUGSINK_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
