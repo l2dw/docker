@@ -314,3 +314,53 @@ commit-changes: ## Commit changes to the infrastructure
 	git add .
 	git commit -m "Update infrastructure: $(DATETIME)"
 	git push origin
+
+## —— 🐝 BUGSINK commands ———————————————————————————————————
+BUGSINK_STACK_NAME := bugsink
+BUGSINK_SERVICES_SHORT := bugsink
+.bugsink-stack-setup: ## Validate bugsink env before swarm deploy
+	@test -n "$(BUGSINK_SECRET_KEY)" || (echo "Error: set BUGSINK_SECRET_KEY in .env (openssl rand -base64 50)" && exit 1)
+bugsink-pull-images: ## Pull images for the bugsink stack
+	$(MAKE) docker-pull-images PROJECT_NAME=$(BUGSINK_STACK_NAME)
+bugsink-stack-up: .bugsink-stack-setup ## Deploy the bugsink stack
+	$(MAKE) stack-deploy STACK_NAME=$(BUGSINK_STACK_NAME)
+bugsink-stack-down: ## Remove the bugsink stack
+	$(MAKE) stack-rm STACK_NAME=$(BUGSINK_STACK_NAME)
+bugsink-stack-recreate: bugsink-stack-down bugsink-stack-up ## Recreate the bugsink stack
+bugsink-stack-logs: ## Show logs of the bugsink stack
+	$(MAKE) stack-logs STACK_NAME=$(BUGSINK_STACK_NAME)
+bugsink-stack-watch-logs: ## Watch logs of the bugsink stack
+	$(MAKE) stack-watch-logs STACK_NAME=$(BUGSINK_STACK_NAME)
+bugsink-debug: ## Debug bugsink swarm stack: services, tasks (states/errors)
+	@echo "--- docker stack services ($(BUGSINK_STACK_NAME))"
+	@$(DOCKER) stack services $(BUGSINK_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
+	@echo
+	@echo "--- docker service ls (${BUGSINK_STACK_NAME}_*) ---"
+	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(BUGSINK_STACK_NAME) 2>/dev/null \
+		|| $(DOCKER) service ls | grep '$(BUGSINK_STACK_NAME)_' \
+		|| echo "(could not filter services)"
+	@echo
+	@echo "--- docker stack ps --no-trunc ($(BUGSINK_STACK_NAME))"
+	@$(DOCKER) stack ps $(BUGSINK_STACK_NAME) --no-trunc
+	@echo
+	@echo "--- service endpoint ($(BUGSINK_STACK_NAME)_bugsink) ---"
+	@$(DOCKER) service inspect $(BUGSINK_STACK_NAME)_bugsink --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(service missing or inspect failed)"
+bugsink-debug-logs: ## Tail recent logs for each bugsink service (e.g. services at 0/1)
+	@for s in $(BUGSINK_SERVICES_SHORT); do \
+		echo "==================== $(BUGSINK_STACK_NAME)_$$s ===================="; \
+		$(DOCKER) service logs "$(BUGSINK_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
+		echo; \
+	done
+bugsink-compose-upgrade: ## Upgrade the bugsink stack
+	make docker-project-upgrade PROJECT_NAME=$(BUGSINK_STACK_NAME)
+bugsink-compose-up: ## Deploy the bugsink stack
+	make docker-project-up PROJECT_NAME=$(BUGSINK_STACK_NAME)
+bugsink-compose-down: ## Remove the bugsink stack
+	make docker-project-down PROJECT_NAME=$(BUGSINK_STACK_NAME)
+bugsink-compose-restart: ## Restart the bugsink stack
+	make docker-project-restart PROJECT_NAME=$(BUGSINK_STACK_NAME)
+bugsink-compose-recreate: bugsink-compose-down bugsink-compose-up ## Recreate the bugsink stack
+bugsink-compose-logs: ## Show logs of the bugsink stack
+	make docker-project-logs PROJECT_NAME=$(BUGSINK_STACK_NAME)
+bugsink-compose-watch-logs: ## Watch logs of the bugsink stack
+	make docker-project-watch PROJECT_NAME=$(BUGSINK_STACK_NAME)
