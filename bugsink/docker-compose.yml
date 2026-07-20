@@ -22,7 +22,8 @@ services:
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
-      - SECRET_KEY=${BUGSINK_SECRET_KEY:?set BUGSINK_SECRET_KEY in .env (openssl rand -base64 50)}
+      # Set BUGSINK_SECRET_KEY in .env (openssl rand -base64 50)
+      - SECRET_KEY=${BUGSINK_SECRET_KEY:-}
       - CREATE_SUPERUSER=${BUGSINK_CREATE_SUPERUSER:-admin@example.org:changeme}
       - PORT=${BUGSINK_PORT:-8000}
       - DATABASE_URL=${BUGSINK_DATABASE_URL}
