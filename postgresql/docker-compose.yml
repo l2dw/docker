@@ -39,4 +39,5 @@ services:
       endpoint_mode: ${POSTGRESQL_ENDPOINT_MODE:-dnsrr}
       placement:
         constraints:
-          - ${POSTGRESQL_PLACEMENT_CONSTRAINTS:-node.role == worker}
+          # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
+          - ${POSTGRESQL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}

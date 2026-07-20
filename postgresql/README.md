@@ -34,5 +34,5 @@ Service DNS name on the overlay: `postgresql` (stack task: `postgresql_postgresq
 ## Notes
 
 - `POSTGRESQL_PASSWORD` is required (no silent default).
-- Default placement is `node.role == worker`; change for single-node / manager-only swarms.
+- Placement defaults to any Linux node (`node.platform.os==linux`). Set `POSTGRESQL_PLACEMENT_CONSTRAINTS` to pin (e.g. `node.role==worker`, `node.hostname==db-1`).
 - Leave `POSTGRESQL_DATA_DIR` / `POSTGRESQL_LOGS_DIR` empty to use named volumes.
