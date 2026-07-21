@@ -17,7 +17,7 @@ services:
     environment:
       - TZ=${TZ:-UTC}
       - JENKINS_IMAGE_TAG=${JENKINS_IMAGE_TAG:-latest}
-      - JENKINS_OPTS=${JENKINS_OPTS:-"--prefix=${JENKINS_BASE_PATH:-/jenkins}"}
+      - JENKINS_OPTS=${JENKINS_OPTS:-"--prefix=/jenkins"}
       ## See .env.example for more environment variables
     env_file:
       - ${JENKINS_ENV_FILE:-.env}
