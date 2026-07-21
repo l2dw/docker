@@ -318,6 +318,10 @@ commit-changes: ## Commit changes to the infrastructure
 # —— 🐝 jenkins-agent commands ———————————————————————————————————
 JENKINS_AGENT_STACK_NAME := jenkins-agent
 JENKINS_AGENT_STACK_SERVICES := jenkins-agent
+JENKINS_AGENT_USER_NAME ?= jenkins
+JENKINS_AGENT_USER_UID ?= 1000
+JENKINS_AGENT_USER_GID ?= 1000
+JENKINS_AGENT_WORKDIR ?= /var/jenkins/agent
 jenkins-agent-build: ## Build the jenkins-agent image
 	@echo "Building the jenkins-agent image..."
 	$(DOCKER) buildx build --push --pull --platform linux/amd64,linux/arm64 \
