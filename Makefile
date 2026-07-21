@@ -324,10 +324,11 @@ jenkins-agent-build: ## Build the jenkins-agent image
 		--build-arg HTTP_PROXY=$(HTTP_PROXY) \
 		--build-arg HTTPS_PROXY=$(HTTPS_PROXY) \
 		--build-arg NO_PROXY=$(NO_PROXY) \
-		--build-arg USER_NAME=admin \
-		--build-arg USER_UID=501 \
-		--build-arg USER_GID=100 \
-		-t atelier.cen.umontreal.ca/jenkins/agent:latest jenkins-agent/
+		--build-arg USER_NAME=$(JENKINS_AGENT_USER_NAME) \
+		--build-arg USER_UID=$(JENKINS_AGENT_USER_UID) \
+		--build-arg USER_GID=$(JENKINS_AGENT_USER_GID) \
+		--build-arg JENKINS_AGENT_WORKDIR=$(JENKINS_AGENT_WORKDIR) \
+		-t $(DOCKER_REGISTRY)/jenkins/agent:latest jenkins-agent
 jenkins-agent-stack-up: ## Deploy the jenkins-agent stack
 	$(MAKE) stack-deploy STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
 jenkins-agent-stack-down: ## Remove the jenkins-agent stack

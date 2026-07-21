@@ -2,18 +2,19 @@ FROM docker.io/jenkins/inbound-agent:latest
 
 USER root
 
-ARG http_proxy
-ARG https_proxy
-ARG no_proxy
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
 ARG USER_UID=1000
 ARG USER_GID=1000
 ARG USER_NAME=jenkins
 ARG DOCKER_VERSION=27.3.1
+ARG JENKINS_AGENT_WORKDIR=/var/jenkins
 
-ENV http_proxy=${http_proxy}
-ENV https_proxy=${https_proxy}
-ENV no_proxy=${no_proxy}
-ENV JENKINS_AGENT_WORKDIR=/var/jenkins-agent
+ENV http_proxy=${HTTP_PROXY}
+ENV https_proxy=${HTTPS_PROXY}
+ENV no_proxy=${NO_PROXY}
+ENV JENKINS_AGENT_WORKDIR=${JENKINS_AGENT_WORKDIR}
 
 RUN apt-get update && apt-get install -y \
     make \

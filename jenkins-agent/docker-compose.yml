@@ -1,7 +1,7 @@
 networks:
   default:
-    name: ${JENKINS_AGENT_NETWORK:-dokploy-network}
-    external: ${JENKINS_AGENT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-jenkins_agent_network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 volumes:
   jenkins_agent_home:
     name: ${JENKINS_AGENT_HOME_VOLUME_NAME:-jenkins_agent_home}
@@ -11,8 +11,8 @@ volumes:
     external: ${JENKINS_AGENT_WORKDIR_VOLUME_EXTERNAL:-false}
 services:
   jenkins-agent:
-    image: ${JENKINS_AGENT_IMAGE:-atelier.cen.umontreal.ca/jenkins/agent:latest}
-    x-pull-policy: ${JENKINS_AGENT_PULL_POLICY:-if_not_present}
+    image: ${DOCKER_REGISTRY:-docker.io}/${JENKINS_AGENT_IMAGE_PATH:-jenkins/agent}:${JENKINS_AGENT_IMAGE_TAG:-latest}
+    x-pull-policy: ${JENKINS_AGENT_PULL_POLICY:-always}
     restart: ${JENKINS_AGENT_RESTART:-unless-stopped}
     privileged: ${JENKINS_AGENT_PRIVILEGED:-true}
     build:
@@ -39,40 +39,38 @@ services:
       - HTTP_PROXY=${HTTP_PROXY}
       - HTTPS_PROXY=${HTTPS_PROXY}
       - NO_PROXY=${NO_PROXY}
-      - USER_NAME=${JENKINS_AGENT_USER:-jenkins}
-      - JENKINS_URL=${JENKINS_URL:-https://jenkins.example.com}
-      - JENKINS_AGENT_NAME=${JENKINS_AGENT_NAME:-jenkins-agent}
-      - JENKINS_SECRET=${JENKINS_SECRET}
-      - JENKINS_AGENT_WORKDIR=${JENKINS_AGENT_WORKDIR:-/var/jenkins-agent}
-      - JENKINS_WEB_SOCKET=${JENKINS_WEB_SOCKET:-true}
+      - JENKINS_URL=${JENKINS_SERVER_URL:-https://example.com/jenkins}
+      - JENKINS_AGENT_NAME=${JENKINS_AGENT_NODE_NAME:-}
+      - JENKINS_SECRET=${JENKINS_AGENT_NODE_SECRET:-}
+      - JENKINS_AGENT_WORKDIR=${JENKINS_AGENT_NODE_WORKDIR:-/var/jenkins/agent}
+      - JENKINS_WEB_SOCKET=${JENKINS_AGENT_WEB_SOCKET:-true}
       - DOCKER_HOST=unix:///var/run/docker.sock
       - CONTAINER_HOST=unix:///var/run/docker.sock
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      - ${JENKINS_AGENT_MOUNT_HOME_DIR:-jenkins_agent_home}:/home/${JENKINS_AGENT_USER_NAME:-admin}:rw
-      - ${JENKINS_AGENT_MOUNT_WORKDIR:-jenkins_agent_workdir}:${JENKINS_AGENT_WORKDIR:-/var/jenkins-agent}
-    mem_limit: ${JENKINS_AGENT_MEMORY_LIMIT:-512M}
+      - ${JENKINS_AGENT_HOME_HOST_PATH:-jenkins_agent_home}:/home/${JENKINS_AGENT_USER_NAME:-jenkins}:rw
+      - ${JENKINS_AGENT_WORKDIR_HOST_PATH:-jenkins_agent_workdir}:${JENKINS_AGENT_NODE_WORKDIR:-/var/jenkins/agent}
     ## Deploy
     deploy:
-      replicas: ${JENKINS_AGENT_REPLICAS:-1}
+      replicas: ${JENKINS_AGENT_DEPLOY_REPLICAS:-1}
       mode: ${JENKINS_AGENT_DEPLOY_MODE:-replicated}
       resources:
         limits:
           memory: ${JENKINS_AGENT_MEMORY_LIMIT:-512M}
       placement:
         constraints:
-          - ${JENKINS_AGENT_PLACEMENT_CONSTRAINTS:-node.role==manager}
-      labels:
-        ## Homepage configuration
-        homepage.enabled: ${JENKINS_AGENT_HOMEPAGE_ENABLED:-true}
-        homepage.group: ${JENKINS_AGENT_HOMEPAGE_GROUP:-Infra}
-        homepage.name: ${JENKINS_AGENT_HOMEPAGE_NAME:-Jenkins Agent}
-        homepage.icon: ${JENKINS_AGENT_HOMEPAGE_ICON:-jenkins.png}
-        homepage.description: ${JENKINS_AGENT_HOMEPAGE_DESCRIPTION:-}
-    labels:
-      ## Homepage configuration
-      homepage.enabled: ${JENKINS_AGENT_HOMEPAGE_ENABLED:-true}
-      homepage.group: ${JENKINS_AGENT_HOMEPAGE_GROUP:-Infra}
-      homepage.name: ${JENKINS_AGENT_HOMEPAGE_NAME:-Jenkins Agent}
-      homepage.icon: ${JENKINS_AGENT_HOMEPAGE_ICON:-jenkins.png}
-      homepage.description: ${JENKINS_AGENT_HOMEPAGE_DESCRIPTION:-}
+          - ${JENKINS_AGENT_DEPLOY_PLACEMENT_CONSTRAINTS:-node.labels.name==agent-1}
+    #   labels:
+    #     ## Homepage configuration
+    #     homepage.enable: ${JENKINS_AGENT_HOMEPAGE_ENABLE:-true}
+    #     homepage.group: ${JENKINS_AGENT_HOMEPAGE_GROUP:-Infra}
+    #     homepage.name: ${JENKINS_AGENT_HOMEPAGE_NAME:-Jenkins Agent}
+    #     homepage.icon: ${JENKINS_AGENT_HOMEPAGE_ICON:-jenkins.png}
+    #     homepage.description: ${JENKINS_AGENT_HOMEPAGE_DESCRIPTION:-}
+    # labels:
+    #   ## Homepage configuration
+    #   homepage.enable: ${JENKINS_AGENT_HOMEPAGE_ENABLE:-true}
+    #   homepage.group: ${JENKINS_AGENT_HOMEPAGE_GROUP:-Infra}
+    #   homepage.name: ${JENKINS_AGENT_HOMEPAGE_NAME:-Jenkins Agent}
+    #   homepage.icon: ${JENKINS_AGENT_HOMEPAGE_ICON:-jenkins.png}
+    #   homepage.description: ${JENKINS_AGENT_HOMEPAGE_DESCRIPTION:-}
