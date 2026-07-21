@@ -1,0 +1,42 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-jenkins-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  jenkins_home:
+    name: ${JENKINS_HOME_VOLUME_NAME:-jenkins_home}
+    external: ${JENKINS_HOME_VOLUME_EXTERNAL:-false}
+
+services:
+  jenkins:
+    image: ${JENKINS_REGISTRY:-docker.io}/${JENKINS_IMAGE_PATH:-jenkins/jenkins}:${JENKINS_IMAGE_TAG:-latest}
+    x-pull-policy: ${JENKINS_PULL_POLICY:-always}
+    restart: ${JENKINS_RESTART:-unless-stopped}
+    privileged: ${JENKINS_PRIVILEGED:-false}
+    environment:
+      - TZ=${TZ:-UTC}
+      - JENKINS_IMAGE_TAG=${JENKINS_IMAGE_TAG:-latest}
+      - JENKINS_OPTS=${JENKINS_OPTS:-"--prefix=${JENKINS_BASE_PATH:-/jenkins}"}
+      ## See .env.example for more environment variables
+    env_file:
+      - ${JENKINS_ENV_FILE:-.env}
+    volumes:
+      - ${JENKINS_HOME_MOUNT_VOLUME_PATH:-jenkins_home}:/var/jenkins_home:z
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    # ports:
+    #   - target: ${JENKINS_CONTAINER_PORT:-8080}
+    #     published: ${JENKINS_CONTAINER_HOST_PORT:-8080}
+    #     protocol: tcp
+    #     mode: ${JENKINS_CONTAINER_PORT_MODE:-host}
+    ## Deploy
+    deploy:
+      replicas: ${JENKINS_DEPLOY_REPLICAS:-1}
+      mode: ${JENKINS_DEPLOY_SWARM_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${JENKINS_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
+          - ${JENKINS_DEPLOY_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
