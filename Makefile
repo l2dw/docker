@@ -315,7 +315,7 @@ commit-changes: ## Commit changes to the infrastructure
 	git commit -m "Update infrastructure: $(DATETIME)"
 	git push origin
 
-# —— 🐝 jenkins-agent commands ———————————————————————————————————
+## —— 🐝 jenkins-agent commands ———————————————————————————————————
 JENKINS_AGENT_STACK_NAME := jenkins-agent
 JENKINS_AGENT_STACK_SERVICES := jenkins-agent
 # ?= does not apply when .env sets KEY= (empty); treat empty as unset so Dockerfile defaults hold
