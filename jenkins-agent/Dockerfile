@@ -9,7 +9,7 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 ARG USER_NAME=jenkins
 ARG DOCKER_VERSION=27.3.1
-ARG JENKINS_AGENT_WORKDIR=/var/jenkins-agent
+ARG JENKINS_AGENT_WORKDIR=/var/jenkins_agent
 
 ENV http_proxy=${HTTP_PROXY}
 ENV https_proxy=${HTTPS_PROXY}
@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Docker CLI (use host socket via -v /var/run/docker.sock:/var/run/docker.sock)
-ENV DOCKER_VERSION=27.3.1
+ENV DOCKER_VERSION=${DOCKER_VERSION}
 RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz \
     | tar xz -C /tmp && mv /tmp/docker/docker /usr/local/bin/docker && chmod +x /usr/local/bin/docker && rm -rf /tmp/docker
 

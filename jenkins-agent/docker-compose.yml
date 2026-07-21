@@ -24,7 +24,7 @@ services:
         NO_PROXY: ${NO_PROXY}
         USER_UID: ${JENKINS_AGENT_USER_UID:-501}
         USER_GID: ${JENKINS_AGENT_USER_GID:-100}
-        USER_NAME: ${JENKINS_AGENT_USER_NAME:-admin}
+        USER_NAME: ${JENKINS_AGENT_USER_NAME:-jenkins}
         DOCKER_VERSION: ${DOCKER_VERSION:-27.3.1}
     # tty: true
     # stdin_open: true
@@ -42,14 +42,14 @@ services:
       - JENKINS_URL=${JENKINS_SERVER_URL:-https://example.com/jenkins}
       - JENKINS_AGENT_NAME=${JENKINS_AGENT_NODE_NAME:-}
       - JENKINS_SECRET=${JENKINS_AGENT_NODE_SECRET:-}
-      - JENKINS_AGENT_WORKDIR=${JENKINS_AGENT_NODE_WORKDIR:-/var/jenkins/agent}
+      - JENKINS_AGENT_WORKDIR=${JENKINS_AGENT_NODE_WORKDIR:-/var/jenkins_agent}
       - JENKINS_WEB_SOCKET=${JENKINS_AGENT_WEB_SOCKET:-true}
       - DOCKER_HOST=unix:///var/run/docker.sock
       - CONTAINER_HOST=unix:///var/run/docker.sock
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${JENKINS_AGENT_HOME_HOST_PATH:-jenkins_agent_home}:/home/${JENKINS_AGENT_USER_NAME:-jenkins}:rw
-      - ${JENKINS_AGENT_WORKDIR_HOST_PATH:-jenkins_agent_workdir}:${JENKINS_AGENT_NODE_WORKDIR:-/var/jenkins/agent}:rw
+      - ${JENKINS_AGENT_WORKDIR_HOST_PATH:-jenkins_agent_workdir}:${JENKINS_AGENT_NODE_WORKDIR:-/var/jenkins_agent}:rw
     ## Deploy
     deploy:
       replicas: ${JENKINS_AGENT_DEPLOY_REPLICAS:-1}

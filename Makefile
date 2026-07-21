@@ -321,7 +321,7 @@ JENKINS_AGENT_STACK_SERVICES := jenkins-agent
 JENKINS_AGENT_USER_NAME ?= jenkins
 JENKINS_AGENT_USER_UID ?= 1000
 JENKINS_AGENT_USER_GID ?= 1000
-JENKINS_AGENT_WORKDIR ?= /var/jenkins/agent
+JENKINS_AGENT_WORKDIR ?= /var/jenkins_agent
 jenkins-agent-build: ## Build the jenkins-agent image
 	@echo "Building the jenkins-agent image..."
 	$(DOCKER) buildx build --push --pull --platform linux/amd64,linux/arm64 \
@@ -332,7 +332,7 @@ jenkins-agent-build: ## Build the jenkins-agent image
 		--build-arg USER_UID=$(JENKINS_AGENT_USER_UID) \
 		--build-arg USER_GID=$(JENKINS_AGENT_USER_GID) \
 		--build-arg JENKINS_AGENT_WORKDIR=$(JENKINS_AGENT_WORKDIR) \
-		-t $(DOCKER_REGISTRY)/jenkins/agent:latest jenkins-agent
+		-t $(DOCKER_REGISTRY_HOST)/jenkins/agent:latest jenkins-agent
 jenkins-agent-stack-up: ## Deploy the jenkins-agent stack
 	$(MAKE) stack-deploy STACK_NAME=$(JENKINS_AGENT_STACK_NAME)
 jenkins-agent-stack-down: ## Remove the jenkins-agent stack
