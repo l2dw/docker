@@ -11,7 +11,7 @@ volumes:
     external: ${JENKINS_AGENT_WORKDIR_VOLUME_EXTERNAL:-false}
 services:
   jenkins-agent:
-    image: ${DOCKER_REGISTRY:-docker.io}/${JENKINS_AGENT_IMAGE_PATH:-jenkins/agent}:${JENKINS_AGENT_IMAGE_TAG:-latest}
+    image: ${JENKINS_AGENT_IMAGE_REGISTRY:-docker.io}/${JENKINS_AGENT_IMAGE_PATH:-jenkins/agent}:${JENKINS_AGENT_IMAGE_TAG:-latest}
     x-pull-policy: ${JENKINS_AGENT_PULL_POLICY:-always}
     restart: ${JENKINS_AGENT_RESTART:-unless-stopped}
     privileged: ${JENKINS_AGENT_PRIVILEGED:-true}
