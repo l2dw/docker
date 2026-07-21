@@ -42,7 +42,7 @@ services:
           - ${JENKINS_DEPLOY_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       labels:
         # Traefik configuration
-        - "traefik.enabled=${JENKINS_TRAEFIK_ENABLED:-true}"
+        - "traefik.enable=${JENKINS_TRAEFIK_ENABLE:-true}"
         # Middleware configuration
         - "traefik.http.middlewares.stripprefix-jenkins.stripprefix.prefixes=${JENKINS_BASE_PATH:-/jenkins}"
         # Service configuration
@@ -52,7 +52,7 @@ services:
         - "traefik.http.routers.${APP_NAME:-jenkins}.rule=Host(`${JENKINS_DOMAIN:-example.com}`) && PathPrefix(`${JENKINS_BASE_PATH:-/jenkins}`)"
         - "traefik.http.routers.${APP_NAME:-jenkins}.service=${APP_NAME:-jenkins}"
         - "traefik.http.routers.${APP_NAME:-jenkins}.middlewares=${JENKINS_TRAEFIK_MIDDLEWARES:-stripprefix-jenkins}"
-        - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TRAEFIK_TLS_ENABLE:-false}"
         - "traefik.http.routers.${APP_NAME:-jenkins}.tls.certresolver=${JENKINS_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
         ## Homepage configuration
         - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-}"
@@ -64,7 +64,7 @@ services:
         - "homepage.ping=${JENKINS_HOMEPAGE_PING:-}"
     labels:
       # Traefik configuration
-      - "traefik.enabled=${JENKINS_TRAEFIK_ENABLED:-true}"
+      - "traefik.enable=${JENKINS_TRAEFIK_ENABLE:-true}"
       # Middleware configuration
       - "traefik.http.middlewares.stripprefix-jenkins.stripprefix.prefixes=${JENKINS_BASE_PATH:-/jenkins}"
       # Service configuration
@@ -74,7 +74,7 @@ services:
       - "traefik.http.routers.${APP_NAME:-jenkins}.rule=Host(`${JENKINS_DOMAIN:-example.com}`) && PathPrefix(`${JENKINS_BASE_PATH:-/jenkins}`)"
       - "traefik.http.routers.${APP_NAME:-jenkins}.service=${APP_NAME:-jenkins}"
       - "traefik.http.routers.${APP_NAME:-jenkins}.middlewares=${JENKINS_TRAEFIK_MIDDLEWARES:-stripprefix-jenkins}"
-      - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TRAEFIK_TLS_ENABLE:-false}"
       - "traefik.http.routers.${APP_NAME:-jenkins}.tls.certresolver=${JENKINS_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
       - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-}"
