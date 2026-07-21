@@ -1,7 +1,7 @@
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-jenkins-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   jenkins_home:
