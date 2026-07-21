@@ -42,7 +42,7 @@ services:
           - ${JENKINS_DEPLOY_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       labels:
         # Traefik configuration
-        - "traefik.enabled=${JENKINS_TRAEFIK_ENABLED:-false}"
+        - "traefik.enabled=${JENKINS_TRAEFIK_ENABLED:-true}"
         # Middleware configuration
         - "traefik.http.middlewares.stripprefix-jenkins.stripprefix.prefixes=${JENKINS_BASE_PATH:-/jenkins}"
         # Service configuration
