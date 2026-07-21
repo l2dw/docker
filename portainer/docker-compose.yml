@@ -34,7 +34,7 @@ services:
     ## Deploy
     deploy:
       replicas: ${PORTAINER_DEPLOY_REPLICAS:-1}
-      mode: ${PORTAINER_DEPLOY_SWARM_MODE:-replicated}
+      mode: ${PORTAINER_DEPLOY_MODE:-replicated}
       resources:
         limits:
           memory: ${PORTAINER_MEMORY_LIMIT:-512M}

@@ -319,6 +319,8 @@ PORTAINER_STACK_NAME := portainer
 PORTAINER_SERVICES_SHORT := portainer
 portainer-pull-images: ## Pull images for the portainer stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(PORTAINER_STACK_NAME)
+portainer-stack-setup: ## Setup the portainer stack
+	@echo "Setting up the portainer stack..."
 portainer-stack-up: .portainer-stack-setup ## Deploy the portainer stack
 	$(MAKE) stack-deploy STACK_NAME=$(PORTAINER_STACK_NAME)
 portainer-stack-down: ## Remove the portainer stack
