@@ -1,21 +1,43 @@
 #!/bin/bash
 
+source "$(dirname "$0")/utils.sh"
+
 # Setup filesystem
-source /etc/environment
 
-# Create directories (CERTS_DIR: bind mount for Traefik ACME /certs in docker-compose)
-CERTS_DIR="${CERTS_DIR:-/etc/certs}"
-sudo mkdir -p "${INFRA_DIR}" "${APPDATA_DIR}" "${CERTS_DIR}" "${LOGS_DIR}" "${BACKUPS_DIR}" "${DATA_DIR}"
-sudo chown "${ADMIN_USER}:${ADMIN_USER}" "${INFRA_DIR}" "${APPDATA_DIR}" "${BACKUPS_DIR}" "${DATA_DIR}"
-
-if [ ! -d /backups ] && [ ! -L /backups ]; then
-    sudo ln -s "${BACKUPS_DIR}" /backups
+if [ -z "${ADMIN_USER:-}" ]; then
+	setup_warn "ADMIN_USER is required; skipping filesystem setup"
+	exit 0
 fi
 
-if [ ! -d /data ] && [ ! -L /data ]; then
-    sudo ln -s "${DATA_DIR}" /data
+resolve_admin_home
+load_env_preserving_exports "${ENV_FILE}"
+apply_identity_defaults
+
+# Defaults when not passed on the command line or stored in the env file yet.
+INFRA_DIR="${INFRA_DIR:-/infra}"
+APPDATA_DIR="${APPDATA_DIR:-/appdata}"
+LOGS_DIR="${LOGS_DIR:-${APPDATA_DIR}/logs}"
+BACKUPS_DIR="${BACKUPS_DIR:-${APPDATA_DIR}/backups}"
+
+echo "==> Creating infrastructure directories..."
+dirs=( "${INFRA_DIR}" "${APPDATA_DIR}" "${LOGS_DIR}" "${BACKUPS_DIR}" )
+
+if sudo -n true 2>/dev/null; then
+	if ! sudo mkdir -p "${dirs[@]}"; then
+		setup_warn "failed to create directories: ${dirs[*]}"
+		exit 0
+	fi
+	if ! sudo chown "${ADMIN_USER}:${ADMIN_USER}" "${dirs[@]}"; then
+		setup_warn "failed to chown directories for ${ADMIN_USER}"
+		exit 0
+	fi
+else
+	if ! mkdir -p "${dirs[@]}"; then
+		setup_warn "failed to create directories (no passwordless sudo): ${dirs[*]}"
+		exit 0
+	fi
+	setup_warn "passwordless sudo not available; created directories without chown to ${ADMIN_USER}"
 fi
 
-if [ ! -d /logs ] && [ ! -L /logs ]; then
-    sudo ln -s "${LOGS_DIR}" /logs
-fi
+echo "Finished setup-filesystem."
+exit 0

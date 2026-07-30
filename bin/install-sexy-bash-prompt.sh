@@ -17,8 +17,27 @@ else
   make install
 fi
 
-sudo mv ~/.bash_prompt /etc/profile.d/zz-bash_prompt.sh
-sed -i -e /.bash_prompt/d ~/.bashrc
+if [ ! -f "${HOME}/.bash_prompt" ]; then
+  echo "install-sexy-bash-prompt: ${HOME}/.bash_prompt not found after install" >&2
+  exit 1
+fi
 
-## Configure prompt for: ubuntu@pivot.ocrx.arbutus-cloud
-sudo sed -i 's/\\h/\\H/g' /etc/profile.d/zz-bash_prompt.sh
+sed -i 's/\\h/\\H/g' "${HOME}/.bash_prompt"
+
+if sudo -n true 2>/dev/null; then
+  sudo cp "${HOME}/.bash_prompt" /etc/profile.d/zz-bash_prompt.sh
+  echo "install-sexy-bash-prompt: installed system-wide in /etc/profile.d/zz-bash_prompt.sh"
+else
+  BASHRC="${HOME}/.bashrc"
+  if [ -f "${BASHRC}" ] && ! grep -qF 'bash_prompt' "${BASHRC}"; then
+    cat >> "${BASHRC}" << 'EOF'
+# #########################################################
+# # sexy-bash-prompt (user install; no passwordless sudo for system-wide profile.d)
+# #########################################################
+[ -r ~/.bash_prompt ] && . ~/.bash_prompt
+EOF
+    echo "install-sexy-bash-prompt: hooked ~/.bash_prompt in ~/.bashrc"
+  else
+    echo "install-sexy-bash-prompt: ~/.bash_prompt updated; ensure ~/.bashrc sources it" >&2
+  fi
+fi
