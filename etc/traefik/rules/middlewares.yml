@@ -1,5 +1,6 @@
 http:
   middlewares:
+    # Proto/port only — do not set X-Forwarded-For / X-Real-Ip (Traefik owns the real client IP).
     forward-https-headers:
       headers:
         customRequestHeaders:
@@ -9,3 +10,11 @@ http:
       redirectScheme:
         scheme: https
         permanent: true
+    # Traefik → ModSecurity CRS (service `waf`). Also declared on Traefik service labels; entrypoints use DOKPLOY_TRAEFIK_WEB*_MIDDLEWARES (default waf).
+    # CRS apache listens on 8080 by default.
+    waf:
+      plugin:
+        traefik-modsecurity-plugin:
+          modSecurityUrl: http://waf:8080
+          maxBodySize: 10485760
+          timeoutMillis: 2000

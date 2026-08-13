@@ -320,10 +320,11 @@ commit-changes: ## Commit changes to the infrastructure
 DOKPLOY_STACK_NAME := dokploy
 DOKPLOY_SERVICES_SHORT := dokploy postgresql redis traefik
 NETWORK_DRIVER ?= overlay
+DEFAULT_NETWORK_NAME ?= dokploy-network
 dokploy-setup: ## Setup the dokploy stack
-	@# Create network if it doesn't exist
-	@if ! $(DOCKER) network ls | grep -q "dokploy-network"; then \
-		$(DOCKER) network create "dokploy-network" --driver $(NETWORK_DRIVER); \
+	@# Create network if it doesn't exist (name matches compose DEFAULT_NETWORK_NAME)
+	@if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$(DEFAULT_NETWORK_NAME)"; then \
+		$(DOCKER) network create "$(DEFAULT_NETWORK_NAME)" --driver $(NETWORK_DRIVER); \
 	fi;
 	@# Create folder if it doesn't exist
 	@if [ -n "$(DOKPLOY_POSTGRES_DATA_DIR)" ]; then mkdir -p "$(DOKPLOY_POSTGRES_DATA_DIR)"; fi;
@@ -460,7 +461,7 @@ dokploy-debug: ## Debug dokploy swarm stack: services, tasks (states/errors), tr
 	@$(DOCKER) stack ps $(DOKPLOY_STACK_NAME) --no-trunc
 	@echo
 	@echo "--- traefik published ports ---"
-	@$(DOCKER) service inspect $(DOKPLOY_STACK_NAME)_dokploy-traefik --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(no traefik service or inspect failed)"
+	@$(DOCKER) service inspect $(DOKPLOY_STACK_NAME)_traefik --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(no traefik service or inspect failed)"
 dokploy-debug-logs: ## Tail recent logs for each dokploy service (e.g. services at 0/1)
 	@for s in $(DOKPLOY_SERVICES_SHORT); do \
 		echo "==================== $(DOKPLOY_STACK_NAME)_$$s ===================="; \
