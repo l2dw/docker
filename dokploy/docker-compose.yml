@@ -63,7 +63,7 @@ services:
     x-pull-policy: always
     privileged: "${DOKPLOY_POSTGRES_PRIVILEGED:-false}"
     # Compose only (Swarm uses deploy.restart_policy)
-    restart: ${DOKPLOY_POSTGRES_RESTART:-${DOKPLOY_RESTART:-unless-stopped}}
+    restart: ${DOKPLOY_POSTGRES_RESTART:-unless-stopped}
     environment:
       - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
       - POSTGRES_USER=${DOKPLOY_POSTGRES_USER:-dokploy}
@@ -77,12 +77,12 @@ services:
         aliases:
           - dokploy-postgresql
     deploy:
-      mode: ${DOKPLOY_POSTGRES_DEPLOY_MODE:-${DOKPLOY_DEPLOY_MODE:-replicated}}
-      replicas: ${DOKPLOY_POSTGRES_DEPLOY_REPLICAS:-${DOKPLOY_DEPLOY_REPLICAS:-1}}
+      mode: ${DOKPLOY_POSTGRES_DEPLOY_MODE:-replicated}
+      replicas: ${DOKPLOY_POSTGRES_DEPLOY_REPLICAS:-1}
       endpoint_mode: dnsrr
       placement:
         constraints:
-          - ${DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS:-${DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role == manager}}
+          - ${DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -95,7 +95,7 @@ services:
   redis:
     image: ${DOKPLOY_REDIS_IMAGE:-docker.io/redis:7}
     user: redis
-    restart: ${DOKPLOY_REDIS_RESTART:-${DOKPLOY_RESTART:-unless-stopped}}
+    restart: ${DOKPLOY_REDIS_RESTART:-unless-stopped}
     environment:
       - REDIS_PASSWORD=${DOKPLOY_REDIS_PASSWORD}
       - TZ=${TZ:-America/Toronto}
@@ -115,12 +115,12 @@ services:
         aliases:
           - dokploy-redis
     deploy:
-      mode: ${DOKPLOY_REDIS_DEPLOY_MODE:-${DOKPLOY_DEPLOY_MODE:-replicated}}
-      replicas: ${DOKPLOY_REDIS_DEPLOY_REPLICAS:-${DOKPLOY_DEPLOY_REPLICAS:-1}}
+      mode: ${DOKPLOY_REDIS_DEPLOY_MODE:-replicated}
+      replicas: ${DOKPLOY_REDIS_DEPLOY_REPLICAS:-1}
       endpoint_mode: dnsrr
       placement:
         constraints:
-          - ${DOKPLOY_REDIS_PLACEMENT_CONSTRAINTS:-${DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role == manager}}
+          - ${DOKPLOY_REDIS_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -134,7 +134,7 @@ services:
     image: ${DOKPLOY_DOKPLOY_IMAGE:-docker.io/dokploy/dokploy:latest}
     x-pull-policy: always
     privileged: "${DOKPLOY_PRIVILEGED:-false}"
-    restart: ${DOKPLOY_DOKPLOY_RESTART:-${DOKPLOY_RESTART:-unless-stopped}}
+    restart: ${DOKPLOY_DOKPLOY_RESTART:-unless-stopped}
     environment:
       - HTTP_PROXY=${HTTP_PROXY}
       - HTTPS_PROXY=${HTTPS_PROXY}
@@ -161,11 +161,11 @@ services:
     # networks:
     #   default:
     deploy:
-      mode: ${DOKPLOY_DOKPLOY_DEPLOY_MODE:-${DOKPLOY_DEPLOY_MODE:-replicated}}
-      replicas: ${DOKPLOY_DOKPLOY_DEPLOY_REPLICAS:-${DOKPLOY_DEPLOY_REPLICAS:-1}}
+      mode: ${DOKPLOY_DOKPLOY_DEPLOY_MODE:-replicated}
+      replicas: ${DOKPLOY_DOKPLOY_DEPLOY_REPLICAS:-1}
       placement:
         constraints:
-          - ${DOKPLOY_DOKPLOY_PLACEMENT_CONSTRAINTS:-${DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role == manager}}
+          - ${DOKPLOY_DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -209,7 +209,7 @@ services:
     image: ${DOKPLOY_TRAEFIK_IMAGE:-docker.io/traefik:latest}
     x-pull-policy: always
     privileged: "${DOKPLOY_TRAEFIK_PRIVILEGED:-false}"
-    restart: ${DOKPLOY_TRAEFIK_RESTART:-${DOKPLOY_RESTART:-unless-stopped}}
+    restart: ${DOKPLOY_TRAEFIK_RESTART:-unless-stopped}
     environment:
       - TZ=${TZ:-America/Toronto}
       - HTTP_PROXY=${HTTP_PROXY}
@@ -263,11 +263,11 @@ services:
         aliases:
           - dokploy-traefik
     deploy:
-      mode: ${DOKPLOY_TRAEFIK_DEPLOY_MODE:-${DOKPLOY_DEPLOY_MODE:-replicated}}
-      replicas: ${DOKPLOY_TRAEFIK_DEPLOY_REPLICAS:-${DOKPLOY_DEPLOY_REPLICAS:-1}}
+      mode: ${DOKPLOY_TRAEFIK_DEPLOY_MODE:-replicated}
+      replicas: ${DOKPLOY_TRAEFIK_DEPLOY_REPLICAS:-1}
       placement:
         constraints:
-          - ${DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS:-${DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role == manager}}
+          - ${DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -346,7 +346,7 @@ services:
 
   certs-dumper:
     image: docker.io/ldez/traefik-certs-dumper:v2.8.3
-    restart: ${DOKPLOY_CERTS_DUMPER_RESTART:-${DOKPLOY_RESTART:-unless-stopped}}
+    restart: ${DOKPLOY_CERTS_DUMPER_RESTART:-unless-stopped}
     entrypoint:
       - sh
       - -ec
@@ -366,11 +366,11 @@ services:
           sleep 5
         done
     deploy:
-      mode: ${DOKPLOY_CERTS_DUMPER_DEPLOY_MODE:-${DOKPLOY_DEPLOY_MODE:-replicated}}
-      replicas: ${DOKPLOY_CERTS_DUMPER_DEPLOY_REPLICAS:-${DOKPLOY_DEPLOY_REPLICAS:-1}}
+      mode: ${DOKPLOY_CERTS_DUMPER_DEPLOY_MODE:-replicated}
+      replicas: ${DOKPLOY_CERTS_DUMPER_DEPLOY_REPLICAS:-1}
       placement:
         constraints:
-          - ${DOKPLOY_CERTS_DUMPER_PLACEMENT_CONSTRAINTS:-${DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role == manager}}
+          - ${DOKPLOY_CERTS_DUMPER_PLACEMENT_CONSTRAINTS:-node.role==manager}
       labels:
         - "traefik.enable=false"
     depends_on:
@@ -380,7 +380,7 @@ services:
 
   waf:
     image: ${DOKPLOY_WAF_IMAGE:-docker.io/owasp/modsecurity-crs:apache}
-    restart: ${DOKPLOY_WAF_RESTART:-${DOKPLOY_RESTART:-unless-stopped}}
+    restart: ${DOKPLOY_WAF_RESTART:-unless-stopped}
     environment:
       # Honor X-Forwarded-For from Traefik (docker/overlay source IPs)
       - PROXY=${DOKPLOY_WAF_PROXY:-1}
@@ -401,10 +401,10 @@ services:
         aliases:
           - dokploy-waf
     deploy:
-      mode: ${DOKPLOY_WAF_DEPLOY_MODE:-${DOKPLOY_DEPLOY_MODE:-replicated}}
-      replicas: ${DOKPLOY_WAF_DEPLOY_REPLICAS:-${DOKPLOY_DEPLOY_REPLICAS:-1}}
+      mode: ${DOKPLOY_WAF_DEPLOY_MODE:-replicated}
+      replicas: ${DOKPLOY_WAF_DEPLOY_REPLICAS:-1}
       placement:
         constraints:
-          - ${DOKPLOY_WAF_PLACEMENT_CONSTRAINTS:-${DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role == manager}}
+          - ${DOKPLOY_WAF_PLACEMENT_CONSTRAINTS:-node.role==manager}
       labels:
         - "traefik.enable=false"

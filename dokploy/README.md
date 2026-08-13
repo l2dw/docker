@@ -18,7 +18,7 @@ Copy [`dokploy/.env.example`](.env.example) keys into the root `.env` (and/or `d
 
 ## Deploy (Swarm)
 
-Per-service vars fall back to stack defaults (`DOKPLOY_DEPLOY_*` / `DOKPLOY_PLACEMENT_CONSTRAINTS`), then hard-coded defaults (`replicated` / `1` / `node.role == manager`).
+`docker stack deploy` does **not** support nested interpolation (`${A:-${B:-x}}`). Each service uses a **single-level** default in compose (e.g. `${DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS:-node.role == manager}`). Set per-service keys in `.env` explicitly.
 
 | Service | Mode | Replicas | Placement |
 |---------|------|----------|-----------|
@@ -31,13 +31,13 @@ Per-service vars fall back to stack defaults (`DOKPLOY_DEPLOY_*` / `DOKPLOY_PLAC
 
 `mode`: `replicated` (default) or `global` (replicas ignored). Stateful services (postgres/redis) should stay at `replicas=1`.
 
-Compose-only: `restart: unless-stopped` via `DOKPLOY_RESTART` / `DOKPLOY_*_RESTART` (Swarm uses `deploy.restart_policy`).
+Compose-only: `restart: unless-stopped` via `DOKPLOY_*_RESTART` (default `unless-stopped`; Swarm uses `deploy.restart_policy`).
 
 ```sh
-DOKPLOY_DEPLOY_MODE=replicated
-DOKPLOY_DEPLOY_REPLICAS=1
-DOKPLOY_PLACEMENT_CONSTRAINTS=node.role == manager
+DOKPLOY_TRAEFIK_DEPLOY_MODE=replicated
+DOKPLOY_TRAEFIK_DEPLOY_REPLICAS=1
 DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS=node.labels.ingress==true
+DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS=node.role == manager
 ```
 
 Network: `DEFAULT_NETWORK_NAME` (default `dokploy-network`). `make dokploy-setup` creates that name (not a hard-coded string).
