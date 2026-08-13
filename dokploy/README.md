@@ -95,7 +95,7 @@ DOKPLOY_WAF_MODSECURITY_URL=http://waf:8080
 - `DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS` — when the peer is in this list, Traefik uses `X-Forwarded-*` for logs and for outbound `X-Forwarded-For` / `X-Real-Ip`.
 - Edge (host ports, no LB): `ClientHost` is the TCP client; Traefik still injects that IP toward backends.
 - Do **not** set `X-Forwarded-For` in `forward-https-headers` (Proto/Port only).
-- WAF: `DOKPLOY_WAF_PROXY=1` + `DOKPLOY_WAF_REMOTEIP_INT_PROXY` so ModSecurity trusts Traefik’s docker/overlay IPs.
+- WAF: `DOKPLOY_WAF_PROXY=1` + `DOKPLOY_WAF_REMOTEIP_INT_PROXY` (space-separated CIDRs, not commas — Apache `RemoteIPInternalProxy`) so ModSecurity trusts Traefik’s docker/overlay IPs.
 
 Behind Cloudflare / a public LB, put that provider’s CIDRs in `TRUSTED_IPS`. Avoid `DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE=true` in production.
 

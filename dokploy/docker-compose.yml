@@ -384,7 +384,8 @@ services:
     environment:
       # Honor X-Forwarded-For from Traefik (docker/overlay source IPs)
       - PROXY=${DOKPLOY_WAF_PROXY:-1}
-      - REMOTEIP_INT_PROXY=${DOKPLOY_WAF_REMOTEIP_INT_PROXY:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32}
+      # Apache RemoteIPInternalProxy: space-separated CIDRs (NOT commas) — template is one directive line.
+      - "REMOTEIP_INT_PROXY=${DOKPLOY_WAF_REMOTEIP_INT_PROXY:-10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.1/32}"
       - TZ=${TZ:-America/Toronto}
     volumes:
       - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2:z
