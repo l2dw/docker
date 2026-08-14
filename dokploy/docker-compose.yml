@@ -35,7 +35,6 @@ volumes:
   dokploy-traefik_rules:
     name: ${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}
     external: ${DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL:-false}
-  ## Single-file mount (traefik.yml), not a directory — empty named volumes behave like dirs; bind or pre-create the file when external.
   # dokploy-certificates:
   #   name: ${DOKPLOY_CERTIFICATES_VOLUME_NAME:-dokploy-certificates}
   #   external: ${DOKPLOY_CERTIFICATES_VOLUME_EXTERNAL:-false}
@@ -46,9 +45,6 @@ volumes:
 # Swarm configs — content from repo; distributed to nodes (no host bind required).
 # To roll content: bump DOKPLOY_*_CONFIG_NAME then stack deploy (configs are immutable).
 configs:
-  dokploy_traefik_static:
-    name: ${DOKPLOY_TRAEFIK_STATIC_CONFIG_NAME:-dokploy_traefik_static}
-    file: ${DOKPLOY_TRAEFIK_STATIC_CONFIG_FILE:-../etc/traefik/traefik.yml}
   dokploy_waf_before_crs:
     name: ${DOKPLOY_WAF_BEFORE_CRS_CONFIG_NAME:-dokploy_waf_before_crs}
     file: ${DOKPLOY_WAF_BEFORE_CRS_RULES:-../etc/waf/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf}
@@ -175,13 +171,13 @@ services:
         failure_action: rollback
       labels:
         - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
-        - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
-        - "traefik.http.routers.dokploy-server.service=dokploy-server"
-        - "traefik.http.routers.dokploy-server.middlewares=${DOKPLOY_MIDDLEWARES:-}"
-        - "traefik.http.routers.dokploy-server.tls=${DOKPLOY_TLS_ENABLED:-false}"
-        - "traefik.http.routers.dokploy-server.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.dokploy-console.loadbalancer.server.port=3000"
+        - "traefik.http.routers.dokploy-console.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.dokploy-console.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
+        - "traefik.http.routers.dokploy-console.service=dokploy-console"
+        - "traefik.http.routers.dokploy-console.middlewares=${DOKPLOY_MIDDLEWARES:-}"
+        - "traefik.http.routers.dokploy-console.tls=${DOKPLOY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.dokploy-console.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
         ## Homepage configuration
         - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
         - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
@@ -190,13 +186,13 @@ services:
         - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
     labels:
       - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.services.dokploy-server.loadbalancer.server.port=3000"
-      - "traefik.http.routers.dokploy-server.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.dokploy-server.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
-      - "traefik.http.routers.dokploy-server.service=dokploy-server"
-      - "traefik.http.routers.dokploy-server.middlewares=${DOKPLOY_MIDDLEWARES:-}"
-      - "traefik.http.routers.dokploy-server.tls=${DOKPLOY_TLS_ENABLED:-false}"
-      - "traefik.http.routers.dokploy-server.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.dokploy-console.loadbalancer.server.port=3000"
+      - "traefik.http.routers.dokploy-console.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.dokploy-console.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
+      - "traefik.http.routers.dokploy-console.service=dokploy-console"
+      - "traefik.http.routers.dokploy-console.middlewares=${DOKPLOY_MIDDLEWARES:-}"
+      - "traefik.http.routers.dokploy-console.tls=${DOKPLOY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.dokploy-console.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
       ## Homepage configuration
       - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
       - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
@@ -229,19 +225,26 @@ services:
       - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/traefik/certificates:z
       - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/traefik/rules
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-    configs:
-      - source: dokploy_traefik_static
-        target: /etc/traefik/traefik.yml
-        mode: 0444
-    # Static baseline: etc/traefik/traefik.yml — only runtime / per-env overrides here (CLI wins over file).
     command:
+      - "--global.sendAnonymousUsage=false"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
       - "--api.basePath=${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
-      - "--entrypoints.web.http.middlewares=${DOKPLOY_TRAEFIK_WEB_MIDDLEWARES:-waf}"
-      - "--entrypoints.websecure.http.middlewares=${DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES:-waf}"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.middlewares=${DOKPLOY_TRAEFIK_WEB_MIDDLEWARES:-}"
       - "--entrypoints.web.forwardedHeaders.trustedIPs=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32,::1/128}"
-      - "--entrypoints.websecure.forwardedHeaders.trustedIPs=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32,::1/128}"
       - "--entrypoints.web.forwardedHeaders.insecure=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE:-false}"
+      - "--entrypoints.web.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
+      - "--entrypoints.web.transport.respondingTimeouts.writeTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_WRITE_TIMEOUT:-600s}"
+      - "--entrypoints.web.transport.respondingTimeouts.idleTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_IDLE_TIMEOUT:-180s}"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.middlewares=${DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES:-}"
+      - "--entrypoints.websecure.forwardedHeaders.trustedIPs=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32,::1/128}"
       - "--entrypoints.websecure.forwardedHeaders.insecure=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE:-false}"
+      - "--entrypoints.websecure.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
+      - "--entrypoints.websecure.transport.respondingTimeouts.writeTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_WRITE_TIMEOUT:-600s}"
+      - "--entrypoints.websecure.transport.respondingTimeouts.idleTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_IDLE_TIMEOUT:-180s}"
+      - "--serversTransport.insecureSkipVerify=true"
       - "--providers.swarm=${DOKPLOY_TRAEFIK_PROVIDERS_SWARM:-true}"
       - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
       - "--providers.swarm.exposedbydefault=false"
@@ -252,11 +255,45 @@ services:
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.network=${DEFAULT_NETWORK_NAME:-dokploy-network}"
       - "--providers.docker.watch=${DOKPLOY_TRAEFIK_PROVIDERS_DOCKER:-true}"
+      - "--providers.file.directory=/etc/traefik/rules"
+      - "--providers.file.watch=true"
+      # HTTP-01 on :80 — stable with WebSocket ALPN (http/1.1 only); TLS-ALPN caused failed orders + LE rate limits.
+      - "--certificatesresolvers.default.acme.httpchallenge=true"
+      - "--certificatesresolvers.default.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.default.acme.storage=/etc/traefik/certificates/default.json"
       - "--certificatesresolvers.default.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-}"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/certificates/letsencrypt.json"
       - "--certificatesresolvers.letsencrypt.acme.email=${DOKPLOY_TRAEFIK_EMAIL:-}"
       - "--log.level=${DOKPLOY_TRAEFIK_LOG_LEVEL:-INFO}"
+      - "--metrics.prometheus=true"
       - "--accesslog=true"
+      - "--accesslog.filePath=/var/log/traefik/access.log"
       - "--accesslog.format=${DOKPLOY_TRAEFIK_ACCESS_LOG_FORMAT:-json}"
+      - "--accesslog.fields.defaultMode=keep"
+      - "--accesslog.fields.names.ClientAddr=keep"
+      - "--accesslog.fields.names.ClientHost=keep"
+      - "--accesslog.fields.names.ClientPort=keep"
+      - "--accesslog.fields.names.RequestHost=keep"
+      - "--accesslog.fields.names.RequestPath=keep"
+      - "--accesslog.fields.names.RequestScheme=keep"
+      - "--accesslog.fields.names.RequestMethod=keep"
+      - "--accesslog.fields.names.RequestProtocol=keep"
+      - "--accesslog.fields.names.RequestPort=keep"
+      - "--accesslog.fields.names.RequestQuery=keep"
+      - "--accesslog.fields.names.DownstreamURL=keep"
+      - "--accesslog.fields.names.UserAgent=keep"
+      - "--accesslog.fields.names.Duration=keep"
+      - "--accesslog.fields.headers.defaultMode=drop"
+      - "--accesslog.fields.headers.names.User-Agent=keep"
+      - "--accesslog.fields.headers.names.X-Forwarded-For=keep"
+      - "--accesslog.fields.headers.names.X-Forwarded-Proto=keep"
+      - "--accesslog.fields.headers.names.X-Real-Ip=keep"
+      - "--experimental.plugins.traefik-modsecurity-plugin.moduleName=github.com/acouvreur/traefik-modsecurity-plugin"
+      - "--experimental.plugins.traefik-modsecurity-plugin.version=v1.3.0"
+      - "--experimental.plugins.rewritebody.moduleName=github.com/traefik/plugin-rewritebody"
+      - "--experimental.plugins.rewritebody.version=v0.3.1"
       - "${DOKPLOY_TRAEFIK_COMMAND:-}"
     networks:
       default:
@@ -289,7 +326,7 @@ services:
         # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
         - "traefik.http.middlewares.basic-auth.basicAuth.users=${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
         # WAF (ModSecurity CRS plugin) — also in etc/traefik/rules/middlewares.yml as waf@file
-        - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.modSecurityUrl=${DOKPLOY_WAF_MODSECURITY_URL:-http://waf:8080}"
+        - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.modSecurityUrl=${DOKPLOY_WAF_MODSECURITY_URL:-http://dokploy-waf:8080}"
         - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.maxBodySize=${DOKPLOY_WAF_MAX_BODY_SIZE:-10485760}"
         - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.timeoutMillis=${DOKPLOY_WAF_TIMEOUT_MILLIS:-2000}"
         ## Dummy port for Swarm provider when routing to api@internal
@@ -322,7 +359,7 @@ services:
       # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
       - "traefik.http.middlewares.basic-auth.basicAuth.users=${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
       # WAF (ModSecurity CRS plugin) — also in etc/traefik/rules/middlewares.yml as waf@file
-      - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.modSecurityUrl=${DOKPLOY_WAF_MODSECURITY_URL:-http://waf:8080}"
+      - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.modSecurityUrl=${DOKPLOY_WAF_MODSECURITY_URL:-http://dokploy-waf:8080}"
       - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.maxBodySize=${DOKPLOY_WAF_MAX_BODY_SIZE:-10485760}"
       - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.timeoutMillis=${DOKPLOY_WAF_TIMEOUT_MILLIS:-2000}"
       ## Dummy port for Swarm provider when routing to api@internal

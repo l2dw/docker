@@ -58,15 +58,7 @@ make dokploy-compose-down
 
 ## Traefik
 
-### Static vs CLI
-
-| Layer | Where | Role |
-|-------|--------|------|
-| Static | [`etc/traefik/traefik.yml`](../etc/traefik/traefik.yml) via Swarm config → `/etc/traefik/traefik.yml` | entryPoints addresses/timeouts, file provider, ACME storage, access-log fields, plugins |
-| CLI | `command:` in compose | `api.basePath`, providers, ACME email, log level, **entrypoint middlewares**, **forwardedHeaders**, `DOKPLOY_TRAEFIK_COMMAND` |
-| Dynamic | [`etc/traefik/rules/`](../etc/traefik/rules/) | middlewares (file provider) |
-
-After editing `traefik.yml`, bump `DOKPLOY_TRAEFIK_STATIC_CONFIG_NAME` and redeploy (Swarm configs are immutable).
+Configuration is entirely via `command:` in [`docker-compose.yml`](docker-compose.yml) (no `traefik.yml`). Dynamic middlewares live in [`etc/traefik/rules/`](../etc/traefik/rules/).
 
 ### Global WAF middleware
 
