@@ -1,7 +1,7 @@
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   postgresql_data:
@@ -13,13 +13,14 @@ volumes:
 
 services:
   postgresql:
-    image: ${POSTGRESQL_IMAGE:-docker.io/postgres:16}
+    image: ${POSTGRESQL_IMAGE:-docker.io/library/postgres:16}
+    restart: ${POSTGRESQL_RESTART:-unless-stopped}
+    privileged: ${POSTGRESQL_PRIVILEGED:-false}
     environment:
-      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD:?set POSTGRESQL_PASSWORD in .env}
+      - TZ=${TZ:-America/Toronto}
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD:-}
       - POSTGRES_USER=${POSTGRESQL_USER:-postgres}
       - POSTGRES_DB=${POSTGRESQL_DB:-postgres}
-      - TZ=${TZ:-America/Toronto}
-      - PGPASSWORD=${POSTGRESQL_PASSWORD:?set POSTGRESQL_PASSWORD in .env}
     volumes:
       - ${POSTGRESQL_DATA_DIR:-postgresql_data}:/var/lib/postgresql/data
       - ${POSTGRESQL_LOGS_DIR:-postgresql_logs}:/var/log/postgresql
@@ -32,12 +33,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 10
-      start_period: 10s
+      start_period: 20s
     deploy:
       mode: ${POSTGRESQL_DEPLOY_MODE:-replicated}
-      replicas: ${POSTGRESQL_REPLICAS:-1}
+      replicas: ${POSTGRESQL_DEPLOY_REPLICAS:-1}
       endpoint_mode: ${POSTGRESQL_ENDPOINT_MODE:-dnsrr}
       placement:
         constraints:
-          # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
           - ${POSTGRESQL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${POSTGRESQL_MEMORY_LIMIT:-512M}
