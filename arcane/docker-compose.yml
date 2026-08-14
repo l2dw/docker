@@ -25,6 +25,7 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
       - APP_URL=${ARCANE_APP_URL:-http://arcane.example.com}
+      - TRUSTED_PROXIES=${ARCANE_TRUSTED_PROXIES:-172.16.0.0/12}
       - PUID=${ARCANE_PUID:-1000}
       - PGID=${ARCANE_PGID:-1000}
       - ENCRYPTION_KEY=${ARCANE_ENCRYPTION_KEY:-}
@@ -56,7 +57,7 @@ services:
         - "traefik.enable=${ARCANE_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
         - "traefik.http.services.arcane.loadbalancer.server.port=3552"
         - "traefik.http.routers.arcane.entrypoints=${ARCANE_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.arcane.rule=Host(`${ARCANE_DOMAIN:-arcane.example.com}`) && PathPrefix(`${ARCANE_BASE_PATH:-/}`)"
+        - "traefik.http.routers.arcane.rule=Host(`${ARCANE_DOMAIN:-arcane.example.com}`)"
         - "traefik.http.routers.arcane.service=arcane"
         - "traefik.http.routers.arcane.middlewares=${ARCANE_MIDDLEWARES:-}"
         - "traefik.http.routers.arcane.tls=${ARCANE_TLS_ENABLED:-false}"
@@ -71,7 +72,7 @@ services:
       - "traefik.enable=${ARCANE_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.arcane.loadbalancer.server.port=3552"
       - "traefik.http.routers.arcane.entrypoints=${ARCANE_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.arcane.rule=Host(`${ARCANE_DOMAIN:-arcane.example.com}`) && PathPrefix(`${ARCANE_BASE_PATH:-/}`)"
+      - "traefik.http.routers.arcane.rule=Host(`${ARCANE_DOMAIN:-arcane.example.com}`)"
       - "traefik.http.routers.arcane.service=arcane"
       - "traefik.http.routers.arcane.middlewares=${ARCANE_MIDDLEWARES:-}"
       - "traefik.http.routers.arcane.tls=${ARCANE_TLS_ENABLED:-false}"

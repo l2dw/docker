@@ -13,14 +13,27 @@ make arcane-stack-up
 make arcane-compose-up
 ```
 
-`make arcane-stack-setup` copies `arcane/.env.example` → `arcane/.env` if needed, generates `ARCANE_ENCRYPTION_KEY` / `ARCANE_JWT_SECRET` with `openssl rand -hex 32` when empty (also upserts root `.env` so Make/Swarm see them), and warns if `ARCANE_APP_URL` / `ARCANE_DOMAIN` are empty or still `*.example.com`.
+`make arcane-stack-setup` copies `arcane/.env.example` → `arcane/.env` if needed, generates `ARCANE_ENCRYPTION_KEY` / `ARCANE_JWT_SECRET` with `openssl rand -hex 32` when empty (also upserts root `.env` so Make/Swarm see them), and **saves** `ARCANE_APP_URL` / `ARCANE_DOMAIN` when you pass them on the command line (otherwise they are lost on the next `make`). Warns if those are empty or still `*.example.com`.
+
+```sh
+make arcane-stack-setup ARCANE_DOMAIN=arcane.local ARCANE_APP_URL=http://arcane.local
+make arcane-compose-up
+```
 
 Copy [`arcane/.env.example`](.env.example) keys into the root `.env`. Set `ARCANE_APP_URL` to the **exact** URL the browser uses (scheme + host, and port if not 80/443). A mismatch causes `403 Cross-origin request blocked`.
+
+On the `arcane` branch, root `README.md` / `compose.yml` / `docker-compose.yml` are symlinks into `arcane/`.
 
 | File | Labels |
 |------|--------|
 | [`compose.yml`](compose.yml) | None (no Traefik / Homepage) |
 | [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage — used by `make` |
+
+## Base path
+
+**Subpath deploy is not supported** by Arcane ([#1119](https://github.com/getarcaneapp/arcane/issues/1119)). Keep `ARCANE_BASE_PATH=/` and use a **subdomain** (`ARCANE_DOMAIN` + Host-only Traefik rule). Do not set `APP_URL` to `https://example.com/arcane`.
+
+Behind Traefik, set `ARCANE_TRUSTED_PROXIES` to the shared Docker network CIDR (default `172.16.0.0/12`) so login rate limits see the real client IP — [websocket / reverse proxy docs](https://getarcane.app/docs/configuration/websockets-reverse-proxies).
 
 ## Makefile
 
@@ -45,8 +58,10 @@ Place the service on a **Swarm manager** (`ARCANE_PLACEMENT_CONSTRAINTS=node.rol
 |----------|--------|
 | `ARCANE_ENCRYPTION_KEY` | 32 bytes (raw, base64, or hex). `openssl rand -hex 32` |
 | `ARCANE_JWT_SECRET` | `openssl rand -hex 32` |
-| `ARCANE_APP_URL` | Public URL (e.g. `https://arcane.example.com`) |
+| `ARCANE_APP_URL` | Public URL (e.g. `https://arcane.example.com`) — no path prefix |
 | `ARCANE_DOMAIN` | Traefik `Host()` |
+| `ARCANE_BASE_PATH` | Keep `/` (subpath unsupported) |
+| `ARCANE_TRUSTED_PROXIES` | Proxy CIDR for `X-Forwarded-*` (default `172.16.0.0/12`) |
 | `ARCANE_TRAEFIK_LABELS_SWARM_ENABLE` | `traefik.enable` on `deploy.labels` (default `true`) |
 | `ARCANE_TRAEFIK_LABELS_DOCKER_ENABLE` | `traefik.enable` on service `labels` (default `true`) |
 

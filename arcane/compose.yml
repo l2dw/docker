@@ -25,6 +25,7 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
       - APP_URL=${ARCANE_APP_URL:-http://arcane.example.com}
+      - TRUSTED_PROXIES=${ARCANE_TRUSTED_PROXIES:-172.16.0.0/12}
       - PUID=${ARCANE_PUID:-1000}
       - PGID=${ARCANE_PGID:-1000}
       - ENCRYPTION_KEY=${ARCANE_ENCRYPTION_KEY:-}

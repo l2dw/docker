@@ -1,6 +1,6 @@
 ---
 name: create-docker-stack
-description: Scaffolds a new application Docker stack in this docker-templates repo (dedicated git branch, project directory, Makefile, compose.yml without labels plus docker-compose.yml with Traefik/Homepage labels). Use when creating a new app stack, docker-compose.yml, Swarm stack, wrapping an image, or when the user asks to dockeriser une application, créer un stack, copier le template tpl, or follow the template/dictfp/dokploy structure.
+description: Scaffolds a new application Docker stack in this docker-templates repo (dedicated git branch, project directory, Makefile, compose.yml without labels plus docker-compose.yml with Traefik/Homepage labels, base_path check, root symlinks for README/compose). Use when creating a new app stack, docker-compose.yml, Swarm stack, wrapping an image, or when the user asks to dockeriser une application, créer un stack, copier le template tpl, or follow the template/dictfp/dokploy structure.
 ---
 
 # Create Docker stack
@@ -33,6 +33,7 @@ Copy this checklist and complete in order:
 ```
 - [ ] 0. Working tree propre (sinon STOP)
 - [ ] 1. Collecter le brief
+- [ ] 1b. Vérifier base_path (docs app)
 - [ ] 2. Nommer projet et préfixe
 - [ ] 3. Branche dédiée depuis master
 - [ ] 4. Copier template tpl
@@ -40,6 +41,7 @@ Copy this checklist and complete in order:
 - [ ] 6. Écrire .env.example
 - [ ] 7. Cibles Makefile
 - [ ] 8. README projet
+- [ ] 8b. Symlinks racine (README + compose)
 - [ ] 9. Valider compose
 ```
 
@@ -65,8 +67,23 @@ If missing, ask (do not invent production domains or secrets):
 
 - Stack name, image(s) + tags, HTTP port
 - Volumes (data/logs), extra services (db, redis)
-- Traefik: domain, `PathPrefix`, TLS, middlewares
+- Traefik: domain, desired `base_path` / subpath (if any), TLS, middlewares
 - Swarm vs Compose (both targets unless user says otherwise)
+
+### 1b. Vérifier `base_path` (docs de l’app)
+
+**Before writing compose**, check the app’s official docs / image env reference for subpath / reverse-proxy support.
+
+Look for names such as: `base path`, `basePath`, `BASE_PATH`, `ROOT_PATH`, `CONTEXT_PATH`, `SUBPATH`, `serve under a path`, `URL prefix`, `ASSET_PREFIX`, `APP_BASE`, or equivalent.
+
+| Result | What to do |
+|--------|------------|
+| **Supported** | Set `<PREFIX>_BASE_PATH` to the chosen path (e.g. `/myapp`, never a trailing slash unless the app requires it). Wire the **app** env var documented by the vendor into `environment:` (both compose files). Keep Traefik `PathPrefix(\`${<PREFIX>_BASE_PATH:-/}\`)` and `homepage.href` with that path. Document the vendor env name + example in the project README. |
+| **Not supported / unclear** | Default `<PREFIX>_BASE_PATH=/`. Prefer **Host-only** routing (subdomain). Do **not** invent a fake app base-path env. Do **not** rely on Traefik `stripPrefix` alone unless the user explicitly asks — many SPAs break. State in the README that subpath deploy is unsupported. |
+
+If the user asked for a subpath but the app cannot do it: warn and keep `/` (or Host-only), do not silently configure a broken PathPrefix.
+
+Details and label examples: [conventions.md](conventions.md) (§ Base path).
 
 ### 2. Nommer projet et préfixe
 
@@ -117,13 +134,15 @@ Two files, same services / volumes / `deploy:` (mode, replicas, placement, `rest
 
 Keep `compose.yml` and `docker-compose.yml` in sync except for labels. Make targets use `docker-compose.yml`. Use `compose.yml` when Traefik/Homepage must not see the service.
 
-Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` (unquoted). No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do not nest interpolation. Details in [conventions.md](conventions.md).
+Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` (unquoted). No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do not nest interpolation. Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Details in [conventions.md](conventions.md).
+
+If step **1b** found a supported base path: include the vendor env in `environment:` and use `<PREFIX>_BASE_PATH` in Traefik/Homepage labels (labeled file only).
 
 ### 6. Écrire .env.example
 
 - `<projet>/.env.example` — all `<PREFIX>_*` keys
 - Root `.env.example` — same project keys (Make exports root `.env` for `stack deploy`)
-- Include `DEFAULT_NETWORK_NAME`, `DEFAULT_NETWORK_EXTERNAL=false`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
+- Include `DEFAULT_NETWORK_NAME`, `DEFAULT_NETWORK_EXTERNAL=false`, `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
 - Placeholders only (`ChangeMe`, empty secrets). Never copy real passwords.
 
 ### 7. Cibles Makefile
@@ -142,6 +161,26 @@ Stack up must call `stack-deploy STACK_NAME=<projet>` (directory name = stack na
 
 Short `<projet>/README.md`: what the stack is, `make <projet>-stack-up` / `make <projet>-compose-up`, required env, debug targets. Note that `docker stack deploy` does not read `.env` alone — use Make.
 
+Include a short **Base path** note: supported or not, vendor env name if any, default `<PREFIX>_BASE_PATH=/`.
+
+### 8b. Symlinks racine (README + compose)
+
+After the project files exist, create **relative** symlinks at the **repo root** pointing into `<projet>/`:
+
+```sh
+ln -sfn <projet>/README.md README.md
+ln -sfn <projet>/compose.yml compose.yml
+ln -sfn <projet>/docker-compose.yml docker-compose.yml
+```
+
+Rules:
+
+- Targets: `README.md`, `compose.yml`, `docker-compose.yml` only (not `.env.example`, not `Makefile`).
+- Relative links (`<projet>/…`), never absolute paths.
+- If a **regular file** already exists at the root with that name: **do not overwrite**. Ask the user, or leave it and report it. If it is already a symlink to this project (or broken to the same path), refresh with `ln -sfn`.
+- Commit the symlinks with the stack (they are part of the branch-per-stack layout).
+- Verify: `ls -l README.md compose.yml docker-compose.yml` → each is a symlink into `<projet>/`.
+
 ### 9. Valider compose
 
 ```sh
@@ -150,7 +189,13 @@ docker compose -f <projet>/docker-compose.yml --env-file <projet>/.env.example c
 docker stack config -c <projet>/docker-compose.yml   # if CLI supports it
 ```
 
-Confirm `compose.yml` has **no** `traefik.` / `homepage.` labels. Fix errors before finishing. Do not create `.env` or `*.override.yml` unless asked.
+Also confirm root symlinks resolve:
+
+```sh
+test -f README.md && test -f compose.yml && test -f docker-compose.yml
+```
+
+Confirm `compose.yml` (project file) has **no** `traefik.` / `homepage.` labels. Fix errors before finishing. Do not create `.env` or `*.override.yml` unless asked.
 
 ## Out of scope
 

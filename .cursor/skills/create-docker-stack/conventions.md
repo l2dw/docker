@@ -33,10 +33,6 @@ services:
       - TZ=${TZ:-America/Toronto}
     volumes:
       - ${MYAPP_DATA_DIR:-myapp_data}:/var/lib/myapp
-    networks:
-      default:
-        aliases:
-          - myapp
     deploy:
       mode: ${MYAPP_DEPLOY_MODE:-replicated}
       replicas: ${MYAPP_DEPLOY_REPLICAS:-1}
@@ -61,6 +57,7 @@ Rules:
 - Do **not** emit Compose `x-*` keys (`x-pull-policy`, etc.).
 - Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` — never `"${…}"`.
 - Pull images via Make (`<projet>-pull-images` / `*-stack-upgrade`), not `pull_policy` / `x-pull-policy` (Swarm rejects `pull_policy`).
+- Do **not** add `networks.default.aliases` by default. The Compose service name is already the DNS name. Add aliases **only** when the user asks, or when a stable alternate hostname is required (Dokploy-style: e.g. `dokploy-postgresql`, `dokploy-redis` for other services to resolve).
 
 ## Env
 
@@ -94,10 +91,50 @@ MYAPP_HOMEPAGE_ICON=myapp.png
 MYAPP_HOMEPAGE_HREF=http://myapp.example.com
 ```
 
+- Always define `<PREFIX>_BASE_PATH` (default `/`). See § Base path.
 - Bind vs named volume: empty `MYAPP_DATA_DIR` → named volume default in compose.
 - Sync the same keys into **root** `.env.example` and `<projet>/.env.example`.
 - GNU Make treats `$` in `.env` as Make syntax; prefer plain values. Compose hashes need `$$`.
 - Never commit `.env` (gitignored via `**/.*` except `*.example`).
+
+## Base path
+
+Traefik always has `<PREFIX>_BASE_PATH` in the **labeled** file (`PathPrefix` + `homepage.href`). That alone is **not** enough for subpath deploy.
+
+**Verify in the app docs** whether the process can generate URLs / assets under a path prefix.
+
+| App supports subpath? | Config |
+|-----------------------|--------|
+| Yes | Set `<PREFIX>_BASE_PATH=/myapp` (example). Map the **vendor** env into `environment:` (name from docs — e.g. `BASE_PATH`, `ROOT_PATH`, `CONTEXT_PATH`). Align public URL vars (`APP_URL`, `BASE_URL`, …) with `https://${DOMAIN}${BASE_PATH}` when the app has them. |
+| No / unknown | Keep `<PREFIX>_BASE_PATH=/`. Prefer subdomain (`Host` only). Do not invent vendor env vars. Do not add `stripPrefix` unless the user explicitly requests it. |
+
+Example when the app documents `BASE_PATH`:
+
+```yaml
+environment:
+  - TZ=${TZ:-America/Toronto}
+  - BASE_PATH=${MYAPP_BASE_PATH:-/}
+```
+
+Trailing slash: follow the vendor. If unspecified, use `/myapp` (no trailing slash) and `/` for root.
+
+## Root symlinks
+
+On the stack branch, after `<projet>/README.md`, `compose.yml`, and `docker-compose.yml` exist, create relative symlinks at the **repo root**:
+
+```sh
+ln -sfn <projet>/README.md README.md
+ln -sfn <projet>/compose.yml compose.yml
+ln -sfn <projet>/docker-compose.yml docker-compose.yml
+```
+
+| Root entry | Points to |
+|------------|-----------|
+| `README.md` | `<projet>/README.md` |
+| `compose.yml` | `<projet>/compose.yml` |
+| `docker-compose.yml` | `<projet>/docker-compose.yml` |
+
+Do **not** symlink `.env.example` or `Makefile` to the project (root keeps Make/`bin` layout). Do not replace an existing regular root file without asking. Commit the three symlinks with the stack.
 
 ## Makefile
 
@@ -184,6 +221,7 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 - Port = container listen port, not the published host port.
 - Do not add a second Traefik service. Apps use `DEFAULT_NETWORK_NAME` (usually `dokploy-network`).
 - Leave `MYAPP_MIDDLEWARES` empty unless the user wants extra middlewares; global WAF is on Traefik entrypoints.
+- `MYAPP_BASE_PATH` drives `PathPrefix` and `homepage.href`. Wire the app’s own base-path env only when step **1b** confirmed support (see § Base path).
 Labels belong **only** in `docker-compose.yml`, never in `compose.yml`.
 
 ## Gitignore / local files

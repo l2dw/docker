@@ -26,10 +26,18 @@ arcane-stack-setup: ## Ensure arcane/.env, generate missing secrets, warn on emp
 	file_get() { \
 		_f=$$1; _k=$$2; \
 		[ -f "$$_f" ] || return 0; \
-		awk -F= -v k="$$_k" '$$1==k {sub(/^[^=]*=/,""); print; exit}' "$$_f"; \
+		sed -n "s/^$${_k}=//p" "$$_f" | head -n 1; \
+	}; \
+	make_get() { \
+		case $$1 in \
+			ARCANE_ENCRYPTION_KEY) printf '%s' '$(ARCANE_ENCRYPTION_KEY)' ;; \
+			ARCANE_JWT_SECRET) printf '%s' '$(ARCANE_JWT_SECRET)' ;; \
+			ARCANE_APP_URL) printf '%s' '$(ARCANE_APP_URL)' ;; \
+			ARCANE_DOMAIN) printf '%s' '$(ARCANE_DOMAIN)' ;; \
+		esac; \
 	}; \
 	for k in $(ARCANE_SECRET_VARS); do \
-		v=$$(eval "printf '%s' \"\$$$$k\""); \
+		v=$$(make_get "$$k"); \
 		[ -n "$$v" ] || v=$$(file_get "$$envf" "$$k"); \
 		[ -n "$$v" ] || v=$$(file_get "$$root" "$$k"); \
 		if [ -z "$$v" ]; then \
@@ -46,13 +54,19 @@ arcane-stack-setup: ## Ensure arcane/.env, generate missing secrets, warn on emp
 	done; \
 	missing=0; \
 	for k in $(ARCANE_NOTIFY_VARS); do \
-		v=$$(eval "printf '%s' \"\$$$$k\""); \
+		from_make=$$(make_get "$$k"); \
+		v=$$from_make; \
 		[ -n "$$v" ] || v=$$(file_get "$$envf" "$$k"); \
 		[ -n "$$v" ] || v=$$(file_get "$$root" "$$k"); \
 		if [ -z "$$v" ]; then \
-			echo "Missing required $$k — set it in $$envf" >&2; \
+			echo "Missing required $$k — set it in $$envf or pass $$k=... on the make command line." >&2; \
 			missing=1; \
 			continue; \
+		fi; \
+		if [ -n "$$from_make" ]; then \
+			upsert "$$envf" "$$k" "$$from_make"; \
+			if [ -n "$$root" ]; then upsert "$$root" "$$k" "$$from_make"; fi; \
+			echo "Saved $$k → $$envf (and $$root)."; \
 		fi; \
 		case "$$v" in \
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
