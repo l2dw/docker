@@ -11,23 +11,20 @@ Read [conventions.md](conventions.md) before writing compose, env, Makefile, or 
 
 ## Sources of truth (read before generating)
 
-Copy patterns from git — the working tree may only contain the current stack. **Create the new branch from `master`.** Use other branches only via `git show` (do not check them out to copy files):
+Copy patterns from the **local ignored scaffold** `_trash/template/` (see `.gitignore`: `_trash/`). **Create the new branch from `master`.** Do not commit `_trash/`. Do not check out git branch `template` to copy files.
 
 | Source | What to copy |
 |--------|----------------|
 | Branch `master` | Base for `git checkout -b <projet>` |
-| Branch `template` | File patterns (`tpl` / `TPL` rename) via `git show` |
-| Branch `dictfp` | `<projet>/Makefile` + root `-include <projet>/Makefile` via `git show` |
-| `dokploy/` / `arcane/` if present | Unified compose: two files, dual Traefik labels, single-level `${VAR:-default}` |
+| `_trash/template/` | Scaffold (`tpl` / `TPL` / `Tpl` rename). Gitignored — not in the repo |
+| `dokploy/` / `arcane/` if present | Apply current conventions on top of the scaffold (two compose files, no `x-*`, unquoted booleans) |
 
 ```sh
-git show template:template/docker-compose.yml
-git show template:template/.env.example
-git show dictfp:dictfp/Makefile
-git show dictfp:Makefile | tail -n 20
+ls _trash/template/
+# compose.yml docker-compose.yml .env.example Makefile README.md
 ```
 
-Prefer current conventions over older `x-*` / quoted `privileged` / literal `external: true` in those sources.
+If `_trash/template/` is missing: **STOP** and tell the user the ignored scaffold is absent. Prefer [conventions.md](conventions.md) over older `x-*` / quoted `privileged` / literal `external: true` in the trash copy.
 
 ## Workflow
 
@@ -60,7 +57,7 @@ If the output is **not empty** (staged, unstaged, or untracked files):
 2. Tell the user the tree is dirty and list `git status --short`.
 3. Ask them to commit or discard, then retry.
 
-Ignored files (`.env`, overrides) do not appear in `--porcelain` and are fine.
+Ignored files (`.env`, overrides, `_trash/`) do not appear in `--porcelain` and are fine.
 
 ### 1. Collecter le brief
 
@@ -97,15 +94,17 @@ Equivalent: `git checkout -b <projet> master`.
 
 If already **on** `<projet>` and it was created from `master` **and** step 0 passed, keep it. Never mix unrelated stacks in one working tree commit.
 
-### 4. Copier template tpl
+### 4. Copier template tpl depuis `_trash/`
+
+Scaffold is **gitignored**: `_trash/template/`. Never `git add` `_trash/`.
 
 ```sh
-git show template:template/docker-compose.yml
-# copy patterns from template (git show) → <projet>/ — do not checkout template
-# replace tpl → <projet>, TPL → <PREFIX>, Tpl → Title
+test -d _trash/template || { echo "missing ignored scaffold _trash/template/"; exit 1; }
+cp -R _trash/template <projet>
+# replace in <projet>/ : TPL → PREFIX, Tpl → Title, tpl → projet
 ```
 
-Delete `stack-compose.yml` unless the user explicitly wants that name. Always write **two** compose files (see step 5). Make / `bin/resolve-project-compose.sh` prefer `stack-compose.yml` if present, else `docker-compose.yml` (labeled). `compose.yml` is unlabeled and not the Make default.
+Then rewrite files to match [conventions.md](conventions.md) (step 5–7): `compose.yml` unlabeled + `docker-compose.yml` labeled; drop `x-*`; unquoted booleans. Delete `stack-compose.yml` unless the user wants that name. Make uses `docker-compose.yml`.
 
 ### 5. Écrire compose.yml + docker-compose.yml
 
@@ -129,7 +128,7 @@ Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAU
 
 ### 7. Cibles Makefile
 
-Create `<projet>/Makefile` from `dictfp/Makefile` (rename `dictfp` / `DICTFP`). At end of root `Makefile`:
+Create `<projet>/Makefile` from `_trash/template/Makefile` (rename `tpl` / `TPL`). At end of root `Makefile`:
 
 ```make
 -include <projet>/Makefile
@@ -156,5 +155,5 @@ Confirm `compose.yml` has **no** `traefik.` / `homepage.` labels. Fix errors bef
 ## Out of scope
 
 - Traefik, WAF, certs-dumper as part of the app stack
-- Committing `.env`, `*.override.*`, or secrets
+- Committing `.env`, `*.override.*`, `_trash/`, or secrets
 - Push / `make commit-changes` unless the user asks

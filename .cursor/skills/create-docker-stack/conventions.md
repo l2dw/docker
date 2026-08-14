@@ -101,7 +101,7 @@ MYAPP_HOMEPAGE_HREF=http://myapp.example.com
 
 ## Makefile
 
-`<projet>/Makefile` (from branch `dictfp`, `dictfp/Makefile`):
+`<projet>/Makefile` (from `_trash/template/Makefile`, gitignored scaffold):
 
 ```make
 ## —— 🐝 Myapp commands ———————————————————————————————————
@@ -192,6 +192,6 @@ Do not add:
 
 - `.env`, `.env.*` except `*.example`
 - `docker-compose.override.yml` / `stack-compose.override.yml`
-- `appdata/`, `certs/`, `*_trash`
+- `appdata/`, `certs/`, `*_trash`, `_trash/` (local scaffold; never commit)
 
 Overrides are the supported way to pin host ports or binds locally.
