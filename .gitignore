@@ -9,3 +9,11 @@ _trash/
 !.cursor/skills/**
 **/*.override.*
 **/*.password
+**/*.backup
+**/*_trash
+var/
+logs/
+backups/
+appdata/
+certs/
+plan
