@@ -1,0 +1,54 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  arcane-data:
+    name: ${ARCANE_DATA_VOLUME_NAME:-arcane-data}
+    external: ${ARCANE_DATA_VOLUME_EXTERNAL:-false}
+  arcane-builds:
+    name: ${ARCANE_BUILDS_VOLUME_NAME:-arcane-builds}
+    external: ${ARCANE_BUILDS_VOLUME_EXTERNAL:-false}
+  arcane-backups:
+    name: ${ARCANE_BACKUPS_VOLUME_NAME:-arcane-backups}
+    external: ${ARCANE_BACKUPS_VOLUME_EXTERNAL:-false}
+
+services:
+  arcane:
+    image: ${ARCANE_IMAGE:-ghcr.io/getarcaneapp/manager:latest}
+    restart: ${ARCANE_RESTART:-unless-stopped}
+    privileged: ${ARCANE_PRIVILEGED:-false}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
+      - APP_URL=${ARCANE_APP_URL:-http://arcane.example.com}
+      - PUID=${ARCANE_PUID:-1000}
+      - PGID=${ARCANE_PGID:-1000}
+      - ENCRYPTION_KEY=${ARCANE_ENCRYPTION_KEY:-}
+      - JWT_SECRET=${ARCANE_JWT_SECRET:-}
+    volumes:
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${ARCANE_DATA_DIR:-arcane-data}:/app/data
+      - ${ARCANE_BUILDS_DIR:-arcane-builds}:/builds
+      - ${ARCANE_BACKUPS_DIR:-arcane-backups}:/backups
+    healthcheck:
+      test: ["CMD", "./arcane", "health", "--timeout", "2s"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    deploy:
+      mode: ${ARCANE_DEPLOY_MODE:-replicated}
+      replicas: ${ARCANE_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${ARCANE_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${ARCANE_MEMORY_LIMIT:-512M}

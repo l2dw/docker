@@ -112,13 +112,10 @@ docker-project-down: .docker-exists-project # Remove a docker-compose stack
 
 docker-project-recreate: docker-project-down docker-project-up # Recreate a docker-compose project
 
-docker-project-restart: .check-project-name # Restart a docker-compose project
-	@# Check if the project name is provided
-	@if [ -z "$(PROJECT_NAME)" ]; then \
-		echo "Project name is not provided"; \
-		exit 1; \
+docker-project-restart: .docker-exists-project # Restart a docker-compose project
+	@if [ -z "$(DOCKER_COMPOSE_FILE)" ]; then \
+		DOCKER_COMPOSE_FILE=$(PROJECT_NAME)/docker-compose.yml; \
 	fi;
-	@# Check if the docker-compose.yml file exists or is a symlink
 	@if [ ! -f "$(DOCKER_COMPOSE_FILE)" ] && [ ! -L "$(DOCKER_COMPOSE_FILE)" ]; then \
 		echo "docker compose file '$(DOCKER_COMPOSE_FILE)' does not exist or is not a symlink"; \
 		exit 1; \
@@ -166,13 +163,15 @@ swarm-unlock-key: ## Show the unlock key
 # Default: no detach flag (CLI without `--detach` rejects it). STACK_DEPLOY_WAIT=1 passes --detach=false only if `docker stack deploy --help` lists `--detach`; else prints a stderr note so older hosts remain usable.
 STACK_DEPLOY_WAIT ?= 1
 
-stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/stack-compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
+stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
 	@stk='$(STACK_NAME)'; compose='$(STACK_FILE)'; ovr='$(STACK_OVERRIDE)'; \
 	if [ -z "$$compose" ] && [ -f "$$stk/stack-compose.yml" ]; then compose="$$stk/stack-compose.yml"; fi; \
+	if [ -z "$$compose" ] && [ -f "$$stk/docker-compose.yml" ]; then compose="$$stk/docker-compose.yml"; fi; \
 	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
-		echo "STACK_FILE is unset and not found at $$stk/stack-compose.yml — set STACK_FILE or create that file."; exit 1; \
+		echo "STACK_FILE is unset and no compose file found under $$stk/ (stack-compose.yml or docker-compose.yml)."; exit 1; \
 	fi; \
 	if [ -z "$$ovr" ] && { [ -f "$$stk/stack-compose.override.yml" ] || [ -L "$$stk/stack-compose.override.yml" ]; }; then ovr="$$stk/stack-compose.override.yml"; fi; \
+	if [ -z "$$ovr" ] && { [ -f "$$stk/docker-compose.override.yml" ] || [ -L "$$stk/docker-compose.override.yml" ]; }; then ovr="$$stk/docker-compose.override.yml"; fi; \
 	set -- -c "$$compose"; \
 	if [ -n "$$ovr" ] && [ -f "$$ovr" ]; then set -- "$$@" -c "$$ovr"; fi; \
 	deploy_extra=""; \
@@ -210,63 +209,5 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-## —— 🐝 tpl commands ———————————————————————————————————
-TPL := tpl
-TPL_SERVICES := tpl
-TPL_PODS := tpl
-
-tpl-deploy: ## Deploy the tpl stack
-	$(MAKE) stack-deploy STACK_NAME=$(TPL)
-
-tpl-remove: ## Remove the tpl stack
-	$(MAKE) stack-rm STACK_NAME=$(TPL)
-tpl-redeploy: tpl-remove tpl-deploy ## Recreate the tpl stack
-
-tpl-stack-deploy: tpl-deploy ## Deploy the tpl stack
-tpl-stack-remove: tpl-remove ## Remove the tpl stack
-
-tpl-stack-redeploy: tpl-redeploy ## Recreate the tpl stack
-
-tpl-stack-logs: ## Show logs of the tpl stack
-	$(MAKE) stack-logs STACK_NAME=$(TPL)
-
-tpl-stack-watch: ## Watch logs of the tpl stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(TPL)
-
-tpl-stack-debug: ## Debug tpl swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(TPL))"
-	@$(DOCKER) stack services $(TPL) 2>/dev/null || echo "(stack missing or swarm unavailable)"
-	@echo
-	@echo "--- docker service ls (${TPL}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(TPL) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(TPL)_' \
-		|| echo "(could not filter services)"
-	@echo
-	@echo "--- docker stack ps --no-trunc ($(TPL))"
-	@$(DOCKER) stack ps $(TPL) --no-trunc
-	@echo
-	@for s in $(TPL_SERVICES); do \
-		echo "==================== $(TPL)_$$s ===================="; \
-		$(DOCKER) service logs "$(TPL)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
-		echo; \
-	done
-
-tpl-up: ## Deploy the tpl project
-	$(MAKE) docker-project-up PROJECT_NAME=$(TPL)
-
-tpl-down: ## Remove the tpl project
-	$(MAKE) docker-project-down PROJECT_NAME=$(TPL)
-
-tpl-recreate: tpl-down tpl-up ## Recreate the tpl project
-
-tpl-compose-up: tpl-up ## Deploy the tpl project
-
-tpl-compose-down: tpl-down # Remove the tpl project
-
-tpl-compose-recreate: tpl-recreate ## Recreate the tpl project
-
-tpl-compose-logs: ## Show logs of the tpl project
-	$(MAKE) docker-project-logs PROJECT_NAME=$(TPL)
-
-tpl-compose-watch: ## Watch logs of the tpl project
-	$(MAKE) docker-project-watch PROJECT_NAME=$(TPL)
+# Per-project targets (e.g. arcane-stack-up)
+-include arcane/Makefile
