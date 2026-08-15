@@ -1,0 +1,83 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  woodpecker-server-data:
+    name: ${WOODPECKER_SERVER_DATA_VOLUME_NAME:-woodpecker-server-data}
+    external: ${WOODPECKER_SERVER_DATA_VOLUME_EXTERNAL:-false}
+  woodpecker-agent-config:
+    name: ${WOODPECKER_AGENT_CONFIG_VOLUME_NAME:-woodpecker-agent-config}
+    external: ${WOODPECKER_AGENT_CONFIG_VOLUME_EXTERNAL:-false}
+
+services:
+  woodpecker-server:
+    image: ${WOODPECKER_SERVER_IMAGE:-docker.io/woodpeckerci/woodpecker-server:v3}
+    restart: ${WOODPECKER_RESTART:-unless-stopped}
+    privileged: ${WOODPECKER_PRIVILEGED:-false}
+    env_file:
+      - ${WOODPECKER_SERVER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - WOODPECKER_HOST=${WOODPECKER_HOST:-http://example.com/woodpecker}
+      - WOODPECKER_OPEN=${WOODPECKER_OPEN:-true}
+      - WOODPECKER_ADMIN=${WOODPECKER_ADMIN:-}
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET:-}
+      - WOODPECKER_SERVER_ADDR=${WOODPECKER_SERVER_ADDR:-:8000}
+      - WOODPECKER_GRPC_ADDR=${WOODPECKER_GRPC_ADDR:-:9000}
+      # Forge: enable exactly one (GitHub or Gitea/Forgejo)
+      - WOODPECKER_GITHUB=${WOODPECKER_GITHUB:-true}
+      - WOODPECKER_GITHUB_CLIENT=${WOODPECKER_GITHUB_CLIENT:-}
+      - WOODPECKER_GITHUB_SECRET=${WOODPECKER_GITHUB_SECRET:-}
+      - WOODPECKER_GITHUB_PUBLIC_ONLY=${WOODPECKER_GITHUB_PUBLIC_ONLY:-false}
+      - WOODPECKER_GITEA=${WOODPECKER_GITEA:-false}
+      - WOODPECKER_GITEA_URL=${WOODPECKER_GITEA_URL:-}
+      - WOODPECKER_GITEA_CLIENT=${WOODPECKER_GITEA_CLIENT:-}
+      - WOODPECKER_GITEA_SECRET=${WOODPECKER_GITEA_SECRET:-}
+    volumes:
+      - ${WOODPECKER_SERVER_DATA_DIR:-woodpecker-server-data}:/var/lib/woodpecker
+    deploy:
+      mode: ${WOODPECKER_SERVER_DEPLOY_MODE:-replicated}
+      replicas: ${WOODPECKER_SERVER_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${WOODPECKER_SERVER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${WOODPECKER_SERVER_MEMORY_LIMIT:-512M}
+
+  woodpecker-agent:
+    image: ${WOODPECKER_AGENT_IMAGE:-docker.io/woodpeckerci/woodpecker-agent:v3}
+    command: agent
+    restart: ${WOODPECKER_RESTART:-unless-stopped}
+    privileged: ${WOODPECKER_AGENT_PRIVILEGED:-false}
+    env_file:
+      - ${WOODPECKER_AGENT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - WOODPECKER_SERVER=${WOODPECKER_AGENT_SERVER:-woodpecker-server:9000}
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET:-}
+      - WOODPECKER_GRPC_SECURE=${WOODPECKER_AGENT_GRPC_SECURE:-false}
+      - WOODPECKER_GRPC_VERIFY=${WOODPECKER_AGENT_GRPC_VERIFY:-true}
+      - WOODPECKER_MAX_WORKFLOWS=${WOODPECKER_AGENT_MAX_WORKFLOWS:-1}
+    volumes:
+      - ${WOODPECKER_AGENT_CONFIG_DIR:-woodpecker-agent-config}:/etc/woodpecker
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    depends_on:
+      - woodpecker-server
+    deploy:
+      mode: ${WOODPECKER_AGENT_DEPLOY_MODE:-replicated}
+      replicas: ${WOODPECKER_AGENT_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${WOODPECKER_AGENT_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${WOODPECKER_AGENT_MEMORY_LIMIT:-512M}

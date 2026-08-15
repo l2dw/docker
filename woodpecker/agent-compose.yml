@@ -1,0 +1,40 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  woodpecker-agent-config:
+    name: ${WOODPECKER_AGENT_CONFIG_VOLUME_NAME:-woodpecker-agent-config}
+    external: ${WOODPECKER_AGENT_CONFIG_VOLUME_EXTERNAL:-false}
+
+services:
+  woodpecker-agent:
+    image: ${WOODPECKER_AGENT_IMAGE:-docker.io/woodpeckerci/woodpecker-agent:v3}
+    command: agent
+    restart: ${WOODPECKER_RESTART:-unless-stopped}
+    privileged: ${WOODPECKER_AGENT_PRIVILEGED:-false}
+    env_file:
+      - ${WOODPECKER_AGENT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - WOODPECKER_SERVER=${WOODPECKER_AGENT_SERVER:-woodpecker-server:9000}
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET:-}
+      - WOODPECKER_GRPC_SECURE=${WOODPECKER_AGENT_GRPC_SECURE:-false}
+      - WOODPECKER_GRPC_VERIFY=${WOODPECKER_AGENT_GRPC_VERIFY:-true}
+      - WOODPECKER_MAX_WORKFLOWS=${WOODPECKER_AGENT_MAX_WORKFLOWS:-1}
+    volumes:
+      - ${WOODPECKER_AGENT_CONFIG_DIR:-woodpecker-agent-config}:/etc/woodpecker
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    deploy:
+      mode: ${WOODPECKER_AGENT_DEPLOY_MODE:-replicated}
+      replicas: ${WOODPECKER_AGENT_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${WOODPECKER_AGENT_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${WOODPECKER_AGENT_MEMORY_LIMIT:-512M}
