@@ -10,9 +10,10 @@ volumes:
   nextcloud-data:
     name: ${NEXTCLOUD_DATA_VOLUME_NAME:-nextcloud-data}
     external: ${NEXTCLOUD_DATA_VOLUME_EXTERNAL:-false}
-  nextcloud-config:
-    name: ${NEXTCLOUD_CONFIG_VOLUME_NAME:-nextcloud-config}
-    external: ${NEXTCLOUD_CONFIG_VOLUME_EXTERNAL:-false}
+
+configs:
+  zzz-custom.config.php:
+    file: ${NEXTCLOUD_CUSTOM_CONFIG:-./config/zzz-custom.config.php}
 
 services:
   nextcloud:
@@ -39,7 +40,10 @@ services:
     volumes:
       - ${NEXTCLOUD_HTML_DIR:-nextcloud-html}:/var/www/html
       - ${NEXTCLOUD_DATA_DIR:-nextcloud-data}:/var/www/html/data
-      - ${NEXTCLOUD_CONFIG_DIR:-nextcloud-config}:/var/www/html/config
+    configs:
+      - source: zzz-custom.config.php
+        target: /var/www/html/config/zzz-custom.config.php
+        mode: 0444
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/status.php >/dev/null || exit 1"]
       interval: 30s

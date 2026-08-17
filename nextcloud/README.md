@@ -66,6 +66,7 @@ Create the database and role on the external Postgres **before** first boot. Aut
 
 | Mount | Default | Role |
 |-------|---------|------|
-| `/var/www/html` | `nextcloud-html` | App code |
+| `/var/www/html` | `nextcloud-html` | App code + `config.php` |
 | `/var/www/html/data` | `nextcloud-data` | User files |
-| `/var/www/html/config` | `nextcloud-config` | `config.php` |
+
+Swarm/Compose **`configs:`** mounts [`config/zzz-custom.config.php`](config/zzz-custom.config.php) at `/var/www/html/config/zzz-custom.config.php` (`mode: 0444`). Path: `NEXTCLOUD_CUSTOM_CONFIG`. Do **not** replace `config.php`. Extra `*.config.php` files are merged ([sample parameters](https://docs.nextcloud.com/server/27/admin_manual/configuration_server/config_sample_php_parameters.html)). The `zzz-` prefix loads last. After editing the file, recreate the stack so Swarm picks up a new config version.
