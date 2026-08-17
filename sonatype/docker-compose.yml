@@ -1,7 +1,7 @@
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   sonatype_data:
@@ -11,31 +11,63 @@ volumes:
 services:
   sonatype:
     image: ${SONATYPE_IMAGE:-docker.io/sonatype/nexus3:latest}
+    restart: ${SONATYPE_RESTART:-unless-stopped}
+    privileged: ${SONATYPE_PRIVILEGED:-false}
+    stop_grace_period: ${SONATYPE_STOP_GRACE_PERIOD:-2m}
+    env_file:
+      - ${SONATYPE_ENV_FILE:-.env.example}
     environment:
-      TZ: ${TZ:-America/Toronto}
-      HTTP_PROXY: ${HTTP_PROXY:-}
-      HTTPS_PROXY: ${HTTPS_PROXY:-}
-      NO_PROXY: ${NO_PROXY:-}
-      http_proxy: ${HTTP_PROXY:-}
-      https_proxy: ${HTTPS_PROXY:-}
-      no_proxy: ${NO_PROXY:-}
-      # Must fit under deploy.resources.limits.memory (default 2G). No nested quotes.
-      INSTALL4J_ADD_VM_PARAMS: ${SONATYPE_INSTALL4J_ADD_VM_PARAMS:--Xms512m -Xmx1g -XX:MaxDirectMemorySize=1g -Djava.util.prefs.userRoot=/nexus-data/javaprefs}
+      - TZ=${TZ:-America/Toronto}
+      # Image prepends / — use "sonatype" not "/sonatype". Empty for root context.
+      - NEXUS_CONTEXT=${SONATYPE_NEXUS_CONTEXT:-sonatype}
+      # Heap + MaxDirectMemorySize must stay under SONATYPE_MEMORY_LIMIT
+      - INSTALL4J_ADD_VM_PARAMS=${SONATYPE_INSTALL4J_ADD_VM_PARAMS:--Xms512m -Xmx1g -XX:MaxDirectMemorySize=1g -Djava.util.prefs.userRoot=/nexus-data/javaprefs}
     volumes:
-      # Nexus writes data + logs under /nexus-data
       - ${SONATYPE_DATA_DIR:-sonatype_data}:/nexus-data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/service/rest/v1/status >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081${SONATYPE_BASE_PATH:-/sonatype}/service/rest/v1/status >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 10
       start_period: 180s
     deploy:
       mode: ${SONATYPE_DEPLOY_MODE:-replicated}
-      replicas: ${SONATYPE_REPLICAS:-1}
+      replicas: ${SONATYPE_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${SONATYPE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
       resources:
         limits:
           memory: ${SONATYPE_MEMORY_LIMIT:-2G}
-      placement:
-        constraints:
-          - ${SONATYPE_PLACEMENT_CONSTRAINTS:-node.role == worker}
+      labels:
+        - "traefik.enable=${SONATYPE_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.sonatype.loadbalancer.server.port=8081"
+        - "traefik.http.routers.sonatype.entrypoints=${SONATYPE_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.sonatype.rule=Host(`${SONATYPE_DOMAIN:-example.com}`) && PathPrefix(`${SONATYPE_BASE_PATH:-/sonatype}`)"
+        - "traefik.http.routers.sonatype.service=sonatype"
+        - "traefik.http.routers.sonatype.middlewares=${SONATYPE_MIDDLEWARES:-}"
+        - "traefik.http.routers.sonatype.tls=${SONATYPE_TLS_ENABLED:-false}"
+        - "traefik.http.routers.sonatype.tls.certresolver=${SONATYPE_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${SONATYPE_HOMEPAGE_GROUP:-CI}"
+        - "homepage.name=${SONATYPE_HOMEPAGE_NAME:-Nexus}"
+        - "homepage.icon=${SONATYPE_HOMEPAGE_ICON:-sonatype.png}"
+        - "homepage.href=${SONATYPE_APP_URL:-http://example.com/sonatype}"
+        - "homepage.description=${SONATYPE_HOMEPAGE_DESCRIPTION:-Sonatype Nexus Repository}"
+        - "homepage.siteMonitor=${SONATYPE_HOMEPAGE_SITEMONITOR:-http://sonatype:8081/sonatype}"
+    labels:
+      - "traefik.enable=${SONATYPE_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.sonatype.loadbalancer.server.port=8081"
+      - "traefik.http.routers.sonatype.entrypoints=${SONATYPE_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.sonatype.rule=Host(`${SONATYPE_DOMAIN:-example.com}`) && PathPrefix(`${SONATYPE_BASE_PATH:-/sonatype}`)"
+      - "traefik.http.routers.sonatype.service=sonatype"
+      - "traefik.http.routers.sonatype.middlewares=${SONATYPE_MIDDLEWARES:-}"
+      - "traefik.http.routers.sonatype.tls=${SONATYPE_TLS_ENABLED:-false}"
+      - "traefik.http.routers.sonatype.tls.certresolver=${SONATYPE_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${SONATYPE_HOMEPAGE_GROUP:-CI}"
+      - "homepage.name=${SONATYPE_HOMEPAGE_NAME:-Nexus}"
+      - "homepage.icon=${SONATYPE_HOMEPAGE_ICON:-sonatype.png}"
+      - "homepage.href=${SONATYPE_APP_URL:-http://example.com/sonatype}"
+      - "homepage.description=${SONATYPE_HOMEPAGE_DESCRIPTION:-Sonatype Nexus Repository}"
+      - "homepage.siteMonitor=${SONATYPE_HOMEPAGE_SITEMONITOR:-http://sonatype:8081/sonatype}"

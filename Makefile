@@ -315,50 +315,5 @@ commit-changes: ## Commit changes to the infrastructure
 	git commit -m "Update infrastructure: $(DATETIME)"
 	git push origin
 
-## —— 🐝 SONATYPE commands ———————————————————————————————————
-SONATYPE_STACK_NAME := sonatype
-SONATYPE_SERVICES_SHORT := sonatype
-sonatype-pull-images: ## Pull images for the sonatype stack
-	$(MAKE) docker-pull-images PROJECT_NAME=$(SONATYPE_STACK_NAME)
-sonatype-stack-up: ## Deploy the sonatype stack
-	$(MAKE) stack-deploy STACK_NAME=$(SONATYPE_STACK_NAME)
-sonatype-stack-down: ## Remove the sonatype stack
-	$(MAKE) stack-rm STACK_NAME=$(SONATYPE_STACK_NAME)
-sonatype-stack-recreate: sonatype-stack-down sonatype-stack-up ## Recreate the sonatype stack
-sonatype-stack-logs: ## Show logs of the sonatype stack
-	$(MAKE) stack-logs STACK_NAME=$(SONATYPE_STACK_NAME)
-sonatype-stack-watch-logs: ## Watch logs of the sonatype stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(SONATYPE_STACK_NAME)
-sonatype-debug: ## Debug sonatype swarm stack: services, tasks, inspect
-	@echo "--- docker stack services ($(SONATYPE_STACK_NAME))"
-	@$(DOCKER) stack services $(SONATYPE_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
-	@echo
-	@echo "--- docker service ls (${SONATYPE_STACK_NAME}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(SONATYPE_STACK_NAME) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(SONATYPE_STACK_NAME)_' \
-		|| echo "(could not filter services)"
-	@echo
-	@echo "--- docker stack ps --no-trunc ($(SONATYPE_STACK_NAME))"
-	@$(DOCKER) stack ps $(SONATYPE_STACK_NAME) --no-trunc
-	@echo
-	@echo "--- sonatype service inspect ---"
-	@$(DOCKER) service inspect $(SONATYPE_STACK_NAME)_sonatype --pretty 2>/dev/null || echo "(no sonatype service or inspect failed)"
-sonatype-debug-logs: ## Tail recent logs for each sonatype service (e.g. services at 0/1)
-	@for s in $(SONATYPE_SERVICES_SHORT); do \
-		echo "==================== $(SONATYPE_STACK_NAME)_$$s ===================="; \
-		$(DOCKER) service logs "$(SONATYPE_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
-		echo; \
-	done
-sonatype-compose-upgrade: ## Upgrade the sonatype stack
-	make docker-project-upgrade PROJECT_NAME=$(SONATYPE_STACK_NAME)
-sonatype-compose-up: ## Deploy the sonatype stack
-	make docker-project-up PROJECT_NAME=$(SONATYPE_STACK_NAME)
-sonatype-compose-down: ## Remove the sonatype stack
-	make docker-project-down PROJECT_NAME=$(SONATYPE_STACK_NAME)
-sonatype-compose-restart: ## Restart the sonatype stack
-	make docker-project-restart PROJECT_NAME=$(SONATYPE_STACK_NAME)
-sonatype-compose-recreate: sonatype-compose-down sonatype-compose-up ## Recreate the sonatype stack
-sonatype-compose-logs: ## Show logs of the sonatype stack
-	make docker-project-logs PROJECT_NAME=$(SONATYPE_STACK_NAME)
-sonatype-compose-watch-logs: ## Watch logs of the sonatype stack
-	make docker-project-watch PROJECT_NAME=$(SONATYPE_STACK_NAME)
+# Per-project targets (e.g. sonatype-stack-up)
+-include sonatype/Makefile

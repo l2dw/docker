@@ -1,0 +1,43 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  sonatype_data:
+    name: ${SONATYPE_DATA_VOLUME_NAME:-sonatype_data}
+    external: ${SONATYPE_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  sonatype:
+    image: ${SONATYPE_IMAGE:-docker.io/sonatype/nexus3:latest}
+    restart: ${SONATYPE_RESTART:-unless-stopped}
+    privileged: ${SONATYPE_PRIVILEGED:-false}
+    stop_grace_period: ${SONATYPE_STOP_GRACE_PERIOD:-2m}
+    env_file:
+      - ${SONATYPE_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      # Image prepends / — use "sonatype" not "/sonatype". Empty for root context.
+      - NEXUS_CONTEXT=${SONATYPE_NEXUS_CONTEXT:-sonatype}
+      # Heap + MaxDirectMemorySize must stay under SONATYPE_MEMORY_LIMIT
+      - INSTALL4J_ADD_VM_PARAMS=${SONATYPE_INSTALL4J_ADD_VM_PARAMS:--Xms512m -Xmx1g -XX:MaxDirectMemorySize=1g -Djava.util.prefs.userRoot=/nexus-data/javaprefs}
+    volumes:
+      - ${SONATYPE_DATA_DIR:-sonatype_data}:/nexus-data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081${SONATYPE_BASE_PATH:-/sonatype}/service/rest/v1/status >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    deploy:
+      mode: ${SONATYPE_DEPLOY_MODE:-replicated}
+      replicas: ${SONATYPE_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${SONATYPE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${SONATYPE_MEMORY_LIMIT:-2G}
