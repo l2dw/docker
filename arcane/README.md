@@ -26,8 +26,26 @@ On the `arcane` branch, root `README.md` / `compose.yml` / `docker-compose.yml` 
 
 | File | Labels |
 |------|--------|
-| [`compose.yml`](compose.yml) | None (no Traefik / Homepage) |
-| [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage — used by `make` |
+| [`compose.yml`](compose.yml) | Manager only, no Traefik / Homepage |
+| [`docker-compose.yml`](docker-compose.yml) | Manager + Traefik / Homepage — used by `make` |
+| [`agent-compose.yml`](agent-compose.yml) | Edge agent only (outbound; no HTTP labels) |
+
+## Edge agent
+
+Run the agent on a **remote** Docker host (or another node) to manage that engine from the manager UI — [remote environments](https://getarcane.app/docs/features/environments).
+
+1. In Arcane: Environments → Add → **Edge** → generate config / token.
+2. Set `ARCANE_AGENT_TOKEN` and `ARCANE_MANAGER_API_URL` (public manager URL, usually same as `ARCANE_APP_URL`) in `arcane/.env` (or root `.env`).
+3. Deploy (Compose):
+
+```sh
+docker compose -f arcane/agent-compose.yml --env-file arcane/.env up -d
+# production env_file: ARCANE_AGENT_ENV_FILE=.env
+```
+
+Uses its own volume `arcane-agent-data` (not the manager’s `arcane-data`). Mounts `DOCKER_RUNTIME_SOCKET`. No Traefik ports — the agent dials out (`EDGE_AGENT=true`, `EDGE_TRANSPORT=poll` by default).
+
+If a token was ever committed or pasted into compose: **rotate it** in the manager UI.
 
 ## Base path
 

@@ -1,0 +1,36 @@
+
+volumes:
+  arcane-agent-data:
+    name: ${ARCANE_AGENT_DATA_VOLUME_NAME:-arcane-agent-data}
+    external: ${ARCANE_AGENT_DATA_VOLUME_EXTERNAL:-false}
+
+# Edge agent — outbound-only to the manager (no published ports / Traefik labels).
+# Create the environment in the manager UI, then set ARCANE_AGENT_TOKEN + ARCANE_MANAGER_API_URL.
+# Docs: https://getarcane.app/docs/features/environments
+services:
+  arcane-edge-agent:
+    image: ${ARCANE_AGENT_IMAGE:-ghcr.io/getarcaneapp/agent:latest}
+    restart: ${ARCANE_AGENT_RESTART:-unless-stopped}
+    privileged: ${ARCANE_AGENT_PRIVILEGED:-false}
+    env_file:
+      - ${ARCANE_AGENT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - EDGE_AGENT=${ARCANE_EDGE_AGENT:-true}
+      - EDGE_TRANSPORT=${ARCANE_EDGE_TRANSPORT:-poll}
+      - AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
+      - MANAGER_API_URL=${ARCANE_MANAGER_API_URL:-http://arcane.example.com}
+    volumes:
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${ARCANE_AGENT_DATA_DIR:-arcane-agent-data}:/app/data
+    deploy:
+      mode: ${ARCANE_AGENT_DEPLOY_MODE:-replicated}
+      replicas: ${ARCANE_AGENT_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${ARCANE_AGENT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${ARCANE_AGENT_MEMORY_LIMIT:-256M}
