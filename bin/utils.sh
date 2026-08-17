@@ -3,11 +3,11 @@
 # Track vars exported before defaults (e.g. make) so callers can still load ~/.env for missing ones.
 # Empty values (ADMIN_USER=) are treated as unset — common in partial .env files.
 _ADMIN_USER_EXPLICIT=0
-[ -n "${ADMIN_USER}" ] && _ADMIN_USER_EXPLICIT=1
+[ -n "${ADMIN_USER:-}" ] && _ADMIN_USER_EXPLICIT=1
 ADMIN_USER="${ADMIN_USER:-${SUDO_USER:-$(whoami)}}"
 
 _INSTANCE_NAME_EXPLICIT=0
-[ -n "${INSTANCE_NAME}" ] && _INSTANCE_NAME_EXPLICIT=1
+[ -n "${INSTANCE_NAME:-}" ] && _INSTANCE_NAME_EXPLICIT=1
 INSTANCE_NAME="${INSTANCE_NAME:-$(hostname -s)}"
 
 # Resolve the admin user's home directory (works when setup runs via sudo/make as another user).
