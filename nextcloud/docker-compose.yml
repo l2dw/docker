@@ -7,6 +7,12 @@ volumes:
   nextcloud-html:
     name: ${NEXTCLOUD_HTML_VOLUME_NAME:-nextcloud-html}
     external: ${NEXTCLOUD_HTML_VOLUME_EXTERNAL:-false}
+  nextcloud-data:
+    name: ${NEXTCLOUD_DATA_VOLUME_NAME:-nextcloud-data}
+    external: ${NEXTCLOUD_DATA_VOLUME_EXTERNAL:-false}
+  nextcloud-config:
+    name: ${NEXTCLOUD_CONFIG_VOLUME_NAME:-nextcloud-config}
+    external: ${NEXTCLOUD_CONFIG_VOLUME_EXTERNAL:-false}
 
 services:
   nextcloud:
@@ -32,6 +38,8 @@ services:
       - OVERWRITECLIURL=${NEXTCLOUD_APP_URL:-http://example.com/nextcloud}
     volumes:
       - ${NEXTCLOUD_HTML_DIR:-nextcloud-html}:/var/www/html
+      - ${NEXTCLOUD_DATA_DIR:-nextcloud-data}:/var/www/html/data
+      - ${NEXTCLOUD_CONFIG_DIR:-nextcloud-config}:/var/www/html/config
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/status.php >/dev/null || exit 1"]
       interval: 30s

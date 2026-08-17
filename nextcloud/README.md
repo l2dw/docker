@@ -66,4 +66,6 @@ Create the database and role on the external Postgres **before** first boot. Aut
 
 | Mount | Default | Role |
 |-------|---------|------|
-| `/var/www/html` | `nextcloud-html` | App + user data |
+| `/var/www/html` | `nextcloud-html` | App code |
+| `/var/www/html/data` | `nextcloud-data` | User files |
+| `/var/www/html/config` | `nextcloud-config` | `config.php` |
