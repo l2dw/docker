@@ -1,0 +1,51 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  nextcloud-html:
+    name: ${NEXTCLOUD_HTML_VOLUME_NAME:-nextcloud-html}
+    external: ${NEXTCLOUD_HTML_VOLUME_EXTERNAL:-false}
+
+services:
+  nextcloud:
+    image: ${NEXTCLOUD_IMAGE:-docker.io/library/nextcloud:27}
+    restart: ${NEXTCLOUD_RESTART:-unless-stopped}
+    privileged: ${NEXTCLOUD_PRIVILEGED:-false}
+    env_file:
+      - ${NEXTCLOUD_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - POSTGRES_HOST=${NEXTCLOUD_DB_HOST:-postgres}
+      - POSTGRES_DB=${NEXTCLOUD_DB_NAME:-nextcloud}
+      - POSTGRES_USER=${NEXTCLOUD_DB_USER:-nextcloud}
+      - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD:-}
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER:-admin}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD:-}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_TRUSTED_DOMAINS:-example.com}
+      - TRUSTED_PROXIES=${NEXTCLOUD_TRUSTED_PROXIES:-172.16.0.0/12}
+      - APACHE_DISABLE_REWRITE_IP=${NEXTCLOUD_APACHE_DISABLE_REWRITE_IP:-1}
+      - OVERWRITEHOST=${NEXTCLOUD_OVERWRITEHOST:-example.com}
+      - OVERWRITEPROTOCOL=${NEXTCLOUD_OVERWRITEPROTOCOL:-http}
+      - OVERWRITEWEBROOT=${NEXTCLOUD_OVERWRITEWEBROOT:-/nextcloud}
+      - OVERWRITECLIURL=${NEXTCLOUD_APP_URL:-http://example.com/nextcloud}
+    volumes:
+      - ${NEXTCLOUD_HTML_DIR:-nextcloud-html}:/var/www/html
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/status.php >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    deploy:
+      mode: ${NEXTCLOUD_DEPLOY_MODE:-replicated}
+      replicas: ${NEXTCLOUD_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${NEXTCLOUD_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${NEXTCLOUD_MEMORY_LIMIT:-1G}
