@@ -1,0 +1,46 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  vaultwarden-data:
+    name: ${VAULTWARDEN_DATA_VOLUME_NAME:-vaultwarden-data}
+    external: ${VAULTWARDEN_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  vaultwarden:
+    image: ${VAULTWARDEN_IMAGE:-docker.io/vaultwarden/server:latest}
+    restart: ${VAULTWARDEN_RESTART:-unless-stopped}
+    privileged: ${VAULTWARDEN_PRIVILEGED:-false}
+    env_file:
+      - ${VAULTWARDEN_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - DOMAIN=${VAULTWARDEN_APP_URL:-http://example.com/vaultwarden}
+      - DATABASE_URL=${VAULTWARDEN_DATABASE_URL:-sqlite:///data/db.sqlite3}
+      - SIGNUPS_ALLOWED=${VAULTWARDEN_SIGNUPS_ALLOWED:-false}
+      - INVITATIONS_ALLOWED=${VAULTWARDEN_INVITATIONS_ALLOWED:-true}
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-}
+      - SHOW_PASSWORD_HINT=${VAULTWARDEN_SHOW_PASSWORD_HINT:-false}
+      - LOG_LEVEL=${VAULTWARDEN_LOG_LEVEL:-info}
+      - IP_HEADER=${VAULTWARDEN_IP_HEADER:-X-Forwarded-For}
+      - SMTP_HOST=${VAULTWARDEN_SMTP_HOST:-}
+      - SMTP_FROM=${VAULTWARDEN_SMTP_FROM:-}
+      - SMTP_PORT=${VAULTWARDEN_SMTP_PORT:-587}
+      - SMTP_SECURITY=${VAULTWARDEN_SMTP_SECURITY:-starttls}
+      - SMTP_USERNAME=${VAULTWARDEN_SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${VAULTWARDEN_SMTP_PASSWORD:-}
+    volumes:
+      - ${VAULTWARDEN_DATA_DIR:-vaultwarden-data}:/data
+    deploy:
+      mode: ${VAULTWARDEN_DEPLOY_MODE:-replicated}
+      replicas: ${VAULTWARDEN_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${VAULTWARDEN_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${VAULTWARDEN_MEMORY_LIMIT:-512M}
