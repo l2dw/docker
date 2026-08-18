@@ -1,35 +1,40 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
 services:
   smtp-relay:
-    image: ${SMTP_RELAY_IMAGE:-namshi/smtp:latest}
-    x-pull-policy: ${SMTP_RELAY_PULL_POLICY:-always}
+    image: ${SMTP_RELAY_IMAGE:-docker.io/namshi/smtp:latest}
     restart: ${SMTP_RELAY_RESTART:-unless-stopped}
+    privileged: ${SMTP_RELAY_PRIVILEGED:-false}
+    env_file:
+      - ${SMTP_RELAY_ENV_FILE:-.env.example}
     environment:
-      TZ: ${TZ}
-      MAILNAME: ${SMTP_RELAY_MAILNAME:-smtp.example.com}
-      RELAY_NETWORKS: ${SMTP_RELAY_NETWORKS:-:192.168.31.0/16:10.16.0.0/8}
-      SMARTHOST_ADDRESS: ${SMTP_RELAY_HOST:-}
-      SMARTHOST_PORT: ${SMTP_RELAY_PORT:-}
-      SMARTHOST_USER: ${SMTP_RELAY_USER:-}
-      SMARTHOST_PASSWORD: ${SMTP_RELAY_PASS:-}
-      SMARTHOST_ALIASES: ${SMTP_RELAY_ALIASES:-}
-    # mem_limit: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
+      - TZ=${TZ:-America/Toronto}
+      - MAILNAME=${SMTP_RELAY_MAILNAME:-smtp.example.com}
+      - PORT=${SMTP_RELAY_PORT_TARGET:-25}
+      - RELAY_NETWORKS=${SMTP_RELAY_NETWORKS:-:192.168.0.0/16:10.0.0.0/8:172.16.0.0/12}
+      - GMAIL_USER=${SMTP_RELAY_GMAIL_USER:-}
+      - GMAIL_PASSWORD=${SMTP_RELAY_GMAIL_PASSWORD:-}
+      - SMARTHOST_ADDRESS=${SMTP_RELAY_HOST:-}
+      - SMARTHOST_PORT=${SMTP_RELAY_PORT:-587}
+      - SMARTHOST_USER=${SMTP_RELAY_USER:-}
+      - SMARTHOST_PASSWORD=${SMTP_RELAY_PASS:-}
+      - SMARTHOST_ALIASES=${SMTP_RELAY_ALIASES:-}
     ports:
       - target: ${SMTP_RELAY_PORT_TARGET:-25}
         published: ${SMTP_RELAY_PORT_PUBLISHED:-25}
         protocol: ${SMTP_RELAY_PORT_PROTOCOL:-tcp}
         mode: ${SMTP_RELAY_PORT_MODE:-host}
-    ## Deploy
     deploy:
-      replicas: ${SMTP_RELAY_REPLICAS:-1}
-      mode: ${SMTP_RELAY_SWARM_MODE:-replicated}
-      # resources:
-      #   limits:
-      #     memory: ${SMTP_RELAY_MEMORY_LIMIT:-512M}
+      mode: ${SMTP_RELAY_DEPLOY_MODE:-replicated}
+      replicas: ${SMTP_RELAY_DEPLOY_REPLICAS:-1}
       placement:
         constraints:
           - ${SMTP_RELAY_PLACEMENT_CONSTRAINTS:-node.role==manager}
-
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${SMTP_RELAY_MEMORY_LIMIT:-256M}
