@@ -1,0 +1,92 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  posteio-data:
+    name: ${POSTEIO_DATA_VOLUME_NAME:-posteio-data}
+    external: ${POSTEIO_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  posteio:
+    image: ${POSTEIO_IMAGE:-docker.io/analogic/poste.io:latest}
+    hostname: ${POSTEIO_HOSTNAME:-mail.example.com}
+    restart: ${POSTEIO_RESTART:-unless-stopped}
+    privileged: ${POSTEIO_PRIVILEGED:-false}
+    stop_grace_period: 1m
+    env_file:
+      - ${POSTEIO_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HTTPS=${POSTEIO_HTTPS:-OFF}
+      - DISABLE_CLAMAV=${POSTEIO_DISABLE_CLAMAV:-}
+      - DISABLE_RSPAMD=${POSTEIO_DISABLE_RSPAMD:-}
+    ports:
+      - target: 25
+        published: ${POSTEIO_PORT_SMTP:-25}
+        protocol: tcp
+        mode: ${POSTEIO_PORT_MODE:-host}
+      - target: 465
+        published: ${POSTEIO_PORT_SMTPS:-465}
+        protocol: tcp
+        mode: ${POSTEIO_PORT_MODE:-host}
+      - target: 587
+        published: ${POSTEIO_PORT_SUBMISSION:-587}
+        protocol: tcp
+        mode: ${POSTEIO_PORT_MODE:-host}
+      - target: 993
+        published: ${POSTEIO_PORT_IMAPS:-993}
+        protocol: tcp
+        mode: ${POSTEIO_PORT_MODE:-host}
+      - target: 995
+        published: ${POSTEIO_PORT_POP3S:-995}
+        protocol: tcp
+        mode: ${POSTEIO_PORT_MODE:-host}
+      - target: 4190
+        published: ${POSTEIO_PORT_SIEVE:-4190}
+        protocol: tcp
+        mode: ${POSTEIO_PORT_MODE:-host}
+    volumes:
+      - ${POSTEIO_DATA_DIR:-posteio-data}:/data
+    deploy:
+      mode: ${POSTEIO_DEPLOY_MODE:-replicated}
+      replicas: ${POSTEIO_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${POSTEIO_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${POSTEIO_MEMORY_LIMIT:-2G}
+      labels:
+        - "traefik.enable=${POSTEIO_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.posteio.loadbalancer.server.port=80"
+        - "traefik.http.routers.posteio.entrypoints=${POSTEIO_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.posteio.rule=Host(`${POSTEIO_DOMAIN:-mail.example.com}`)"
+        - "traefik.http.routers.posteio.service=posteio"
+        - "traefik.http.routers.posteio.middlewares=${POSTEIO_MIDDLEWARES:-}"
+        - "traefik.http.routers.posteio.tls=${POSTEIO_TLS_ENABLED:-false}"
+        - "traefik.http.routers.posteio.tls.certresolver=${POSTEIO_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${POSTEIO_HOMEPAGE_GROUP:-Mail}"
+        - "homepage.name=${POSTEIO_HOMEPAGE_NAME:-Poste.io}"
+        - "homepage.icon=${POSTEIO_HOMEPAGE_ICON:-mail.png}"
+        - "homepage.href=${POSTEIO_APP_URL:-http://mail.example.com}"
+        - "homepage.description=${POSTEIO_HOMEPAGE_DESCRIPTION:-Mail server admin and webmail}"
+        - "homepage.siteMonitor=${POSTEIO_HOMEPAGE_SITEMONITOR:-http://posteio:80}"
+    labels:
+      - "traefik.enable=${POSTEIO_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.posteio.loadbalancer.server.port=80"
+      - "traefik.http.routers.posteio.entrypoints=${POSTEIO_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.posteio.rule=Host(`${POSTEIO_DOMAIN:-mail.example.com}`)"
+      - "traefik.http.routers.posteio.service=posteio"
+      - "traefik.http.routers.posteio.middlewares=${POSTEIO_MIDDLEWARES:-}"
+      - "traefik.http.routers.posteio.tls=${POSTEIO_TLS_ENABLED:-false}"
+      - "traefik.http.routers.posteio.tls.certresolver=${POSTEIO_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${POSTEIO_HOMEPAGE_GROUP:-Mail}"
+      - "homepage.name=${POSTEIO_HOMEPAGE_NAME:-Poste.io}"
+      - "homepage.icon=${POSTEIO_HOMEPAGE_ICON:-mail.png}"
+      - "homepage.href=${POSTEIO_APP_URL:-http://mail.example.com}"
+      - "homepage.description=${POSTEIO_HOMEPAGE_DESCRIPTION:-Mail server admin and webmail}"
+      - "homepage.siteMonitor=${POSTEIO_HOMEPAGE_SITEMONITOR:-http://posteio:80}"
