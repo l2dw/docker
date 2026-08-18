@@ -1,0 +1,49 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  adguard-conf:
+    name: ${ADGUARD_CONF_VOLUME_NAME:-adguard-conf}
+    external: ${ADGUARD_CONF_VOLUME_EXTERNAL:-false}
+  adguard-work:
+    name: ${ADGUARD_WORK_VOLUME_NAME:-adguard-work}
+    external: ${ADGUARD_WORK_VOLUME_EXTERNAL:-false}
+
+services:
+  adguard:
+    image: ${ADGUARD_IMAGE:-docker.io/adguard/adguardhome:latest}
+    restart: ${ADGUARD_RESTART:-unless-stopped}
+    privileged: ${ADGUARD_PRIVILEGED:-false}
+    env_file:
+      - ${ADGUARD_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    ports:
+      - target: 53
+        published: ${ADGUARD_PORT_DNS_TCP:-53}
+        protocol: tcp
+        mode: ${ADGUARD_PORT_DNS_MODE:-host}
+      - target: 53
+        published: ${ADGUARD_PORT_DNS_UDP:-53}
+        protocol: udp
+        mode: ${ADGUARD_PORT_DNS_MODE:-host}
+      - target: 3000
+        published: ${ADGUARD_PORT_SETUP:-3053}
+        protocol: tcp
+        mode: ${ADGUARD_PORT_SETUP_MODE:-host}
+    volumes:
+      - ${ADGUARD_CONF_DIR:-adguard-conf}:/opt/adguardhome/conf
+      - ${ADGUARD_WORK_DIR:-adguard-work}:/opt/adguardhome/work
+    deploy:
+      mode: ${ADGUARD_DEPLOY_MODE:-replicated}
+      replicas: ${ADGUARD_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${ADGUARD_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${ADGUARD_MEMORY_LIMIT:-512M}
