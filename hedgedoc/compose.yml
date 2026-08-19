@@ -19,7 +19,7 @@ services:
       - TZ=${TZ:-America/Toronto}
       - CMD_DB_URL=${HEDGEDOC_DB_URL:-postgres://hedgedoc:ChangeMe@dokploy-postgresql:5432/hedgedoc}
       - CMD_DOMAIN=${HEDGEDOC_DOMAIN:-hedgedoc.example.com}
-      - CMD_URL_PATH=${HEDGEDOC_URL_PATH:-hedgedoc}
+      - CMD_URL_PATH=${HEDGEDOC_URL_PATH:-}
       - CMD_PROTOCOL_USESSL=${HEDGEDOC_PROTOCOL_USESSL:-false}
       - CMD_URL_ADDPORT=${HEDGEDOC_URL_ADDPORT:-false}
       - CMD_SESSION_SECRET=${HEDGEDOC_SESSION_SECRET:-ChangeMe}

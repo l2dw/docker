@@ -19,7 +19,7 @@ services:
       - TZ=${TZ:-America/Toronto}
       - CMD_DB_URL=${HEDGEDOC_DB_URL:-postgres://hedgedoc:ChangeMe@dokploy-postgresql:5432/hedgedoc}
       - CMD_DOMAIN=${HEDGEDOC_DOMAIN:-hedgedoc.example.com}
-      - CMD_URL_PATH=${HEDGEDOC_URL_PATH:-hedgedoc}
+      - CMD_URL_PATH=${HEDGEDOC_URL_PATH:-}
       - CMD_PROTOCOL_USESSL=${HEDGEDOC_PROTOCOL_USESSL:-false}
       - CMD_URL_ADDPORT=${HEDGEDOC_URL_ADDPORT:-false}
       - CMD_SESSION_SECRET=${HEDGEDOC_SESSION_SECRET:-ChangeMe}
@@ -39,11 +39,11 @@ services:
           memory: ${HEDGEDOC_MEMORY_LIMIT:-512M}
       labels:
         - "traefik.enable=${HEDGEDOC_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.middlewares.stripprefix-hedgedoc.stripprefix.prefixes=${HEDGEDOC_BASE_PATH:-/hedgedoc}"
+        - "traefik.http.middlewares.stripprefix-hedgedoc.stripprefix.prefixes=${HEDGEDOC_BASE_PATH:-/}"
         - "traefik.http.routers.${APP_NAME:-hedgedoc}.entrypoints=${HEDGEDOC_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.${APP_NAME:-hedgedoc}.rule=Host(`${HEDGEDOC_DOMAIN:-hedgedoc.example.com}`) && PathPrefix(`${HEDGEDOC_BASE_PATH:-/hedgedoc}`)"
+        - "traefik.http.routers.${APP_NAME:-hedgedoc}.rule=Host(`${HEDGEDOC_DOMAIN:-hedgedoc.example.com}`) && PathPrefix(`${HEDGEDOC_BASE_PATH:-/}`)"
         - "traefik.http.routers.${APP_NAME:-hedgedoc}.service=${APP_NAME:-hedgedoc}"
-        - "traefik.http.routers.${APP_NAME:-hedgedoc}.middlewares=${HEDGEDOC_MIDDLEWARES:-stripprefix-hedgedoc}"
+        - "traefik.http.routers.${APP_NAME:-hedgedoc}.middlewares=${HEDGEDOC_MIDDLEWARES:-}"
         - "traefik.http.routers.${APP_NAME:-hedgedoc}.tls=${HEDGEDOC_TLS_ENABLED:-false}"
         - "traefik.http.routers.${APP_NAME:-hedgedoc}.tls.certresolver=${HEDGEDOC_TLS_CERTRESOLVER:-letsencrypt}"
         - "traefik.http.services.${APP_NAME:-hedgedoc}.loadbalancer.server.port=3000"
@@ -51,16 +51,16 @@ services:
         - "homepage.group=${HEDGEDOC_HOMEPAGE_GROUP:-Notes}"
         - "homepage.name=${HEDGEDOC_HOMEPAGE_NAME:-HedgeDoc}"
         - "homepage.icon=${HEDGEDOC_HOMEPAGE_ICON:-hedgedoc.png}"
-        - "homepage.href=${HEDGEDOC_HOMEPAGE_HREF:-http://hedgedoc.example.com/hedgedoc}"
+        - "homepage.href=${HEDGEDOC_HOMEPAGE_HREF:-http://hedgedoc.example.com/}"
         - "homepage.description=${HEDGEDOC_HOMEPAGE_DESCRIPTION:-Collaborative markdown}"
         - "homepage.siteMonitor=${HEDGEDOC_HOMEPAGE_SITEMONITOR:-http://hedgedoc:3000}"
     labels:
       - "traefik.enable=${HEDGEDOC_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.middlewares.stripprefix-hedgedoc.stripprefix.prefixes=${HEDGEDOC_BASE_PATH:-/hedgedoc}"
+      - "traefik.http.middlewares.stripprefix-hedgedoc.stripprefix.prefixes=${HEDGEDOC_BASE_PATH:-/}"
       - "traefik.http.routers.${APP_NAME:-hedgedoc}.entrypoints=${HEDGEDOC_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_NAME:-hedgedoc}.rule=Host(`${HEDGEDOC_DOMAIN:-hedgedoc.example.com}`) && PathPrefix(`${HEDGEDOC_BASE_PATH:-/hedgedoc}`)"
+      - "traefik.http.routers.${APP_NAME:-hedgedoc}.rule=Host(`${HEDGEDOC_DOMAIN:-hedgedoc.example.com}`) && PathPrefix(`${HEDGEDOC_BASE_PATH:-/}`)"
       - "traefik.http.routers.${APP_NAME:-hedgedoc}.service=${APP_NAME:-hedgedoc}"
-      - "traefik.http.routers.${APP_NAME:-hedgedoc}.middlewares=${HEDGEDOC_MIDDLEWARES:-stripprefix-hedgedoc}"
+      - "traefik.http.routers.${APP_NAME:-hedgedoc}.middlewares=${HEDGEDOC_MIDDLEWARES:-}"
       - "traefik.http.routers.${APP_NAME:-hedgedoc}.tls=${HEDGEDOC_TLS_ENABLED:-false}"
       - "traefik.http.routers.${APP_NAME:-hedgedoc}.tls.certresolver=${HEDGEDOC_TLS_CERTRESOLVER:-letsencrypt}"
       - "traefik.http.services.${APP_NAME:-hedgedoc}.loadbalancer.server.port=3000"
@@ -68,6 +68,6 @@ services:
       - "homepage.group=${HEDGEDOC_HOMEPAGE_GROUP:-Notes}"
       - "homepage.name=${HEDGEDOC_HOMEPAGE_NAME:-HedgeDoc}"
       - "homepage.icon=${HEDGEDOC_HOMEPAGE_ICON:-hedgedoc.png}"
-      - "homepage.href=${HEDGEDOC_HOMEPAGE_HREF:-http://hedgedoc.example.com/hedgedoc}"
+      - "homepage.href=${HEDGEDOC_HOMEPAGE_HREF:-http://hedgedoc.example.com/}"
       - "homepage.description=${HEDGEDOC_HOMEPAGE_DESCRIPTION:-Collaborative markdown}"
       - "homepage.siteMonitor=${HEDGEDOC_HOMEPAGE_SITEMONITOR:-http://hedgedoc:3000}"

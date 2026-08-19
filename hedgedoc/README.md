@@ -21,7 +21,9 @@ On the `hedgedoc` branch, root `README.md` / `compose.yml` / `docker-compose.yml
 
 ## Base path
 
-**Supported** via vendor `CMD_URL_PATH` (no slashes, e.g. `hedgedoc`). Default `HEDGEDOC_BASE_PATH=/hedgedoc` + Traefik `PathPrefix` and middleware `stripprefix-hedgedoc` (the process listens at `/`; generated links use the path). Dedicated subdomain: `HEDGEDOC_BASE_PATH=/`, `HEDGEDOC_URL_PATH=` empty, `HEDGEDOC_MIDDLEWARES=` empty, and update `homepage.href`.
+Default **`HEDGEDOC_BASE_PATH=/`**: Traefik `Host` + `PathPrefix(/)` (the whole site at `http://hedgedoc.example.com/`). Keep `HEDGEDOC_URL_PATH` and `HEDGEDOC_MIDDLEWARES` **empty** — do **not** strip `/`.
+
+Subpath (optional): `HEDGEDOC_BASE_PATH=/hedgedoc`, `HEDGEDOC_URL_PATH=hedgedoc` (`CMD_URL_PATH`, no slashes), `HEDGEDOC_MIDDLEWARES=stripprefix-hedgedoc`, `HEDGEDOC_HOMEPAGE_HREF=http://hedgedoc.example.com/hedgedoc`. The process still listens at `/`; Traefik strips the prefix.
 
 HTTPS behind Traefik: `HEDGEDOC_PROTOCOL_USESSL=true` and `HEDGEDOC_URL_ADDPORT=false`.
 
