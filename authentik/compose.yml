@@ -1,0 +1,82 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  authentik_media:
+    name: ${AUTHENTIK_MEDIA_VOLUME_NAME:-authentik_media}
+    external: ${AUTHENTIK_MEDIA_VOLUME_EXTERNAL:-false}
+  authentik_templates:
+    name: ${AUTHENTIK_TEMPLATES_VOLUME_NAME:-authentik_templates}
+    external: ${AUTHENTIK_TEMPLATES_VOLUME_EXTERNAL:-false}
+  authentik_certs:
+    name: ${AUTHENTIK_CERTS_VOLUME_NAME:-authentik_certs}
+    external: ${AUTHENTIK_CERTS_VOLUME_EXTERNAL:-false}
+
+services:
+  authentik-server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2025.10.4}
+    restart: ${AUTHENTIK_RESTART:-unless-stopped}
+    privileged: ${AUTHENTIK_PRIVILEGED:-false}
+    command: server
+    env_file:
+      - ${AUTHENTIK_SERVER_ENV_FILE:-.env.example}
+    environment:
+      - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY:-ChangeMe}
+      - AUTHENTIK_POSTGRESQL__HOST=${AUTHENTIK_POSTGRESQL__HOST:-dokploy-postgresql}
+      - AUTHENTIK_POSTGRESQL__PORT=${AUTHENTIK_POSTGRESQL__PORT:-5432}
+      - AUTHENTIK_POSTGRESQL__USER=${AUTHENTIK_POSTGRESQL__USER:-authentik}
+      - AUTHENTIK_POSTGRESQL__NAME=${AUTHENTIK_POSTGRESQL__NAME:-authentik}
+      - AUTHENTIK_POSTGRESQL__PASSWORD=${AUTHENTIK_POSTGRESQL__PASSWORD:-ChangeMe}
+      - AUTHENTIK_WEB__PATH=${AUTHENTIK_WEB__PATH:-/authentik/}
+      - AUTHENTIK_WEB__BASE_URL=${AUTHENTIK_WEB__BASE_URL:-http://authentik.example.com}
+    volumes:
+      - ${AUTHENTIK_MEDIA_DIR:-authentik_media}:/media
+      - ${AUTHENTIK_TEMPLATES_DIR:-authentik_templates}:/templates
+    deploy:
+      mode: ${AUTHENTIK_DEPLOY_MODE:-replicated}
+      replicas: ${AUTHENTIK_SERVER_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${AUTHENTIK_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${AUTHENTIK_SERVER_MEMORY_LIMIT:-1G}
+
+  authentik-worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2025.10.4}
+    restart: ${AUTHENTIK_RESTART:-unless-stopped}
+    privileged: ${AUTHENTIK_PRIVILEGED:-false}
+    command: worker
+    user: ${AUTHENTIK_WORKER_USER:-root}
+    env_file:
+      - ${AUTHENTIK_WORKER_ENV_FILE:-.env.example}
+    environment:
+      - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY:-ChangeMe}
+      - AUTHENTIK_POSTGRESQL__HOST=${AUTHENTIK_POSTGRESQL__HOST:-dokploy-postgresql}
+      - AUTHENTIK_POSTGRESQL__PORT=${AUTHENTIK_POSTGRESQL__PORT:-5432}
+      - AUTHENTIK_POSTGRESQL__USER=${AUTHENTIK_POSTGRESQL__USER:-authentik}
+      - AUTHENTIK_POSTGRESQL__NAME=${AUTHENTIK_POSTGRESQL__NAME:-authentik}
+      - AUTHENTIK_POSTGRESQL__PASSWORD=${AUTHENTIK_POSTGRESQL__PASSWORD:-ChangeMe}
+      - AUTHENTIK_WEB__PATH=${AUTHENTIK_WEB__PATH:-/authentik/}
+      - AUTHENTIK_WEB__BASE_URL=${AUTHENTIK_WEB__BASE_URL:-http://authentik.example.com}
+    volumes:
+      - ${AUTHENTIK_MEDIA_DIR:-authentik_media}:/media
+      - ${AUTHENTIK_TEMPLATES_DIR:-authentik_templates}:/templates
+      - ${AUTHENTIK_CERTS_DIR:-authentik_certs}:/certs
+    deploy:
+      mode: ${AUTHENTIK_DEPLOY_MODE:-replicated}
+      replicas: ${AUTHENTIK_WORKER_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${AUTHENTIK_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${AUTHENTIK_WORKER_MEMORY_LIMIT:-1G}
