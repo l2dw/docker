@@ -1,0 +1,41 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  meilisearch-data:
+    name: ${MEILISEARCH_DATA_VOLUME_NAME:-meilisearch-data}
+    external: ${MEILISEARCH_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  meilisearch:
+    image: ${MEILISEARCH_IMAGE:-docker.io/getmeili/meilisearch:v1.37}
+    restart: ${MEILISEARCH_RESTART:-unless-stopped}
+    privileged: ${MEILISEARCH_PRIVILEGED:-false}
+    env_file:
+      - ${MEILISEARCH_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - MEILI_ENV=${MEILISEARCH_ENV:-production}
+      - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY:-}
+      - MEILI_NO_ANALYTICS=${MEILISEARCH_NO_ANALYTICS:-true}
+      - MEILI_HTTP_ADDR=${MEILISEARCH_HTTP_ADDR:-0.0.0.0:7700}
+    volumes:
+      - ${MEILISEARCH_DATA_DIR:-meilisearch-data}:/meili_data
+    networks:
+      default:
+        aliases:
+          - ${MEILISEARCH_NETWORK_ALIAS:-meilisearch}
+    deploy:
+      mode: ${MEILISEARCH_DEPLOY_MODE:-replicated}
+      replicas: ${MEILISEARCH_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${MEILISEARCH_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${MEILISEARCH_MEMORY_LIMIT:-512M}
