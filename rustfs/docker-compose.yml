@@ -1,0 +1,94 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  rustfs-data:
+    name: ${RUSTFS_DATA_VOLUME_NAME:-rustfs-data}
+    external: ${RUSTFS_DATA_VOLUME_EXTERNAL:-false}
+  rustfs-logs:
+    name: ${RUSTFS_LOGS_VOLUME_NAME:-rustfs-logs}
+    external: ${RUSTFS_LOGS_VOLUME_EXTERNAL:-false}
+
+services:
+  rustfs:
+    image: ${RUSTFS_IMAGE:-docker.io/rustfs/rustfs:latest}
+    command:
+      - /data
+    restart: ${RUSTFS_RESTART:-unless-stopped}
+    privileged: ${RUSTFS_PRIVILEGED:-false}
+    env_file:
+      - ${RUSTFS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-}
+      - RUSTFS_ADDRESS=${RUSTFS_ADDRESS:-:9000}
+      - RUSTFS_CONSOLE_ADDRESS=${RUSTFS_CONSOLE_ADDRESS:-:9001}
+      - RUSTFS_CONSOLE_ENABLE=${RUSTFS_CONSOLE_ENABLE:-true}
+      - RUSTFS_OBS_LOGGER_LEVEL=${RUSTFS_OBS_LOGGER_LEVEL:-error}
+      - RUSTFS_OBS_LOG_DIRECTORY=${RUSTFS_OBS_LOG_DIRECTORY:-/var/log/rustfs/}
+    volumes:
+      - ${RUSTFS_DATA_DIR:-rustfs-data}:${RUSTFS_DATA_CONTAINER_PATH:-/data}
+      - ${RUSTFS_LOGS_DIR:-rustfs-logs}:${RUSTFS_LOGS_CONTAINER_PATH:-/var/log/rustfs}
+    deploy:
+      mode: ${RUSTFS_DEPLOY_MODE:-replicated}
+      replicas: ${RUSTFS_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${RUSTFS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${RUSTFS_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${RUSTFS_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.routers.rustfs-s3.entrypoints=${RUSTFS_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.rustfs-s3.rule=Host(`${RUSTFS_S3_DOMAIN:-s3.example.com}`)"
+        - "traefik.http.routers.rustfs-s3.service=rustfs-s3"
+        - "traefik.http.routers.rustfs-s3.middlewares=${RUSTFS_MIDDLEWARES:-}"
+        - "traefik.http.routers.rustfs-s3.tls=${RUSTFS_TLS_ENABLED:-false}"
+        - "traefik.http.routers.rustfs-s3.tls.certresolver=${RUSTFS_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.rustfs-s3.loadbalancer.server.port=9000"
+        - "traefik.http.services.rustfs-s3.loadbalancer.passhostheader=true"
+        - "traefik.http.routers.rustfs-console.entrypoints=${RUSTFS_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.rustfs-console.rule=Host(`${RUSTFS_CONSOLE_DOMAIN:-s3.example.com}`) && (PathPrefix(`${RUSTFS_CONSOLE_PATH:-/rustfs/console}`) || PathPrefix(`/rustfs/admin`) || PathPrefix(`/browser`))"
+        - "traefik.http.routers.rustfs-console.service=rustfs-console"
+        - "traefik.http.routers.rustfs-console.middlewares=${RUSTFS_MIDDLEWARES:-}"
+        - "traefik.http.routers.rustfs-console.tls=${RUSTFS_TLS_ENABLED:-false}"
+        - "traefik.http.routers.rustfs-console.tls.certresolver=${RUSTFS_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.rustfs-console.loadbalancer.server.port=9001"
+        - "traefik.http.services.rustfs-console.loadbalancer.passhostheader=true"
+        - "homepage.group=${RUSTFS_HOMEPAGE_GROUP:-Storage}"
+        - "homepage.name=${RUSTFS_HOMEPAGE_NAME:-RustFS}"
+        - "homepage.icon=${RUSTFS_HOMEPAGE_ICON:-rustfs.png}"
+        - "homepage.href=${RUSTFS_CONSOLE_URL:-http://s3.example.com/rustfs/console}"
+        - "homepage.description=${RUSTFS_HOMEPAGE_DESCRIPTION:-S3-compatible object storage}"
+        - "homepage.siteMonitor=${RUSTFS_HOMEPAGE_SITEMONITOR:-http://rustfs:9001/rustfs/console/health}"
+    labels:
+      - "traefik.enable=${RUSTFS_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.routers.rustfs-s3.entrypoints=${RUSTFS_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.rustfs-s3.rule=Host(`${RUSTFS_S3_DOMAIN:-s3.example.com}`)"
+      - "traefik.http.routers.rustfs-s3.service=rustfs-s3"
+      - "traefik.http.routers.rustfs-s3.middlewares=${RUSTFS_MIDDLEWARES:-}"
+      - "traefik.http.routers.rustfs-s3.tls=${RUSTFS_TLS_ENABLED:-false}"
+      - "traefik.http.routers.rustfs-s3.tls.certresolver=${RUSTFS_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.rustfs-s3.loadbalancer.server.port=9000"
+      - "traefik.http.services.rustfs-s3.loadbalancer.passhostheader=true"
+      - "traefik.http.routers.rustfs-console.entrypoints=${RUSTFS_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.rustfs-console.rule=Host(`${RUSTFS_CONSOLE_DOMAIN:-s3.example.com}`) && (PathPrefix(`${RUSTFS_CONSOLE_PATH:-/rustfs/console}`) || PathPrefix(`/rustfs/admin`) || PathPrefix(`/browser`))"
+      - "traefik.http.routers.rustfs-console.service=rustfs-console"
+      - "traefik.http.routers.rustfs-console.middlewares=${RUSTFS_MIDDLEWARES:-}"
+      - "traefik.http.routers.rustfs-console.tls=${RUSTFS_TLS_ENABLED:-false}"
+      - "traefik.http.routers.rustfs-console.tls.certresolver=${RUSTFS_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.rustfs-console.loadbalancer.server.port=9001"
+      - "traefik.http.services.rustfs-console.loadbalancer.passhostheader=true"
+      - "homepage.group=${RUSTFS_HOMEPAGE_GROUP:-Storage}"
+      - "homepage.name=${RUSTFS_HOMEPAGE_NAME:-RustFS}"
+      - "homepage.icon=${RUSTFS_HOMEPAGE_ICON:-rustfs.png}"
+      - "homepage.href=${RUSTFS_CONSOLE_URL:-http://s3.example.com/rustfs/console}"
+      - "homepage.description=${RUSTFS_HOMEPAGE_DESCRIPTION:-S3-compatible object storage}"
+      - "homepage.siteMonitor=${RUSTFS_HOMEPAGE_SITEMONITOR:-http://rustfs:9001/rustfs/console/health}"

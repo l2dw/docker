@@ -1,0 +1,46 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  rustfs-data:
+    name: ${RUSTFS_DATA_VOLUME_NAME:-rustfs-data}
+    external: ${RUSTFS_DATA_VOLUME_EXTERNAL:-false}
+  rustfs-logs:
+    name: ${RUSTFS_LOGS_VOLUME_NAME:-rustfs-logs}
+    external: ${RUSTFS_LOGS_VOLUME_EXTERNAL:-false}
+
+services:
+  rustfs:
+    image: ${RUSTFS_IMAGE:-docker.io/rustfs/rustfs:latest}
+    command:
+      - /data
+    restart: ${RUSTFS_RESTART:-unless-stopped}
+    privileged: ${RUSTFS_PRIVILEGED:-false}
+    env_file:
+      - ${RUSTFS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-}
+      - RUSTFS_ADDRESS=${RUSTFS_ADDRESS:-:9000}
+      - RUSTFS_CONSOLE_ADDRESS=${RUSTFS_CONSOLE_ADDRESS:-:9001}
+      - RUSTFS_CONSOLE_ENABLE=${RUSTFS_CONSOLE_ENABLE:-true}
+      - RUSTFS_OBS_LOGGER_LEVEL=${RUSTFS_OBS_LOGGER_LEVEL:-error}
+      - RUSTFS_OBS_LOG_DIRECTORY=${RUSTFS_OBS_LOG_DIRECTORY:-/var/log/rustfs/}
+    volumes:
+      - ${RUSTFS_DATA_DIR:-rustfs-data}:${RUSTFS_DATA_CONTAINER_PATH:-/data}
+      - ${RUSTFS_LOGS_DIR:-rustfs-logs}:${RUSTFS_LOGS_CONTAINER_PATH:-/var/log/rustfs}
+    deploy:
+      mode: ${RUSTFS_DEPLOY_MODE:-replicated}
+      replicas: ${RUSTFS_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${RUSTFS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${RUSTFS_MEMORY_LIMIT:-1G}
