@@ -36,6 +36,7 @@ Startup runs `npm run cli db seed -- --swe` then `npm start` (skip seed when the
 | `LOGTO_ENDPOINT` / `LOGTO_ADMIN_ENDPOINT` | Public OIDC + Admin URLs (must match Traefik) |
 | `LOGTO_DB_URL` | External Postgres DSN (warns if `ChangeMe`) |
 | `LOGTO_ENV_FILE` | Compose dotenv (default `.env.example`) |
+| `APP_NAME` | Optional. Dokploy sets this; **not** in `.env.example`. Traefik router/service names default to `logto` / `logto-admin`; with `APP_NAME` they become `${APP_NAME}` / `${APP_NAME}-admin` so two Logto apps on the same Traefik do not collide. |
 
 Do not commit `logto/.env` or real secrets.
 

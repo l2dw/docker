@@ -161,6 +161,7 @@ MYAPP_ENV_FILE=.env.example
 - Always define `<PREFIX>_BASE_PATH`. If the app **supports** subpath (step 1b), default to `/<projet>` and align public URL vars; if not, default `/`. See § Base path.
 - Bind vs named volume: empty `MYAPP_DATA_DIR` → named volume default in compose.
 - Sync the same keys into **root** `.env.example` and `<projet>/.env.example`.
+- Do **not** add `APP_NAME` to `.env.example`. Dokploy often injects it; Traefik labels use `${APP_NAME:-<projet>}`.
 - GNU Make treats `$` in `.env` as Make syntax; prefer plain values. Compose hashes need `$$`.
 - Never commit `.env` (gitignored via `**/.*` except `*.example`).
 
@@ -275,18 +276,20 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 - Swarm: `traefik.enable=${MYAPP_TRAEFIK_LABELS_SWARM_ENABLE:-true}` under `deploy.labels`
 - Compose: `traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}` under service `labels`
 
+**`APP_NAME` (Traefik names only).** Hard-coded `routers.myapp` / `services.myapp` collide when several Dokploy apps share Traefik. Interpolate **every** Traefik router and Traefik service name as `${APP_NAME:-<projet>}`. Extra HTTP listeners append a suffix (concatenation, not nested `${}`): `${APP_NAME:-logto}-admin`. Keep the Compose YAML service key as `myapp` / `logto` (overlay DNS, `homepage.siteMonitor`). Do **not** add `APP_NAME` to `.env.example`. Do not put `APP_NAME` on `<projet>-setup` NOTIFY_VARS.
+
 ```yaml
 # deploy.labels (Swarm)
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
 # service labels (Compose) — same keys, but:
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-- "traefik.http.services.myapp.loadbalancer.server.port=8080"
-- "traefik.http.routers.myapp.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
-- "traefik.http.routers.myapp.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
-- "traefik.http.routers.myapp.service=myapp"
-- "traefik.http.routers.myapp.middlewares=${MYAPP_MIDDLEWARES:-}"
-- "traefik.http.routers.myapp.tls=${MYAPP_TLS_ENABLED:-false}"
-- "traefik.http.routers.myapp.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
+- "traefik.http.services.${APP_NAME:-myapp}.loadbalancer.server.port=8080"
+- "traefik.http.routers.${APP_NAME:-myapp}.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
+- "traefik.http.routers.${APP_NAME:-myapp}.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
+- "traefik.http.routers.${APP_NAME:-myapp}.service=${APP_NAME:-myapp}"
+- "traefik.http.routers.${APP_NAME:-myapp}.middlewares=${MYAPP_MIDDLEWARES:-}"
+- "traefik.http.routers.${APP_NAME:-myapp}.tls=${MYAPP_TLS_ENABLED:-false}"
+- "traefik.http.routers.${APP_NAME:-myapp}.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
 - "homepage.group=${MYAPP_HOMEPAGE_GROUP:-}"
 - "homepage.name=${MYAPP_HOMEPAGE_NAME:-Myapp}"
 - "homepage.icon=${MYAPP_HOMEPAGE_ICON:-myapp.png}"

@@ -93,10 +93,10 @@ Details and label examples: [conventions.md](conventions.md) (§ Base path).
 |-------|------|---------|
 | Directory / branch / stack | kebab-case, `[a-z0-9-]+` | `myapp` |
 | Env prefix | `SCREAMING_SNAKE` + `_` | `MYAPP_` |
-| Compose services | `<projet>` or `<projet>-<role>` | `myapp`, `myapp-db` |
-| Router/service Traefik | same as compose service | `myapp` |
+| Compose services | YAML key `<projet>` or `<projet>-<role>` (overlay DNS). Do **not** rename the Compose key to `${APP_NAME}` | `myapp`, `myapp-db` |
+| Router/service Traefik | `${APP_NAME:-<projet>}` (and `${APP_NAME:-<projet>}-<role>` for extra HTTP listeners). Dokploy often injects `APP_NAME` | `traefik.http.routers.${APP_NAME:-myapp}` |
 
-Do not reuse `tpl` / `TPL` in generated files.
+Do not reuse `tpl` / `TPL` in generated files. Do **not** put `APP_NAME` in `.env.example` (Dokploy / the host env supplies it; Compose default is `<projet>`).
 
 ### 3. Branche dédiée depuis `master`
 
@@ -139,6 +139,8 @@ Make targets use `docker-compose.yml`. Use `compose.yml` when Traefik/Homepage m
 Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` (unquoted). Pairing: **`dokploy-network` (or empty name → that default) ⇒ `DEFAULT_NETWORK_EXTERNAL=true`**; any other name ⇒ `false`. Do not nest interpolation to derive one from the other. `<projet>-setup` must upsert `DEFAULT_NETWORK_EXTERNAL` to match `DEFAULT_NETWORK_NAME`. No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
 
 If step **1b** found a supported base path **and** labels are used: include the vendor env in `environment:` and use `<PREFIX>_BASE_PATH` in Traefik/Homepage labels (labeled file only).
+
+Traefik **router and Traefik service** names (not the Compose YAML service key) must be `${APP_NAME:-<projet>}` so two Dokploy apps of the same template do not collide on the shared Traefik. Extra listeners suffix the same prefix (`${APP_NAME:-logto}-admin`). `homepage.siteMonitor` still uses the Compose DNS name (`http://myapp:8080`). See [conventions.md](conventions.md) (§ Traefik).
 
 ### 5b. Per-service compose (plusieurs services)
 
@@ -199,6 +201,7 @@ Rules:
 - Root `.env.example` — same project keys (Make exports root `.env` for `stack deploy`)
 - Include `DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true` (because the default name is `dokploy-network`; if NAME is not `dokploy-network`, set EXTERNAL=`false`), `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
 - Include `<PREFIX>_ENV_FILE=.env.example` (or per-role `*_SERVER_ENV_FILE` / `*_AGENT_ENV_FILE`, etc.)
+- **Do not** add `APP_NAME` to root or project `.env.example`. Traefik labels default it in compose (`${APP_NAME:-<projet>}`). Dokploy creates this variable.
 - Placeholders only (`ChangeMe`, empty secrets). Never copy real passwords.
 
 ### 7. Cibles Makefile
@@ -230,6 +233,8 @@ Short `<projet>/README.md`: what the stack is, `make <projet>-setup`, `make <pro
 Include a short **Base path** note: supported or not, vendor env name if any. If supported, default is `<PREFIX>_BASE_PATH=/<projet>` (aligned public URL); if not, `/`.
 
 Document `env_file` vars (`*_ENV_FILE`), that `environment:` overrides the file, and that Swarm uses Make export + `environment:` (not Compose `env_file`).
+
+When Traefik labels are used, note that `APP_NAME` (Dokploy) scopes router/service names; it is **not** listed in `.env.example`.
 
 ### 8b. Symlinks racine (README + compose)
 
