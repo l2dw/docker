@@ -83,6 +83,11 @@ karakeep-setup: ## Ensure karakeep/.env, generate secrets, warn on example.com /
 	if [ -z "$$oa" ]; then \
 		echo "Warning: KARAKEEP_OPENAI_API_KEY is empty — automatic tagging is disabled until you set an OpenAI-compatible key." >&2; \
 	fi; \
+	meili=$$(file_get "$$envf" KARAKEEP_MEILI_ADDR); \
+	[ -n "$$meili" ] || meili=$$(file_get "$$root" KARAKEEP_MEILI_ADDR); \
+	if [ -z "$$meili" ]; then \
+		echo "Warning: KARAKEEP_MEILI_ADDR is empty — search is disabled. Point it at an existing Meilisearch (e.g. http://meilisearch:7700)." >&2; \
+	fi; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Karakeep env OK ($$envf)."
 .karakeep-setup: karakeep-setup
