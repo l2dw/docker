@@ -1,0 +1,39 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  redis-data:
+    name: ${REDIS_DATA_VOLUME_NAME:-redis-data}
+    external: ${REDIS_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  redis:
+    image: ${REDIS_IMAGE:-docker.io/library/redis:7-alpine}
+    restart: ${REDIS_RESTART:-unless-stopped}
+    privileged: ${REDIS_PRIVILEGED:-false}
+    env_file:
+      - ${REDIS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD}
+    volumes:
+      - ${REDIS_DATA_DIR:-redis-data}:${REDIS_DATA_CONTAINER_PATH:-/data}
+    deploy:
+      mode: ${REDIS_DEPLOY_MODE:-replicated}
+      replicas: ${REDIS_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${REDIS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY_LIMIT:-256M}
