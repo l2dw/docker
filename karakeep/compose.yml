@@ -1,0 +1,69 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  karakeep-data:
+    name: ${KARAKEEP_DATA_VOLUME_NAME:-karakeep-data}
+    external: ${KARAKEEP_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  karakeep-web:
+    image: ${KARAKEEP_IMAGE:-ghcr.io/karakeep-app/karakeep:release}
+    restart: ${KARAKEEP_RESTART:-unless-stopped}
+    privileged: ${KARAKEEP_PRIVILEGED:-false}
+    env_file:
+      - ${KARAKEEP_WEB_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - DATA_DIR=${KARAKEEP_DATA_CONTAINER_PATH:-/data}
+      - NEXTAUTH_URL=${KARAKEEP_NEXTAUTH_URL:-http://karakeep.example.com}
+      - NEXTAUTH_SECRET=${KARAKEEP_NEXTAUTH_SECRET:-}
+      - BROWSER_WEB_URL=${KARAKEEP_BROWSER_WEB_URL:-http://karakeep-chrome:9222}
+      - DISABLE_SIGNUPS=${KARAKEEP_DISABLE_SIGNUPS:-false}
+      - OPENAI_API_KEY=${KARAKEEP_OPENAI_API_KEY:-}
+    volumes:
+      - ${KARAKEEP_DATA_DIR:-karakeep-data}:${KARAKEEP_DATA_CONTAINER_PATH:-/data}
+    depends_on:
+      - karakeep-chrome
+    deploy:
+      mode: ${KARAKEEP_DEPLOY_MODE:-replicated}
+      replicas: ${KARAKEEP_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${KARAKEEP_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${KARAKEEP_WEB_MEMORY_LIMIT:-1G}
+
+  karakeep-chrome:
+    image: ${KARAKEEP_CHROME_IMAGE:-ghcr.io/karakeep-app/karakeep-chrome:release}
+    restart: ${KARAKEEP_RESTART:-unless-stopped}
+    privileged: ${KARAKEEP_PRIVILEGED:-false}
+    init: true
+    env_file:
+      - ${KARAKEEP_CHROME_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    command:
+      - --disable-gpu
+      - --disable-dev-shm-usage
+      - --hide-scrollbars
+      - --disable-blink-features=AutomationControlled
+      - --window-size=1440,900
+    deploy:
+      mode: ${KARAKEEP_DEPLOY_MODE:-replicated}
+      replicas: ${KARAKEEP_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${KARAKEEP_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${KARAKEEP_CHROME_MEMORY_LIMIT:-1G}
