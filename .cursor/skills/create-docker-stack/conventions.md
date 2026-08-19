@@ -90,6 +90,30 @@ Rules:
 - Do **not** add `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` to service `environment:` unless the user explicitly wants proxy passthrough (root `.env` may still define them for other tools).
 - Prefer Compose **`env_file` + `environment:`** together (see § Env file). Do not use Swarm `configs:` as a substitute for dotenv injection.
 
+## Redis (external)
+
+When the **application** can use Redis (cache, broker, sessions), treat it like external Postgres: join `dokploy-network` and point at the existing Redis, default hostname `dokploy-redis`.
+
+Do **not** add a Redis container to the app stack unless the user asked. Do **not** add Redis env vars for apps that never mention Redis.
+
+```yaml
+environment:
+  - AUTHENTIK_REDIS__HOST=${AUTHENTIK_REDIS__HOST:-dokploy-redis}
+  - AUTHENTIK_REDIS__PORT=${AUTHENTIK_REDIS__PORT:-6379}
+  - AUTHENTIK_REDIS__PASSWORD=${AUTHENTIK_REDIS__PASSWORD:-}
+# or a single URL when that is the vendor contract:
+  - REDIS_URL=${MYAPP_REDIS_URL:-}
+```
+
+| Rule | Detail |
+|------|--------|
+| Default host | `dokploy-redis` (Dokploy-style alias on the Redis stack, not on this app) |
+| Default port | `6379` — do not publish Redis on the app stack |
+| Optional Redis | Empty `*_REDIS_URL` / empty host = feature off; document in README |
+| Required Redis | Host default `dokploy-redis`; password `ChangeMe` or empty; `<projet>-setup` warns, does **not** generate Redis secrets |
+| Vendor names | Use documented keys (`REDIS_URL`, `AUTHENTIK_REDIS__HOST`, …). Do not invent a second URL *and* split host unless the vendor uses both |
+| In-stack Redis | Only if the user asked: service `<projet>-redis`, no Traefik labels, interpolable host so they can switch to `dokploy-redis` |
+
 ## Env file (`env_file` + `environment`)
 
 Always declare both on app services (and on each `<role>-compose.yml` service):
@@ -156,12 +180,18 @@ MYAPP_HOMEPAGE_ICON=myapp.png
 MYAPP_HOMEPAGE_HREF=http://myapp.example.com/myapp
 # Compose env_file (path relative to <projet>/). environment: overrides the file.
 MYAPP_ENV_FILE=.env.example
+# Redis — only if the app can use it (step 1c). External by default; no redis service in the app stack.
+# MYAPP_REDIS_HOST=dokploy-redis
+# MYAPP_REDIS_PORT=6379
+# MYAPP_REDIS_PASSWORD=ChangeMe
+# MYAPP_REDIS_URL=
 ```
 
 - Always define `<PREFIX>_BASE_PATH`. If the app **supports** subpath (step 1b), default to `/<projet>` and align public URL vars; if not, default `/`. See § Base path.
 - Bind vs named volume: empty `MYAPP_DATA_DIR` → named volume default in compose.
 - Sync the same keys into **root** `.env.example` and `<projet>/.env.example`.
 - Do **not** add `APP_NAME` to `.env.example`. Dokploy often injects it; Traefik labels use `${APP_NAME:-<projet>}`.
+- Redis: only when step **1c** applies. See § Redis.
 - GNU Make treats `$` in `.env` as Make syntax; prefer plain values. Compose hashes need `$$`.
 - Never commit `.env` (gitignored via `**/.*` except `*.example`).
 
