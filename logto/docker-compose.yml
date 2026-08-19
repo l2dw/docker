@@ -1,0 +1,84 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+services:
+  logto:
+    image: ${LOGTO_IMAGE:-ghcr.io/logto-io/logto:latest}
+    restart: ${LOGTO_RESTART:-unless-stopped}
+    privileged: ${LOGTO_PRIVILEGED:-false}
+    entrypoint:
+      - sh
+      - -c
+      - npm run cli db seed -- --swe && npm start
+    env_file:
+      - ${LOGTO_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - TRUST_PROXY_HEADER=${LOGTO_TRUST_PROXY_HEADER:-1}
+      - DB_URL=${LOGTO_DB_URL:-postgres://logto:ChangeMe@dokploy-postgresql:5432/logto}
+      - PORT=${LOGTO_PORT:-3001}
+      - ADMIN_PORT=${LOGTO_ADMIN_PORT:-3002}
+      - ENDPOINT=${LOGTO_ENDPOINT:-http://logto.example.com}
+      - ADMIN_ENDPOINT=${LOGTO_ADMIN_ENDPOINT:-http://admin.logto.example.com}
+    deploy:
+      mode: ${LOGTO_DEPLOY_MODE:-replicated}
+      replicas: ${LOGTO_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${LOGTO_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${LOGTO_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${LOGTO_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.routers.logto.entrypoints=${LOGTO_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.logto.rule=Host(`${LOGTO_DOMAIN:-logto.example.com}`)"
+        - "traefik.http.routers.logto.service=logto"
+        - "traefik.http.routers.logto.middlewares=${LOGTO_MIDDLEWARES:-}"
+        - "traefik.http.routers.logto.tls=${LOGTO_TLS_ENABLED:-false}"
+        - "traefik.http.routers.logto.tls.certresolver=${LOGTO_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.logto.loadbalancer.server.port=3001"
+        - "traefik.http.services.logto.loadbalancer.passhostheader=true"
+        - "traefik.http.routers.logto-admin.entrypoints=${LOGTO_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.logto-admin.rule=Host(`${LOGTO_ADMIN_DOMAIN:-admin.logto.example.com}`)"
+        - "traefik.http.routers.logto-admin.service=logto-admin"
+        - "traefik.http.routers.logto-admin.middlewares=${LOGTO_MIDDLEWARES:-}"
+        - "traefik.http.routers.logto-admin.tls=${LOGTO_TLS_ENABLED:-false}"
+        - "traefik.http.routers.logto-admin.tls.certresolver=${LOGTO_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.logto-admin.loadbalancer.server.port=3002"
+        - "traefik.http.services.logto-admin.loadbalancer.passhostheader=true"
+        - "homepage.group=${LOGTO_HOMEPAGE_GROUP:-Identity}"
+        - "homepage.name=${LOGTO_HOMEPAGE_NAME:-Logto}"
+        - "homepage.icon=${LOGTO_HOMEPAGE_ICON:-logto.png}"
+        - "homepage.href=${LOGTO_ADMIN_ENDPOINT:-http://admin.logto.example.com}"
+        - "homepage.description=${LOGTO_HOMEPAGE_DESCRIPTION:-OIDC identity (Admin Console)}"
+        - "homepage.siteMonitor=${LOGTO_HOMEPAGE_SITEMONITOR:-http://logto:3002}"
+    labels:
+      - "traefik.enable=${LOGTO_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.routers.logto.entrypoints=${LOGTO_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.logto.rule=Host(`${LOGTO_DOMAIN:-logto.example.com}`)"
+      - "traefik.http.routers.logto.service=logto"
+      - "traefik.http.routers.logto.middlewares=${LOGTO_MIDDLEWARES:-}"
+      - "traefik.http.routers.logto.tls=${LOGTO_TLS_ENABLED:-false}"
+      - "traefik.http.routers.logto.tls.certresolver=${LOGTO_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.logto.loadbalancer.server.port=3001"
+      - "traefik.http.services.logto.loadbalancer.passhostheader=true"
+      - "traefik.http.routers.logto-admin.entrypoints=${LOGTO_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.logto-admin.rule=Host(`${LOGTO_ADMIN_DOMAIN:-admin.logto.example.com}`)"
+      - "traefik.http.routers.logto-admin.service=logto-admin"
+      - "traefik.http.routers.logto-admin.middlewares=${LOGTO_MIDDLEWARES:-}"
+      - "traefik.http.routers.logto-admin.tls=${LOGTO_TLS_ENABLED:-false}"
+      - "traefik.http.routers.logto-admin.tls.certresolver=${LOGTO_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.logto-admin.loadbalancer.server.port=3002"
+      - "traefik.http.services.logto-admin.loadbalancer.passhostheader=true"
+      - "homepage.group=${LOGTO_HOMEPAGE_GROUP:-Identity}"
+      - "homepage.name=${LOGTO_HOMEPAGE_NAME:-Logto}"
+      - "homepage.icon=${LOGTO_HOMEPAGE_ICON:-logto.png}"
+      - "homepage.href=${LOGTO_ADMIN_ENDPOINT:-http://admin.logto.example.com}"
+      - "homepage.description=${LOGTO_HOMEPAGE_DESCRIPTION:-OIDC identity (Admin Console)}"
+      - "homepage.siteMonitor=${LOGTO_HOMEPAGE_SITEMONITOR:-http://logto:3002}"
