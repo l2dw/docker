@@ -4,10 +4,11 @@ MEILISEARCH_SERVICES_SHORT := meilisearch
 MEILISEARCH_ENV := $(MEILISEARCH_STACK_NAME)/.env
 MEILISEARCH_ENV_EXAMPLE := $(MEILISEARCH_STACK_NAME)/.env.example
 MEILISEARCH_SECRET_VARS := MEILISEARCH_MASTER_KEY
+MEILISEARCH_NOTIFY_VARS := MEILISEARCH_DOMAIN MEILISEARCH_APP_URL
 
 meilisearch-pull-images: ## Pull images for the meilisearch stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(MEILISEARCH_STACK_NAME)
-meilisearch-setup: ## Ensure meilisearch/.env, generate master key, sync DEFAULT_NETWORK_EXTERNAL
+meilisearch-setup: ## Ensure meilisearch/.env, generate master key, warn on example.com
 	@set -e; \
 	envf='$(MEILISEARCH_ENV)'; \
 	exf='$(MEILISEARCH_ENV_EXAMPLE)'; \
@@ -28,6 +29,8 @@ meilisearch-setup: ## Ensure meilisearch/.env, generate master key, sync DEFAULT
 	make_get() { \
 		case $$1 in \
 			MEILISEARCH_MASTER_KEY) printf '%s' '$(MEILISEARCH_MASTER_KEY)' ;; \
+			MEILISEARCH_DOMAIN) printf '%s' '$(MEILISEARCH_DOMAIN)' ;; \
+			MEILISEARCH_APP_URL) printf '%s' '$(MEILISEARCH_APP_URL)' ;; \
 		esac; \
 	}; \
 	for k in $(MEILISEARCH_SECRET_VARS); do \
@@ -44,6 +47,26 @@ meilisearch-setup: ## Ensure meilisearch/.env, generate master key, sync DEFAULT
 			echo "Generated $$k → $$envf (and $$root)."; \
 		fi; \
 	done; \
+	missing=0; \
+	for k in $(MEILISEARCH_NOTIFY_VARS); do \
+		from_make=$$(make_get "$$k"); \
+		v=$$from_make; \
+		[ -n "$$v" ] || v=$$(file_get "$$envf" "$$k"); \
+		[ -n "$$v" ] || v=$$(file_get "$$root" "$$k"); \
+		if [ -z "$$v" ]; then \
+			echo "Missing required $$k — set it in $$envf or pass $$k=... on the make command line." >&2; \
+			missing=1; \
+			continue; \
+		fi; \
+		if [ -n "$$from_make" ]; then \
+			upsert "$$envf" "$$k" "$$from_make"; \
+			if [ -n "$$root" ]; then upsert "$$root" "$$k" "$$from_make"; fi; \
+			echo "Saved $$k → $$envf (and $$root)."; \
+		fi; \
+		case "$$v" in \
+			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
+		esac; \
+	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
 	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
 	[ -n "$$net" ] || net='dokploy-network'; \
@@ -54,6 +77,7 @@ meilisearch-setup: ## Ensure meilisearch/.env, generate master key, sync DEFAULT
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
 	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Meilisearch env OK ($$envf)."
 .meilisearch-setup: meilisearch-setup
 meilisearch-stack-up: .meilisearch-setup ## Deploy the meilisearch stack
