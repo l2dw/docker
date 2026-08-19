@@ -1,0 +1,67 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  keycloak-data:
+    name: ${KEYCLOAK_DATA_VOLUME_NAME:-keycloak-data}
+    external: ${KEYCLOAK_DATA_VOLUME_EXTERNAL:-false}
+  keycloak-themes:
+    name: ${KEYCLOAK_THEMES_VOLUME_NAME:-keycloak-themes}
+    external: ${KEYCLOAK_THEMES_VOLUME_EXTERNAL:-false}
+  keycloak-providers:
+    name: ${KEYCLOAK_PROVIDERS_VOLUME_NAME:-keycloak-providers}
+    external: ${KEYCLOAK_PROVIDERS_VOLUME_EXTERNAL:-false}
+  keycloak-conf:
+    name: ${KEYCLOAK_CONF_VOLUME_NAME:-keycloak-conf}
+    external: ${KEYCLOAK_CONF_VOLUME_EXTERNAL:-false}
+  keycloak-logs:
+    name: ${KEYCLOAK_LOGS_VOLUME_NAME:-keycloak-logs}
+    external: ${KEYCLOAK_LOGS_VOLUME_EXTERNAL:-false}
+
+services:
+  keycloak:
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:latest}
+    command: start
+    restart: ${KEYCLOAK_RESTART:-unless-stopped}
+    privileged: ${KEYCLOAK_PRIVILEGED:-false}
+    env_file:
+      - ${KEYCLOAK_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD:-}
+      - KC_DB=${KEYCLOAK_DB:-postgres}
+      - KC_DB_URL=${KEYCLOAK_DB_URL:-jdbc:postgresql://dokploy-postgresql:5432/keycloak}
+      - KC_DB_USERNAME=${KEYCLOAK_DB_USERNAME:-keycloak}
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD:-}
+      - KC_HOSTNAME=${KEYCLOAK_APP_URL:-http://example.com/auth}
+      - KC_HTTP_RELATIVE_PATH=${KEYCLOAK_BASE_PATH:-/auth}
+      - KC_HTTP_ENABLED=${KEYCLOAK_HTTP_ENABLED:-true}
+      - KC_PROXY_HEADERS=${KEYCLOAK_PROXY_HEADERS:-xforwarded}
+      - KC_HOSTNAME_STRICT=${KEYCLOAK_HOSTNAME_STRICT:-true}
+      - KC_CACHE=${KEYCLOAK_CACHE:-local}
+      - KC_HEALTH_ENABLED=${KEYCLOAK_HEALTH_ENABLED:-true}
+      - KC_METRICS_ENABLED=${KEYCLOAK_METRICS_ENABLED:-false}
+      - KC_LOG_LEVEL=${KEYCLOAK_LOG_LEVEL:-info}
+      - KC_LOG=${KEYCLOAK_LOG:-file,console}
+      - KC_LOG_FILE=${KEYCLOAK_LOG_FILE:-/opt/keycloak/logs/keycloak.log}
+    volumes:
+      - ${KEYCLOAK_DATA_DIR:-keycloak-data}:${KEYCLOAK_DATA_CONTAINER_PATH:-/opt/keycloak/data}
+      - ${KEYCLOAK_THEMES_DIR:-keycloak-themes}:${KEYCLOAK_THEMES_CONTAINER_PATH:-/opt/keycloak/themes}
+      - ${KEYCLOAK_PROVIDERS_DIR:-keycloak-providers}:${KEYCLOAK_PROVIDERS_CONTAINER_PATH:-/opt/keycloak/providers}
+      - ${KEYCLOAK_CONF_DIR:-keycloak-conf}:${KEYCLOAK_CONF_CONTAINER_PATH:-/opt/keycloak/conf}
+      - ${KEYCLOAK_LOGS_DIR:-keycloak-logs}:${KEYCLOAK_LOGS_CONTAINER_PATH:-/opt/keycloak/logs}
+    deploy:
+      mode: ${KEYCLOAK_DEPLOY_MODE:-replicated}
+      replicas: ${KEYCLOAK_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${KEYCLOAK_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${KEYCLOAK_MEMORY_LIMIT:-1G}
