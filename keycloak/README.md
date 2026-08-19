@@ -4,6 +4,8 @@ Official [Keycloak](https://www.keycloak.org/server/containers) (`quay.io/keyclo
 
 Postgres is **external** — this stack has no `keycloak-db` service. Point `KEYCLOAK_DB_URL` at a database that already exists on the overlay (default hostname `dokploy-postgresql`). Create the `keycloak` role/database before the first start.
 
+`dokploy-network` is **external** (`DEFAULT_NETWORK_EXTERNAL=true`). Any other `DEFAULT_NETWORK_NAME` → `false`. `make keycloak-setup` keeps those two keys in sync.
+
 `.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${KEYCLOAK_ENV_FILE:-.env.example}`; production: `KEYCLOAK_ENV_FILE=.env`. `environment:` wins on key conflicts.
 
 ```sh

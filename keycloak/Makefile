@@ -70,6 +70,16 @@ keycloak-setup: ## Ensure keycloak/.env, generate admin/DB passwords, warn on AP
 			KEYCLOAK_DB_URL:*keycloak-db*) echo "Warning: $$k still points at removed service keycloak-db — set an external JDBC URL." >&2 ;; \
 		esac; \
 	done; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='dokploy-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Keycloak env OK ($$envf)."
 .keycloak-setup: keycloak-setup
