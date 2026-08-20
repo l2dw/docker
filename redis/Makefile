@@ -7,7 +7,7 @@ REDIS_SECRET_VARS := REDIS_PASSWORD
 
 redis-pull-images: ## Pull images for the redis stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(REDIS_STACK_NAME)
-redis-setup: ## Ensure redis/.env, generate REDIS_PASSWORD if empty
+redis-setup: ## Ensure redis/.env, generate REDIS_PASSWORD if empty, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(REDIS_ENV)'; \
 	exf='$(REDIS_ENV_EXAMPLE)'; \
@@ -44,6 +44,16 @@ redis-setup: ## Ensure redis/.env, generate REDIS_PASSWORD if empty
 			echo "Generated $$k → $$envf (and $$root)."; \
 		fi; \
 	done; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='dokploy-network'; \
+	case "$$net" in \
+		''|dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
 	echo "redis env OK ($$envf)."
 .redis-setup: redis-setup
 redis-stack-up: .redis-setup ## Deploy the redis stack

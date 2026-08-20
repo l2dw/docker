@@ -1,7 +1,7 @@
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
 
 volumes:
   redis-data:

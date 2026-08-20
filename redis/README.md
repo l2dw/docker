@@ -21,7 +21,7 @@ On the `redis` branch, root `README.md` / `compose.yml` / `docker-compose.yml` a
 
 ## Auth and persistence
 
-`make redis-setup` writes `REDIS_PASSWORD` (openssl hex) into `redis/.env` and the root `.env` if empty. The official image **ignores** `REDIS_PASSWORD` / `REDIS_ARGS` as server config; Compose interpolates the password onto:
+`make redis-setup` writes `REDIS_PASSWORD` (openssl hex) into `redis/.env` and the root `.env` if empty, and sets `DEFAULT_NETWORK_EXTERNAL` (`true` iff `DEFAULT_NETWORK_NAME` is `dokploy-network` or empty — join the existing overlay). The official image **ignores** `REDIS_PASSWORD` / `REDIS_ARGS` as server config; Compose interpolates the password onto:
 
 `redis-server --appendonly yes --requirepass <REDIS_PASSWORD>`
 
@@ -56,5 +56,6 @@ make redis-compose-logs
 | `REDIS_ENV_FILE` | Compose dotenv (default `.env.example`) |
 | `REDIS_IMAGE` | Default `docker.io/library/redis:7-alpine` |
 | `REDIS_NETWORK_ALIAS` | Overlay DNS alias (default `dokploy-redis`) |
+| `DEFAULT_NETWORK_NAME` / `DEFAULT_NETWORK_EXTERNAL` | Default join `dokploy-network` with `external=true` |
 
 Do not commit `redis/.env` or real passwords.

@@ -136,7 +136,7 @@ Then rewrite files to match [conventions.md](conventions.md) (step 5–7): label
 
 Make targets use `docker-compose.yml`. Use `compose.yml` when Traefik/Homepage must not see the service (unlabeled copy, or the symlink when unlabeled). Apply step **5c** (`env_file` + `environment:`) on every app service in these files.
 
-Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` (unquoted). No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do not nest interpolation. Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
+Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` (unquoted). Pairing: **`dokploy-network` (or empty name → that default) ⇒ `DEFAULT_NETWORK_EXTERNAL=true`**; any other name ⇒ `false`. Do not nest interpolation to derive one from the other. `<projet>-setup` must upsert `DEFAULT_NETWORK_EXTERNAL` to match `DEFAULT_NETWORK_NAME`. No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
 
 If step **1b** found a supported base path **and** labels are used: include the vendor env in `environment:` and use `<PREFIX>_BASE_PATH` in Traefik/Homepage labels (labeled file only).
 
@@ -197,7 +197,7 @@ Rules:
 
 - `<projet>/.env.example` — all `<PREFIX>_*` keys
 - Root `.env.example` — same project keys (Make exports root `.env` for `stack deploy`)
-- Include `DEFAULT_NETWORK_NAME`, `DEFAULT_NETWORK_EXTERNAL=false`, `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
+- Include `DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true` (because the default name is `dokploy-network`; if NAME is not `dokploy-network`, set EXTERNAL=`false`), `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
 - Include `<PREFIX>_ENV_FILE=.env.example` (or per-role `*_SERVER_ENV_FILE` / `*_AGENT_ENV_FILE`, etc.)
 - Placeholders only (`ChangeMe`, empty secrets). Never copy real passwords.
 
@@ -213,7 +213,7 @@ Required targets:
 
 | Target | Role |
 |--------|------|
-| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing secrets, warn on placeholder domains / incomplete OAuth. **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
+| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing secrets, warn on placeholder domains / incomplete OAuth, **sync `DEFAULT_NETWORK_EXTERNAL`** (`true` iff network name is `dokploy-network` or empty). **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
 | `.<projet>-setup` | Thin target that depends on `<projet>-setup` (used as prerequisite) |
 | `<projet>-stack-up\|down\|recreate\|upgrade\|logs` | Swarm |
 | `<projet>-compose-up\|down\|restart\|logs` | Compose |

@@ -27,7 +27,7 @@ Do not maintain a duplicate unlabeled file. Root symlinks still point at `<proje
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
 
 volumes:
   myapp_data:
@@ -83,7 +83,8 @@ Rules:
 - Do not mount the Docker socket unless the app needs it.
 - Stateful services: `replicas: 1`. `mode: global` ignores replicas.
 - Do **not** emit Compose `x-*` keys (`x-pull-policy`, etc.).
-- Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` — never `"${…}"`.
+- Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` — never `"${…}"`.
+- Overlay pairing (two keys; **no nested** `${A:-${B}}`): compose defaults `DEFAULT_NETWORK_NAME` → `dokploy-network` and `DEFAULT_NETWORK_EXTERNAL` → `true`. If NAME is `dokploy-network` or empty, EXTERNAL must be `true` (join the existing overlay). Any other NAME → EXTERNAL `false`. `<projet>-setup` upserts EXTERNAL to match NAME.
 - Pull images via Make (`<projet>-pull-images` / `*-stack-upgrade`), not `pull_policy` / `x-pull-policy` (Swarm rejects `pull_policy`).
 - Do **not** add `networks.default.aliases` by default. The Compose service name is already the DNS name. Add aliases **only** when the user asks, or when a stable alternate hostname is required (Dokploy-style: e.g. `dokploy-postgresql`, `dokploy-redis` for other services to resolve).
 - Do **not** add `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` to service `environment:` unless the user explicitly wants proxy passthrough (root `.env` may still define them for other tools).
@@ -130,7 +131,7 @@ Typical keys:
 
 ```
 DEFAULT_NETWORK_NAME=dokploy-network
-DEFAULT_NETWORK_EXTERNAL=false
+DEFAULT_NETWORK_EXTERNAL=true
 MYAPP_IMAGE=
 MYAPP_RESTART=unless-stopped
 MYAPP_PRIVILEGED=false
@@ -219,7 +220,7 @@ MYAPP_STACK_NAME := myapp
 MYAPP_SERVICES_SHORT := myapp
 myapp-pull-images: ## Pull images for the myapp stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(MYAPP_STACK_NAME)
-myapp-setup: ## Ensure <projet>/.env, generate missing secrets, warn on required empties
+myapp-setup: ## Ensure <projet>/.env, generate missing secrets, sync DEFAULT_NETWORK_EXTERNAL to NAME
 	@echo "Setting up the myapp stack..."
 .myapp-setup: myapp-setup
 myapp-stack-up: .myapp-setup ## Deploy the myapp stack
