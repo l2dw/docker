@@ -1,0 +1,99 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  elasticsearch-data:
+    name: ${ELASTICSEARCH_DATA_VOLUME_NAME:-elasticsearch-data}
+    external: ${ELASTICSEARCH_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  elasticsearch:
+    image: ${ELASTICSEARCH_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:8.17.4}
+    restart: ${ELASTICSEARCH_RESTART:-unless-stopped}
+    privileged: ${ELASTICSEARCH_PRIVILEGED:-false}
+    env_file:
+      - ${ELASTICSEARCH_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - discovery.type=${ELASTICSEARCH_DISCOVERY_TYPE:-single-node}
+      - cluster.name=${ELASTICSEARCH_CLUSTER_NAME:-elasticsearch}
+      - node.name=${ELASTICSEARCH_NODE_NAME:-elasticsearch}
+      - xpack.security.enabled=${ELASTICSEARCH_XPACK_SECURITY_ENABLED:-false}
+      - xpack.security.http.ssl.enabled=${ELASTICSEARCH_XPACK_SECURITY_HTTP_SSL_ENABLED:-false}
+      - xpack.ml.enabled=${ELASTICSEARCH_XPACK_ML_ENABLED:-false}
+      - bootstrap.memory_lock=${ELASTICSEARCH_BOOTSTRAP_MEMORY_LOCK:-false}
+      - index.number_of_shards=${ELASTICSEARCH_INDEX_NUMBER_OF_SHARDS:-1}
+      - index.number_of_replicas=${ELASTICSEARCH_INDEX_NUMBER_OF_REPLICAS:-0}
+      - ES_JAVA_OPTS=${ELASTICSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
+    volumes:
+      - ${ELASTICSEARCH_DATA_DIR:-elasticsearch-data}:/usr/share/elasticsearch/data
+    networks:
+      default:
+        aliases:
+          - ${ELASTICSEARCH_NETWORK_ALIAS:-dokploy-elasticsearch}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS "http://127.0.0.1:9200/_cluster/health?wait_for_status=green&timeout=5s" >/dev/null
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+    deploy:
+      mode: ${ELASTICSEARCH_DEPLOY_MODE:-replicated}
+      replicas: ${ELASTICSEARCH_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${ELASTICSEARCH_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${ELASTICSEARCH_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${ELASTICSEARCH_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.middlewares.elasticsearch-stripprefix.stripprefix.prefixes=${ELASTICSEARCH_BASE_PATH:-/elasticsearch}"
+        - "traefik.http.routers.elasticsearch.entrypoints=${ELASTICSEARCH_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.elasticsearch.rule=Host(`${ELASTICSEARCH_DOMAIN:-elasticsearch.example.com}`) && PathPrefix(`${ELASTICSEARCH_BASE_PATH:-/elasticsearch}`)"
+        - "traefik.http.routers.elasticsearch.service=elasticsearch"
+        - "traefik.http.routers.elasticsearch.middlewares=${ELASTICSEARCH_MIDDLEWARES:-elasticsearch-stripprefix}"
+        - "traefik.http.routers.elasticsearch.tls=${ELASTICSEARCH_TLS_ENABLED:-false}"
+        - "traefik.http.routers.elasticsearch.tls.certresolver=${ELASTICSEARCH_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.elasticsearch.loadbalancer.server.port=9200"
+        - "traefik.http.services.elasticsearch.loadbalancer.passhostheader=true"
+        - "homepage.group=${ELASTICSEARCH_HOMEPAGE_GROUP:-Search}"
+        - "homepage.name=${ELASTICSEARCH_HOMEPAGE_NAME:-Elasticsearch}"
+        - "homepage.icon=${ELASTICSEARCH_HOMEPAGE_ICON:-elasticsearch.png}"
+        - "homepage.href=${ELASTICSEARCH_HOMEPAGE_HREF:-http://elasticsearch.example.com/elasticsearch}"
+        - "homepage.description=${ELASTICSEARCH_HOMEPAGE_DESCRIPTION:-Elasticsearch HTTP}"
+        - "homepage.siteMonitor=${ELASTICSEARCH_HOMEPAGE_SITEMONITOR:-http://elasticsearch:9200}"
+    labels:
+      - "traefik.enable=${ELASTICSEARCH_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.middlewares.elasticsearch-stripprefix.stripprefix.prefixes=${ELASTICSEARCH_BASE_PATH:-/elasticsearch}"
+      - "traefik.http.routers.elasticsearch.entrypoints=${ELASTICSEARCH_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.elasticsearch.rule=Host(`${ELASTICSEARCH_DOMAIN:-elasticsearch.example.com}`) && PathPrefix(`${ELASTICSEARCH_BASE_PATH:-/elasticsearch}`)"
+      - "traefik.http.routers.elasticsearch.service=elasticsearch"
+      - "traefik.http.routers.elasticsearch.middlewares=${ELASTICSEARCH_MIDDLEWARES:-elasticsearch-stripprefix}"
+      - "traefik.http.routers.elasticsearch.tls=${ELASTICSEARCH_TLS_ENABLED:-false}"
+      - "traefik.http.routers.elasticsearch.tls.certresolver=${ELASTICSEARCH_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.elasticsearch.loadbalancer.server.port=9200"
+      - "traefik.http.services.elasticsearch.loadbalancer.passhostheader=true"
+      - "homepage.group=${ELASTICSEARCH_HOMEPAGE_GROUP:-Search}"
+      - "homepage.name=${ELASTICSEARCH_HOMEPAGE_NAME:-Elasticsearch}"
+      - "homepage.icon=${ELASTICSEARCH_HOMEPAGE_ICON:-elasticsearch.png}"
+      - "homepage.href=${ELASTICSEARCH_HOMEPAGE_HREF:-http://elasticsearch.example.com/elasticsearch}"
+      - "homepage.description=${ELASTICSEARCH_HOMEPAGE_DESCRIPTION:-Elasticsearch HTTP}"
+      - "homepage.siteMonitor=${ELASTICSEARCH_HOMEPAGE_SITEMONITOR:-http://elasticsearch:9200}"
