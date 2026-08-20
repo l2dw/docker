@@ -11,7 +11,7 @@ Read [conventions.md](conventions.md) before writing compose, env, Makefile, or 
 
 ## Sources of truth (read before generating)
 
-Copy patterns from the **local ignored scaffold** `_trash/template/` (see `.gitignore`: `_trash/`). **Create the new branch from `master`.** Do not commit `_trash/`. Do not check out git branch `template` to copy files.
+Copy patterns from the **local ignored scaffold** `_trash/template/` (see `.gitignore`: `_trash/`). **Create the new branch from up-to-date `master`** (fetch + `pull --ff-only` — step **3**). Do not commit `_trash/`. Do not check out git branch `template` to copy files.
 
 | Source | What to copy |
 |--------|----------------|
@@ -35,7 +35,7 @@ Copy this checklist and complete in order:
 - [ ] 1. Collecter le brief
 - [ ] 1b. Vérifier base_path (docs app)
 - [ ] 2. Nommer projet et préfixe
-- [ ] 3. Branche dédiée depuis master
+- [ ] 3. Mettre `master` à jour, puis branche dédiée depuis `master`
 - [ ] 4. Copier template tpl
 - [ ] 5. Écrire compose.yml + docker-compose.yml
 - [ ] 5b. Per-service compose (si plusieurs services)
@@ -98,20 +98,36 @@ Details and label examples: [conventions.md](conventions.md) (§ Base path).
 
 Do not reuse `tpl` / `TPL` in generated files.
 
-### 3. Branche dédiée depuis `master`
+### 3. Mettre `master` à jour, puis branche dédiée
 
 **Une branche ≈ un stack.** Do not add a second project onto `dokploy`, `arcane`, or another app branch.
 
-Create the branch **from `master`** (not `template`, not `main` unless `master` is missing):
+**Before** `git checkout -b <projet>`, sync local `master` with the remote (after step **0** — tree still clean):
 
 ```sh
+git fetch origin master
 git checkout master
+git pull --ff-only origin master
+```
+
+| Result | What to do |
+|--------|------------|
+| **Fast-forward OK** | Continue — create the stack branch from this `master`. |
+| **`master` missing locally** | `git checkout -b master origin/master` (or `main` only if `master` is absent on remotes). |
+| **FF-only fails** (local `master` has unpushed commits or diverged) | **STOP.** Report `git status -sb` and `git log --oneline master..origin/master` / `origin/master..master`. Ask the user to reconcile (`push`, `reset`, or merge) before scaffolding. Do not branch from stale or diverged `master`. |
+| **`origin` unreachable** | Try `git fetch l2dw master` + `git pull --ff-only l2dw master` (mirror). If both fail, **STOP** — do not invent stack files offline. |
+
+Primary remote for pulls: **`origin`** (GitLab). **`l2dw`** (GitHub) is the fallback mirror — same rule as push.
+
+Then create the stack branch **from updated `master`** (not `template`, not another app branch):
+
+```sh
 git checkout -b <projet>
 ```
 
-Equivalent: `git checkout -b <projet> master`.
+Equivalent: `git checkout -b <projet> master` immediately after the pull above.
 
-If already **on** `<projet>` and it was created from `master` **and** step 0 passed, keep it. Never mix unrelated stacks in one working tree commit.
+If already **on** `<projet>`, it was created from up-to-date `master`, **and** step **0** passed — keep it. Never mix unrelated stacks in one working tree commit.
 
 ### 4. Copier template tpl depuis `_trash/`
 
