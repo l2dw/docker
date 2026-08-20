@@ -26,6 +26,10 @@ services:
       - ${REDIS_PASSWORD}
     volumes:
       - ${REDIS_DATA_DIR:-redis-data}:${REDIS_DATA_CONTAINER_PATH:-/data}
+    networks:
+      default:
+        aliases:
+          - ${REDIS_NETWORK_ALIAS:-dokploy-redis}
     deploy:
       mode: ${REDIS_DEPLOY_MODE:-replicated}
       replicas: ${REDIS_DEPLOY_REPLICAS:-1}
