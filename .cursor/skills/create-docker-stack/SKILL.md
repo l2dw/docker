@@ -34,7 +34,6 @@ Copy this checklist and complete in order:
 - [ ] 0. Working tree propre (sinon STOP)
 - [ ] 1. Collecter le brief
 - [ ] 1b. Vérifier base_path (docs app)
-- [ ] 1c. Redis (si l’app peut l’utiliser)
 - [ ] 2. Nommer projet et préfixe
 - [ ] 3. Branche dédiée depuis master
 - [ ] 4. Copier template tpl
@@ -69,7 +68,7 @@ Ignored files (`.env`, overrides, `_trash/`) do not appear in `--porcelain` and 
 If missing, ask (do not invent production domains or secrets):
 
 - Stack name, image(s) + tags, HTTP port
-- Volumes (data/logs), extra services (db, redis) — Redis is **external by default** when the app can use it (step **1c**)
+- Volumes (data/logs), extra services (db, redis)
 - Traefik: domain, desired `base_path` / subpath (if any), TLS, middlewares
 - Swarm vs Compose (both targets unless user says otherwise)
 
@@ -88,33 +87,16 @@ If the user asked for a subpath but the app cannot do it: warn and keep `/` (or 
 
 Details and label examples: [conventions.md](conventions.md) (§ Base path).
 
-### 1c. Redis (docs de l’app)
-
-**Before writing compose**, check the app’s official docs / env reference for Redis (cache, broker, sessions, queues).
-
-Look for names such as: `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `CACHE_REDIS`, `BROKER_URL`, `CELERY_BROKER`, `AUTHENTIK_REDIS__HOST`, or equivalent nested `REDIS__*` keys.
-
-| Result | What to do |
-|--------|------------|
-| **App can use Redis** | **Do not** add a Redis Compose service unless the user explicitly wants Redis in this stack. Wire **external** Redis env on every app service (`environment:` + `.env.example`). Default host `${<PREFIX>_REDIS_HOST:-dokploy-redis}` (same overlay as `dokploy-postgresql`), port `6379`. Map the **vendor** env names. Password placeholder `ChangeMe` or empty if the app allows no auth. Do **not** generate a Redis password in `<projet>-setup`. |
-| **Optional Redis** (empty = off) | Still add the vars. Default URL/host **empty** (or document empty = disabled). `<projet>-setup` may warn when empty. Same pattern as optional Meilisearch URL. |
-| **Required Redis** | Non-empty host default `dokploy-redis`. Warn on `ChangeMe` / empty password if the overlay Redis requires `requirepass`. Document creating/using the existing Redis stack. |
-| **No Redis in docs** | Do **not** invent Redis env vars. |
-
-If the user asked for an **in-stack** Redis: then add `<projet>-redis` (no Traefik labels, no host publish of 6379 unless asked) **and** still keep interpolable host/password so they can switch back to `dokploy-redis`. Prefer external unless they asked.
-
-Do not add `networks.default.aliases` for Redis on the **app** stack (the Redis stack owns `dokploy-redis`). Details: [conventions.md](conventions.md) (§ Redis).
-
 ### 2. Nommer projet et préfixe
 
 | Thing | Rule | Example |
 |-------|------|---------|
 | Directory / branch / stack | kebab-case, `[a-z0-9-]+` | `myapp` |
 | Env prefix | `SCREAMING_SNAKE` + `_` | `MYAPP_` |
-| Compose services | YAML key `<projet>` or `<projet>-<role>` (overlay DNS). Do **not** rename the Compose key to `${APP_NAME}` | `myapp`, `myapp-db` |
-| Router/service Traefik | `${APP_NAME:-<projet>}` (and `${APP_NAME:-<projet>}-<role>` for extra HTTP listeners). Dokploy often injects `APP_NAME` | `traefik.http.routers.${APP_NAME:-myapp}` |
+| Compose services | `<projet>` or `<projet>-<role>` | `myapp`, `myapp-db` |
+| Router/service Traefik | same as compose service | `myapp` |
 
-Do not reuse `tpl` / `TPL` in generated files. Do **not** put `APP_NAME` in `.env.example` (Dokploy / the host env supplies it; Compose default is `<projet>`).
+Do not reuse `tpl` / `TPL` in generated files.
 
 ### 3. Branche dédiée depuis `master`
 
@@ -157,10 +139,6 @@ Make targets use `docker-compose.yml`. Use `compose.yml` when Traefik/Homepage m
 Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` (unquoted). Pairing: **`dokploy-network` (or empty name → that default) ⇒ `DEFAULT_NETWORK_EXTERNAL=true`**; any other name ⇒ `false`. Do not nest interpolation to derive one from the other. `<projet>-setup` must upsert `DEFAULT_NETWORK_EXTERNAL` to match `DEFAULT_NETWORK_NAME`. No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
 
 If step **1b** found a supported base path **and** labels are used: include the vendor env in `environment:` and use `<PREFIX>_BASE_PATH` in Traefik/Homepage labels (labeled file only).
-
-If step **1c** found Redis: add vendor Redis keys to `environment:` on **every** app role that talks to Redis (server + worker). Do not add a `redis:` service unless the user asked.
-
-Traefik **router and Traefik service** names (not the Compose YAML service key) must be `${APP_NAME:-<projet>}` so two Dokploy apps of the same template do not collide on the shared Traefik. Extra listeners suffix the same prefix (`${APP_NAME:-logto}-admin`). `homepage.siteMonitor` still uses the Compose DNS name (`http://myapp:8080`). See [conventions.md](conventions.md) (§ Traefik).
 
 ### 5b. Per-service compose (plusieurs services)
 
@@ -221,8 +199,6 @@ Rules:
 - Root `.env.example` — same project keys (Make exports root `.env` for `stack deploy`)
 - Include `DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true` (because the default name is `dokploy-network`; if NAME is not `dokploy-network`, set EXTERNAL=`false`), `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
 - Include `<PREFIX>_ENV_FILE=.env.example` (or per-role `*_SERVER_ENV_FILE` / `*_AGENT_ENV_FILE`, etc.)
-- If step **1c**: include Redis keys (`<PREFIX>_REDIS_HOST=dokploy-redis`, `<PREFIX>_REDIS_PORT=6379`, vendor `*_REDIS_URL` / `AUTHENTIK_REDIS__HOST`, password `ChangeMe` or empty). Omit Redis keys when the app cannot use Redis.
-- **Do not** add `APP_NAME` to root or project `.env.example`. Traefik labels default it in compose (`${APP_NAME:-<projet>}`). Dokploy creates this variable.
 - Placeholders only (`ChangeMe`, empty secrets). Never copy real passwords.
 
 ### 7. Cibles Makefile
@@ -237,7 +213,7 @@ Required targets:
 
 | Target | Role |
 |--------|------|
-| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing **app** secrets (not Redis/DB passwords), warn on placeholder domains / `ChangeMe` Redis or Postgres, incomplete OAuth, **sync `DEFAULT_NETWORK_EXTERNAL`** (`true` iff network name is `dokploy-network` or empty). **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
+| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing secrets, warn on placeholder domains / incomplete OAuth, **sync `DEFAULT_NETWORK_EXTERNAL`** (`true` iff network name is `dokploy-network` or empty). **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
 | `.<projet>-setup` | Thin target that depends on `<projet>-setup` (used as prerequisite) |
 | `<projet>-stack-up\|down\|recreate\|upgrade\|logs` | Swarm |
 | `<projet>-compose-up\|down\|restart\|logs` | Compose |
@@ -254,10 +230,6 @@ Short `<projet>/README.md`: what the stack is, `make <projet>-setup`, `make <pro
 Include a short **Base path** note: supported or not, vendor env name if any. If supported, default is `<PREFIX>_BASE_PATH=/<projet>` (aligned public URL); if not, `/`.
 
 Document `env_file` vars (`*_ENV_FILE`), that `environment:` overrides the file, and that Swarm uses Make export + `environment:` (not Compose `env_file`).
-
-When Traefik labels are used, note that `APP_NAME` (Dokploy) scopes router/service names; it is **not** listed in `.env.example`.
-
-If Redis is supported, document external `dokploy-redis` (or empty URL if optional). Do not tell users to run Redis in this stack unless they asked.
 
 ### 8b. Symlinks racine (README + compose)
 

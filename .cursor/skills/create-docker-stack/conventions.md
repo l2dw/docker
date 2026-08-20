@@ -84,35 +84,11 @@ Rules:
 - Stateful services: `replicas: 1`. `mode: global` ignores replicas.
 - Do **not** emit Compose `x-*` keys (`x-pull-policy`, etc.).
 - Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` — never `"${…}"`.
-- Overlay pairing (two keys; **no nested** `${A:-${B}}`): compose defaults `DEFAULT_NETWORK_NAME` → `dokploy-network` and `DEFAULT_NETWORK_EXTERNAL` → `true`. If NAME is `dokploy-network` or empty, EXTERNAL must be `true` (join the existing overlay). Any other NAME → EXTERNAL `false` (Compose/Swarm may create the network). `<projet>-setup` upserts EXTERNAL to match NAME.
+- Overlay pairing (two keys; **no nested** `${A:-${B}}`): compose defaults `DEFAULT_NETWORK_NAME` → `dokploy-network` and `DEFAULT_NETWORK_EXTERNAL` → `true`. If NAME is `dokploy-network` or empty, EXTERNAL must be `true` (join the existing overlay). Any other NAME → EXTERNAL `false`. `<projet>-setup` upserts EXTERNAL to match NAME.
 - Pull images via Make (`<projet>-pull-images` / `*-stack-upgrade`), not `pull_policy` / `x-pull-policy` (Swarm rejects `pull_policy`).
 - Do **not** add `networks.default.aliases` by default. The Compose service name is already the DNS name. Add aliases **only** when the user asks, or when a stable alternate hostname is required (Dokploy-style: e.g. `dokploy-postgresql`, `dokploy-redis` for other services to resolve).
 - Do **not** add `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` to service `environment:` unless the user explicitly wants proxy passthrough (root `.env` may still define them for other tools).
 - Prefer Compose **`env_file` + `environment:`** together (see § Env file). Do not use Swarm `configs:` as a substitute for dotenv injection.
-
-## Redis (external)
-
-When the **application** can use Redis (cache, broker, sessions), treat it like external Postgres: join `dokploy-network` and point at the existing Redis, default hostname `dokploy-redis`.
-
-Do **not** add a Redis container to the app stack unless the user asked. Do **not** add Redis env vars for apps that never mention Redis.
-
-```yaml
-environment:
-  - AUTHENTIK_REDIS__HOST=${AUTHENTIK_REDIS__HOST:-dokploy-redis}
-  - AUTHENTIK_REDIS__PORT=${AUTHENTIK_REDIS__PORT:-6379}
-  - AUTHENTIK_REDIS__PASSWORD=${AUTHENTIK_REDIS__PASSWORD:-}
-# or a single URL when that is the vendor contract:
-  - REDIS_URL=${MYAPP_REDIS_URL:-}
-```
-
-| Rule | Detail |
-|------|--------|
-| Default host | `dokploy-redis` (Dokploy-style alias on the Redis stack, not on this app) |
-| Default port | `6379` — do not publish Redis on the app stack |
-| Optional Redis | Empty `*_REDIS_URL` / empty host = feature off; document in README |
-| Required Redis | Host default `dokploy-redis`; password `ChangeMe` or empty; `<projet>-setup` warns, does **not** generate Redis secrets |
-| Vendor names | Use documented keys (`REDIS_URL`, `AUTHENTIK_REDIS__HOST`, …). Do not invent a second URL *and* split host unless the vendor uses both |
-| In-stack Redis | Only if the user asked: service `<projet>-redis`, no Traefik labels, interpolable host so they can switch to `dokploy-redis` |
 
 ## Env file (`env_file` + `environment`)
 
@@ -180,18 +156,11 @@ MYAPP_HOMEPAGE_ICON=myapp.png
 MYAPP_HOMEPAGE_HREF=http://myapp.example.com/myapp
 # Compose env_file (path relative to <projet>/). environment: overrides the file.
 MYAPP_ENV_FILE=.env.example
-# Redis — only if the app can use it (step 1c). External by default; no redis service in the app stack.
-# MYAPP_REDIS_HOST=dokploy-redis
-# MYAPP_REDIS_PORT=6379
-# MYAPP_REDIS_PASSWORD=ChangeMe
-# MYAPP_REDIS_URL=
 ```
 
 - Always define `<PREFIX>_BASE_PATH`. If the app **supports** subpath (step 1b), default to `/<projet>` and align public URL vars; if not, default `/`. See § Base path.
 - Bind vs named volume: empty `MYAPP_DATA_DIR` → named volume default in compose.
 - Sync the same keys into **root** `.env.example` and `<projet>/.env.example`.
-- Do **not** add `APP_NAME` to `.env.example`. Dokploy often injects it; Traefik labels use `${APP_NAME:-<projet>}`.
-- Redis: only when step **1c** applies. See § Redis.
 - GNU Make treats `$` in `.env` as Make syntax; prefer plain values. Compose hashes need `$$`.
 - Never commit `.env` (gitignored via `**/.*` except `*.example`).
 
@@ -306,20 +275,18 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 - Swarm: `traefik.enable=${MYAPP_TRAEFIK_LABELS_SWARM_ENABLE:-true}` under `deploy.labels`
 - Compose: `traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}` under service `labels`
 
-**`APP_NAME` (Traefik names only).** Hard-coded `routers.myapp` / `services.myapp` collide when several Dokploy apps share Traefik. Interpolate **every** Traefik router and Traefik service name as `${APP_NAME:-<projet>}`. Extra HTTP listeners append a suffix (concatenation, not nested `${}`): `${APP_NAME:-logto}-admin`. Keep the Compose YAML service key as `myapp` / `logto` (overlay DNS, `homepage.siteMonitor`). Do **not** add `APP_NAME` to `.env.example`. Do not put `APP_NAME` on `<projet>-setup` NOTIFY_VARS.
-
 ```yaml
 # deploy.labels (Swarm)
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
 # service labels (Compose) — same keys, but:
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-- "traefik.http.services.${APP_NAME:-myapp}.loadbalancer.server.port=8080"
-- "traefik.http.routers.${APP_NAME:-myapp}.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
-- "traefik.http.routers.${APP_NAME:-myapp}.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
-- "traefik.http.routers.${APP_NAME:-myapp}.service=${APP_NAME:-myapp}"
-- "traefik.http.routers.${APP_NAME:-myapp}.middlewares=${MYAPP_MIDDLEWARES:-}"
-- "traefik.http.routers.${APP_NAME:-myapp}.tls=${MYAPP_TLS_ENABLED:-false}"
-- "traefik.http.routers.${APP_NAME:-myapp}.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
+- "traefik.http.services.myapp.loadbalancer.server.port=8080"
+- "traefik.http.routers.myapp.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
+- "traefik.http.routers.myapp.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
+- "traefik.http.routers.myapp.service=myapp"
+- "traefik.http.routers.myapp.middlewares=${MYAPP_MIDDLEWARES:-}"
+- "traefik.http.routers.myapp.tls=${MYAPP_TLS_ENABLED:-false}"
+- "traefik.http.routers.myapp.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
 - "homepage.group=${MYAPP_HOMEPAGE_GROUP:-}"
 - "homepage.name=${MYAPP_HOMEPAGE_NAME:-Myapp}"
 - "homepage.icon=${MYAPP_HOMEPAGE_ICON:-myapp.png}"
