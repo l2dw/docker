@@ -1,0 +1,44 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  mysql-data:
+    name: ${MYSQL_DATA_VOLUME_NAME:-mysql-data}
+    external: ${MYSQL_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:-docker.io/library/mysql:8.0}
+    restart: ${MYSQL_RESTART:-unless-stopped}
+    privileged: ${MYSQL_PRIVILEGED:-false}
+    env_file:
+      - ${MYSQL_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-mysql}
+      - MYSQL_USER=${MYSQL_USER:-mysql}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-}
+    volumes:
+      - ${MYSQL_DATA_DIR:-mysql-data}:/var/lib/mysql
+    networks:
+      default:
+        aliases:
+          - ${MYSQL_NETWORK_ALIAS:-dokploy-mysql}
+    deploy:
+      mode: ${MYSQL_DEPLOY_MODE:-replicated}
+      replicas: ${MYSQL_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${MYSQL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${MYSQL_MEMORY_LIMIT:-512M}
