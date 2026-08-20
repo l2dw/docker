@@ -28,9 +28,28 @@ Align `ELASTICSEARCH_HOMEPAGE_HREF` with the public URL.
 
 ## Health (`green`)
 
-The healthcheck calls `/_cluster/health?wait_for_status=green`. Defaults `index.number_of_replicas=0` and `index.number_of_shards=1` keep a **single-node** cluster green after indexing (replica=1 would stay yellow).
+The healthcheck calls `/_cluster/health?wait_for_status=green`. An empty single-node cluster is green. Do **not** pass `index.number_of_shards` / `index.number_of_replicas` as process env — Elasticsearch rejects them as unknown node settings and the task never starts. Replica count is an **index** setting (templates / index create), not a node env var.
 
 Host: `vm.max_map_count=262144` (Elastic requirement). Without it the node may fail to start.
+
+## Data path (`ELASTICSEARCH_DATA_DIR`)
+
+`docker stack deploy` does **not** treat `${ELASTICSEARCH_DATA_DIR}:/usr/share/elasticsearch/data` as a bind mount. The compose source is an interpolation, so Swarm always classifies it as a **named volume**, then fills in the value. If that value is `/appdata/khaos/elasticsearch/data`, you get:
+
+> The mount is a named volume whose name is the absolute path …
+
+Keep `ELASTICSEARCH_DATA_DIR=elasticsearch-data` (and `ELASTICSEARCH_DATA_VOLUME_NAME` a short name, not a path). Docker stores data in its volume directory.
+
+For a host directory on Swarm, use a gitignored `docker-compose.override.yml` (path must already exist; pin the node):
+
+```yaml
+services:
+  elasticsearch:
+    volumes:
+      - type: bind
+        source: /appdata/khaos/elasticsearch/data
+        target: /usr/share/elasticsearch/data
+```
 
 ## Makefile
 
