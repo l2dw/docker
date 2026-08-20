@@ -44,10 +44,10 @@ services:
       - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:-}
       - PAPERLESS_OCR_LANGUAGE=${PAPERLESS_OCR_LANGUAGE:-fra+eng}
     volumes:
-      - ${PAPERLESS_DATA_DIR:-paperless-data}:/usr/src/paperless/data
-      - ${PAPERLESS_MEDIA_DIR:-paperless-media}:/usr/src/paperless/media
-      - ${PAPERLESS_EXPORT_DIR:-paperless-export}:/usr/src/paperless/export
-      - ${PAPERLESS_CONSUME_DIR:-paperless-consume}:/usr/src/paperless/consume
+      - ${PAPERLESS_DATA_BIND:-paperless-data}:/usr/src/paperless/data
+      - ${PAPERLESS_MEDIA_BIND:-paperless-media}:/usr/src/paperless/media
+      - ${PAPERLESS_EXPORT_BIND:-paperless-export}:/usr/src/paperless/export
+      - ${PAPERLESS_CONSUME_BIND:-paperless-consume}:/usr/src/paperless/consume
     healthcheck:
       test:
         - CMD-SHELL

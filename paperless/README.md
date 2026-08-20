@@ -35,14 +35,14 @@ Paperless **supports** a URL prefix via `PAPERLESS_FORCE_SCRIPT_NAME` and `PAPER
 
 ## Volumes
 
-Four **named volumes** (Swarm treats `${PAPERLESS_*_DIR}:/usr/src/paperless/...` as named volumes after interpolation — do not put `/appdata/...` in those vars).
+Four **named volumes** (Swarm treats `${PAPERLESS_*_BIND}:/usr/src/paperless/...` as named volumes after interpolation — do not put `/appdata/...` in those vars). Named `*_BIND` so they do not collide with Paperless’s own path settings.
 
 | Var | Container path |
 |-----|----------------|
-| `PAPERLESS_DATA_DIR` | `/usr/src/paperless/data` |
-| `PAPERLESS_MEDIA_DIR` | `/usr/src/paperless/media` |
-| `PAPERLESS_EXPORT_DIR` | `/usr/src/paperless/export` |
-| `PAPERLESS_CONSUME_DIR` | `/usr/src/paperless/consume` (drop PDFs here) |
+| `PAPERLESS_DATA_BIND` | `/usr/src/paperless/data` |
+| `PAPERLESS_MEDIA_BIND` | `/usr/src/paperless/media` |
+| `PAPERLESS_EXPORT_BIND` | `/usr/src/paperless/export` |
+| `PAPERLESS_CONSUME_BIND` | `/usr/src/paperless/consume` (drop PDFs here) |
 
 Host bind: gitignored Compose override `type: bind` (directory must exist).
 
