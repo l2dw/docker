@@ -45,6 +45,7 @@ Copy this checklist and complete in order:
 - [ ] 8. README projet
 - [ ] 8b. Symlinks racine (README + compose)
 - [ ] 9. Valider compose
+- [ ] 10. Si push : skill sur `master` aussi (si `.cursor/skills/` a changé)
 ```
 
 ### 0. Working tree propre — STOP si non commit
@@ -282,9 +283,41 @@ test -f README.md && test -f compose.yml && test -f docker-compose.yml
 
 Confirm: if labels are used, project `compose.yml` has **no** `traefik.` / `homepage.` labels; if unlabeled, `compose.yml` is a symlink to `docker-compose.yml`. Fix errors before finishing. Do not create `.env` or `*.override.yml` unless asked.
 
+### 10. Push — skill also on `master`
+
+`.cursor/skills/create-docker-stack/` is **shared** (not stack-specific). Step **3** pulls skill from `master`; if skill commits exist only on `<projet>`, the next stack will miss them.
+
+**When the user asks to push** (or you push after scaffolding), after pushing `<projet>` to **`origin`** and **`l2dw`**:
+
+1. List skill commits not yet on `master`:
+
+```sh
+git fetch origin master
+git log --oneline master..<projet> -- .cursor/skills/create-docker-stack/
+```
+
+2. If the list is **non-empty**, cherry-pick **only** those commits onto `master` (never cherry-pick stack commits — `<projet>/`, root symlinks, root `.env.example` / `Makefile` for that stack):
+
+```sh
+git checkout master
+git pull --ff-only origin master
+git cherry-pick <sha>   # repeat per skill commit, oldest first
+git push origin master && git push l2dw master
+git checkout <projet>
+```
+
+3. If cherry-pick conflicts, **STOP** and ask the user — do not push a half-merged `master`.
+
+| Touch | Push on `<projet>` | Also on `master` |
+|-------|-------------------|------------------|
+| `<projet>/`, stack symlinks, stack Make/env | yes | no |
+| `.cursor/skills/create-docker-stack/**` | yes (with stack branch) | **yes — cherry-pick** |
+
+If skill was edited but not yet committed, commit skill changes (alone or with stack) on `<projet>`, then run step **10** before finishing.
+
 ## Out of scope
 
 - Traefik, WAF, certs-dumper as part of the app stack
 - Committing `.env`, `*.override.*`, `_trash/`, or secrets
 - Push / `make commit-changes` unless the user asks
-- When the user asks to push: prefer remotes **`l2dw`** and **`origin`** only (unless they name another remote)
+- When the user asks to push: prefer remotes **`l2dw`** and **`origin`** only (unless they name another remote). **Skill path changes must also reach `master`** — see step **10** (cherry-pick, do not merge whole stack branches into `master`).

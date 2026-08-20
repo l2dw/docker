@@ -315,6 +315,20 @@ git checkout -b <projet>
 - Remotes: **`origin`** first; **`l2dw`** fallback if `origin` is unreachable (same as push).
 - One stack ≈ one branch from **updated** `master`, not from another app branch or stale local `master`.
 
+## Git — skill on `master` when pushing
+
+Skill edits under `.cursor/skills/create-docker-stack/` are **not** stack-scoped. After pushing branch `<projet>` (when the user asked), mirror skill commits onto `master`:
+
+```sh
+git log --oneline master..<projet> -- .cursor/skills/create-docker-stack/
+git checkout master && git pull --ff-only origin master
+git cherry-pick <sha>    # skill commits only, oldest first
+git push origin master && git push l2dw master
+git checkout <projet>
+```
+
+Do **not** merge `<projet>` into `master` just for the skill — cherry-pick skill commits only. If there are no skill commits in the range, skip.
+
 ## Gitignore / local files
 
 Do not add:
