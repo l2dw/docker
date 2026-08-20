@@ -1,0 +1,105 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  paperless-data:
+    name: ${PAPERLESS_DATA_VOLUME_NAME:-paperless-data}
+    external: ${PAPERLESS_DATA_VOLUME_EXTERNAL:-false}
+  paperless-media:
+    name: ${PAPERLESS_MEDIA_VOLUME_NAME:-paperless-media}
+    external: ${PAPERLESS_MEDIA_VOLUME_EXTERNAL:-false}
+  paperless-export:
+    name: ${PAPERLESS_EXPORT_VOLUME_NAME:-paperless-export}
+    external: ${PAPERLESS_EXPORT_VOLUME_EXTERNAL:-false}
+  paperless-consume:
+    name: ${PAPERLESS_CONSUME_VOLUME_NAME:-paperless-consume}
+    external: ${PAPERLESS_CONSUME_VOLUME_EXTERNAL:-false}
+
+services:
+  paperless:
+    image: ${PAPERLESS_IMAGE:-ghcr.io/paperless-ngx/paperless-ngx:3.0.5}
+    restart: ${PAPERLESS_RESTART:-unless-stopped}
+    privileged: ${PAPERLESS_PRIVILEGED:-false}
+    env_file:
+      - ${PAPERLESS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - USERMAP_UID=${PAPERLESS_USERMAP_UID:-1000}
+      - USERMAP_GID=${PAPERLESS_USERMAP_GID:-1000}
+      - PAPERLESS_TIME_ZONE=${TZ:-America/Toronto}
+      - PAPERLESS_REDIS=${PAPERLESS_REDIS:-redis://:ChangeMe@dokploy-redis:6379}
+      - PAPERLESS_DBENGINE=${PAPERLESS_DBENGINE:-postgresql}
+      - PAPERLESS_DBHOST=${PAPERLESS_DBHOST:-dokploy-postgresql}
+      - PAPERLESS_DBPORT=${PAPERLESS_DBPORT:-5432}
+      - PAPERLESS_DBNAME=${PAPERLESS_DBNAME:-paperless}
+      - PAPERLESS_DBUSER=${PAPERLESS_DBUSER:-paperless}
+      - PAPERLESS_DBPASS=${PAPERLESS_DBPASS:-ChangeMe}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:-}
+      - PAPERLESS_URL=${PAPERLESS_URL:-http://paperless.example.com}
+      - PAPERLESS_FORCE_SCRIPT_NAME=${PAPERLESS_FORCE_SCRIPT_NAME}
+      - PAPERLESS_STATIC_URL=${PAPERLESS_STATIC_URL}
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:-admin}
+      - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:-}
+      - PAPERLESS_OCR_LANGUAGE=${PAPERLESS_OCR_LANGUAGE:-fra+eng}
+    volumes:
+      - ${PAPERLESS_DATA_DIR:-paperless-data}:/usr/src/paperless/data
+      - ${PAPERLESS_MEDIA_DIR:-paperless-media}:/usr/src/paperless/media
+      - ${PAPERLESS_EXPORT_DIR:-paperless-export}:/usr/src/paperless/export
+      - ${PAPERLESS_CONSUME_DIR:-paperless-consume}:/usr/src/paperless/consume
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS "${PAPERLESS_HEALTHCHECK_URL:-http://127.0.0.1:8000/paperless/}" >/dev/null
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    deploy:
+      mode: ${PAPERLESS_DEPLOY_MODE:-replicated}
+      replicas: ${PAPERLESS_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${PAPERLESS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${PAPERLESS_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${PAPERLESS_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.routers.paperless.entrypoints=${PAPERLESS_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.paperless.rule=Host(`${PAPERLESS_DOMAIN:-paperless.example.com}`) && PathPrefix(`${PAPERLESS_BASE_PATH:-/paperless}`)"
+        - "traefik.http.routers.paperless.service=paperless"
+        - "traefik.http.routers.paperless.middlewares=${PAPERLESS_MIDDLEWARES:-}"
+        - "traefik.http.routers.paperless.tls=${PAPERLESS_TLS_ENABLED:-false}"
+        - "traefik.http.routers.paperless.tls.certresolver=${PAPERLESS_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.paperless.loadbalancer.server.port=8000"
+        - "traefik.http.services.paperless.loadbalancer.passhostheader=true"
+        - "homepage.group=${PAPERLESS_HOMEPAGE_GROUP:-Documents}"
+        - "homepage.name=${PAPERLESS_HOMEPAGE_NAME:-Paperless}"
+        - "homepage.icon=${PAPERLESS_HOMEPAGE_ICON:-paperless-ngx.png}"
+        - "homepage.href=${PAPERLESS_HOMEPAGE_HREF:-http://paperless.example.com/paperless}"
+        - "homepage.description=${PAPERLESS_HOMEPAGE_DESCRIPTION:-Paperless-ngx DMS}"
+        - "homepage.siteMonitor=${PAPERLESS_HOMEPAGE_SITEMONITOR:-http://paperless:8000}"
+    labels:
+      - "traefik.enable=${PAPERLESS_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.routers.paperless.entrypoints=${PAPERLESS_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.paperless.rule=Host(`${PAPERLESS_DOMAIN:-paperless.example.com}`) && PathPrefix(`${PAPERLESS_BASE_PATH:-/paperless}`)"
+      - "traefik.http.routers.paperless.service=paperless"
+      - "traefik.http.routers.paperless.middlewares=${PAPERLESS_MIDDLEWARES:-}"
+      - "traefik.http.routers.paperless.tls=${PAPERLESS_TLS_ENABLED:-false}"
+      - "traefik.http.routers.paperless.tls.certresolver=${PAPERLESS_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
+      - "traefik.http.services.paperless.loadbalancer.passhostheader=true"
+      - "homepage.group=${PAPERLESS_HOMEPAGE_GROUP:-Documents}"
+      - "homepage.name=${PAPERLESS_HOMEPAGE_NAME:-Paperless}"
+      - "homepage.icon=${PAPERLESS_HOMEPAGE_ICON:-paperless-ngx.png}"
+      - "homepage.href=${PAPERLESS_HOMEPAGE_HREF:-http://paperless.example.com/paperless}"
+      - "homepage.description=${PAPERLESS_HOMEPAGE_DESCRIPTION:-Paperless-ngx DMS}"
+      - "homepage.siteMonitor=${PAPERLESS_HOMEPAGE_SITEMONITOR:-http://paperless:8000}"
