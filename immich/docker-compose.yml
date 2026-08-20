@@ -1,0 +1,107 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-immich-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  immich-upload:
+    name: ${IMMICH_UPLOAD_VOLUME_NAME:-immich-upload}
+    external: ${IMMICH_UPLOAD_VOLUME_EXTERNAL:-false}
+  immich-model-cache:
+    name: ${IMMICH_MODEL_CACHE_VOLUME_NAME:-immich-model-cache}
+    external: ${IMMICH_MODEL_CACHE_VOLUME_EXTERNAL:-false}
+
+services:
+  immich-server:
+    image: ${IMMICH_SERVER_IMAGE:-ghcr.io/immich-app/immich-server:v3.1.0}
+    restart: ${IMMICH_RESTART:-unless-stopped}
+    privileged: ${IMMICH_PRIVILEGED:-false}
+    env_file:
+      - ${IMMICH_SERVER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - DB_HOSTNAME=${IMMICH_DB_HOSTNAME:-dokploy-postgresql}
+      - DB_PORT=${IMMICH_DB_PORT:-5432}
+      - DB_USERNAME=${IMMICH_DB_USERNAME:-postgres}
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD:-}
+      - DB_DATABASE_NAME=${IMMICH_DB_DATABASE_NAME:-immich}
+      - REDIS_HOSTNAME=${IMMICH_REDIS_HOSTNAME:-dokploy-redis}
+      - REDIS_PORT=${IMMICH_REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${IMMICH_REDIS_PASSWORD:-}
+      - REDIS_DBINDEX=${IMMICH_REDIS_DBINDEX:-0}
+    volumes:
+      - ${IMMICH_UPLOAD_BIND:-immich-upload}:/data
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      mode: ${IMMICH_SERVER_DEPLOY_MODE:-replicated}
+      replicas: ${IMMICH_SERVER_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${IMMICH_SERVER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: start-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${IMMICH_SERVER_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${IMMICH_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.routers.immich-server.entrypoints=${IMMICH_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.immich-server.rule=Host(`${IMMICH_DOMAIN:-immich.example.com}`)"
+        - "traefik.http.routers.immich-server.service=immich-server"
+        - "traefik.http.routers.immich-server.middlewares=${IMMICH_MIDDLEWARES:-}"
+        - "traefik.http.routers.immich-server.tls=${IMMICH_TLS_ENABLED:-false}"
+        - "traefik.http.routers.immich-server.tls.certresolver=${IMMICH_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.immich-server.loadbalancer.server.port=2283"
+        - "traefik.http.services.immich-server.loadbalancer.passhostheader=true"
+        - "homepage.group=${IMMICH_HOMEPAGE_GROUP:-Photos}"
+        - "homepage.name=${IMMICH_HOMEPAGE_NAME:-Immich}"
+        - "homepage.icon=${IMMICH_HOMEPAGE_ICON:-immich.png}"
+        - "homepage.href=${IMMICH_HOMEPAGE_HREF:-http://immich.example.com}"
+        - "homepage.description=${IMMICH_HOMEPAGE_DESCRIPTION:-Immich photo/video library}"
+        - "homepage.siteMonitor=${IMMICH_HOMEPAGE_SITEMONITOR:-http://immich-server:2283}"
+    labels:
+      - "traefik.enable=${IMMICH_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.routers.immich-server.entrypoints=${IMMICH_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.immich-server.rule=Host(`${IMMICH_DOMAIN:-immich.example.com}`)"
+      - "traefik.http.routers.immich-server.service=immich-server"
+      - "traefik.http.routers.immich-server.middlewares=${IMMICH_MIDDLEWARES:-}"
+      - "traefik.http.routers.immich-server.tls=${IMMICH_TLS_ENABLED:-false}"
+      - "traefik.http.routers.immich-server.tls.certresolver=${IMMICH_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.immich-server.loadbalancer.server.port=2283"
+      - "traefik.http.services.immich-server.loadbalancer.passhostheader=true"
+      - "homepage.group=${IMMICH_HOMEPAGE_GROUP:-Photos}"
+      - "homepage.name=${IMMICH_HOMEPAGE_NAME:-Immich}"
+      - "homepage.icon=${IMMICH_HOMEPAGE_ICON:-immich.png}"
+      - "homepage.href=${IMMICH_HOMEPAGE_HREF:-http://immich.example.com}"
+      - "homepage.description=${IMMICH_HOMEPAGE_DESCRIPTION:-Immich photo/video library}"
+      - "homepage.siteMonitor=${IMMICH_HOMEPAGE_SITEMONITOR:-http://immich-server:2283}"
+
+  immich-machine-learning:
+    image: ${IMMICH_ML_IMAGE:-ghcr.io/immich-app/immich-machine-learning:v3.1.0}
+    restart: ${IMMICH_RESTART:-unless-stopped}
+    privileged: ${IMMICH_PRIVILEGED:-false}
+    env_file:
+      - ${IMMICH_ML_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - ${IMMICH_MODEL_CACHE_BIND:-immich-model-cache}:/cache
+    deploy:
+      mode: ${IMMICH_ML_DEPLOY_MODE:-replicated}
+      replicas: ${IMMICH_ML_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${IMMICH_ML_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: start-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${IMMICH_ML_MEMORY_LIMIT:-1G}

@@ -153,7 +153,9 @@ Then rewrite files to match [conventions.md](conventions.md) (step 5–7): label
 
 Make targets use `docker-compose.yml`. Use `compose.yml` when Traefik/Homepage must not see the service (unlabeled copy, or the symlink when unlabeled). Apply step **5c** (`env_file` + `environment:`) on every app service in these files.
 
-Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` (unquoted). Pairing: **`dokploy-network` (or empty name → that default) ⇒ `DEFAULT_NETWORK_EXTERNAL=true`**; any other name ⇒ `false`. Do not nest interpolation to derive one from the other. `<projet>-setup` must upsert `DEFAULT_NETWORK_EXTERNAL` to match `DEFAULT_NETWORK_NAME`. No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
+Network: `name: ${DEFAULT_NETWORK_NAME:-<projet>-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` (unquoted). **Default is a stack-local overlay** (e.g. `immich-network`, `myapp-network`) with `external=false` so Swarm/Compose can create it. Pairing (two keys; **no nested** `${A:-${B}}`): **`dokploy-network` ⇒ `DEFAULT_NETWORK_EXTERNAL=true`** (join the shared Dokploy overlay + Traefik); any other name (including the stack default) ⇒ `false`. `<projet>-setup` must upsert `DEFAULT_NETWORK_EXTERNAL` to match `DEFAULT_NETWORK_NAME` (fallback NAME when empty = `<projet>-network`). To reach shared Redis/DB/Traefik on Dokploy, set `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true`. No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
+
+**Memory:** on **every** service, under `deploy.resources.limits`, set `memory: ${<PREFIX>_MEMORY_LIMIT:-1G}` (single service) or `${<PREFIX>_<ROLE>_MEMORY_LIMIT:-1G}` (multi-role). Default is always **1G** unless the user asks for another value. Put the same key(s) in `.env.example`.
 
 If step **1b** found a supported base path **and** labels are used: include the vendor env in `environment:` and use `<PREFIX>_BASE_PATH` in Traefik/Homepage labels (labeled file only).
 
@@ -214,7 +216,9 @@ Rules:
 
 - `<projet>/.env.example` — all `<PREFIX>_*` keys
 - Root `.env.example` — same project keys (Make exports root `.env` for `stack deploy`)
-- Include `DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true` (because the default name is `dokploy-network`; if NAME is not `dokploy-network`, set EXTERNAL=`false`), `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
+- Include `DEFAULT_NETWORK_NAME=<projet>-network`, `DEFAULT_NETWORK_EXTERNAL=false` (stack-local default). If the user wants the shared overlay: `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true`. Pairing: only `dokploy-network` ⇒ `EXTERNAL=true`; any other NAME ⇒ `false`.
+- Include `<PREFIX>_MEMORY_LIMIT=1G` (or per-role `*_SERVER_MEMORY_LIMIT=1G`, etc.)
+- Include `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
 - Include `<PREFIX>_ENV_FILE=.env.example` (or per-role `*_SERVER_ENV_FILE` / `*_AGENT_ENV_FILE`, etc.)
 - Placeholders only (`ChangeMe`, empty secrets). Never copy real passwords.
 
@@ -230,7 +234,7 @@ Required targets:
 
 | Target | Role |
 |--------|------|
-| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing secrets, warn on placeholder domains / incomplete OAuth, **sync `DEFAULT_NETWORK_EXTERNAL`** (`true` iff network name is `dokploy-network` or empty). **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
+| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing secrets, warn on placeholder domains / incomplete OAuth, **sync `DEFAULT_NETWORK_EXTERNAL`** (`true` **only** if network name is `dokploy-network`; otherwise `false`, including empty → fallback `<projet>-network`). **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
 | `.<projet>-setup` | Thin target that depends on `<projet>-setup` (used as prerequisite) |
 | `<projet>-stack-up\|down\|recreate\|upgrade\|logs` | Swarm |
 | `<projet>-compose-up\|down\|restart\|logs` | Compose |
