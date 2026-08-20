@@ -300,6 +300,21 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 - `MYAPP_BASE_PATH` drives `PathPrefix` and `homepage.href`. Wire the app’s own base-path env only when step **1b** confirmed support (see § Base path).
 - Labels belong **only** in `docker-compose.yml`, never in a separate unlabeled `compose.yml`. If the stack has **no** labels, do not invent empty Traefik/Homepage blocks — symlink `compose.yml` → `docker-compose.yml` instead.
 
+## Git — `master` before new stack
+
+After a clean tree (SKILL step **0**), before `git checkout -b <projet>`:
+
+```sh
+git fetch origin master
+git checkout master
+git pull --ff-only origin master
+git checkout -b <projet>
+```
+
+- **FF-only** — do not merge/rebase automatically if pull fails; stop and ask the user.
+- Remotes: **`origin`** first; **`l2dw`** fallback if `origin` is unreachable (same as push).
+- One stack ≈ one branch from **updated** `master`, not from another app branch or stale local `master`.
+
 ## Gitignore / local files
 
 Do not add:
