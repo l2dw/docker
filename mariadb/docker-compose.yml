@@ -1,0 +1,44 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  mariadb-data:
+    name: ${MARIADB_DATA_VOLUME_NAME:-mariadb-data}
+    external: ${MARIADB_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  mariadb:
+    image: ${MARIADB_IMAGE:-docker.io/library/mariadb:11}
+    restart: ${MARIADB_RESTART:-unless-stopped}
+    privileged: ${MARIADB_PRIVILEGED:-false}
+    env_file:
+      - ${MARIADB_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD:-}
+      - MARIADB_DATABASE=${MARIADB_DATABASE:-mariadb}
+      - MARIADB_USER=${MARIADB_USER:-mariadb}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD:-}
+    volumes:
+      - ${MARIADB_DATA_DIR:-mariadb-data}:/var/lib/mysql
+    networks:
+      default:
+        aliases:
+          - ${MARIADB_NETWORK_ALIAS:-dokploy-mariadb}
+    deploy:
+      mode: ${MARIADB_DEPLOY_MODE:-replicated}
+      replicas: ${MARIADB_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${MARIADB_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${MARIADB_MEMORY_LIMIT:-512M}
