@@ -1,0 +1,152 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-xibo-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  xibo-custom:
+    name: ${XIBO_CUSTOM_VOLUME_NAME:-xibo-custom}
+    external: ${XIBO_CUSTOM_VOLUME_EXTERNAL:-false}
+  xibo-backup:
+    name: ${XIBO_BACKUP_VOLUME_NAME:-xibo-backup}
+    external: ${XIBO_BACKUP_VOLUME_EXTERNAL:-false}
+  xibo-library:
+    name: ${XIBO_LIBRARY_VOLUME_NAME:-xibo-library}
+    external: ${XIBO_LIBRARY_VOLUME_EXTERNAL:-false}
+  xibo-userscripts:
+    name: ${XIBO_USERSCRIPT_VOLUME_NAME:-xibo-userscripts}
+    external: ${XIBO_USERSCRIPT_VOLUME_EXTERNAL:-false}
+  xibo-ca-certs:
+    name: ${XIBO_CA_CERTS_VOLUME_NAME:-xibo-ca-certs}
+    external: ${XIBO_CA_CERTS_VOLUME_EXTERNAL:-false}
+
+services:
+  xibo-xmr:
+    image: ${XIBO_XMR_IMAGE:-ghcr.io/xibosignage/xibo-xmr:1.3}
+    restart: ${XIBO_XMR_RESTART:-unless-stopped}
+    privileged: ${XIBO_XMR_PRIVILEGED:-false}
+    env_file:
+      - ${XIBO_XMR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    deploy:
+      mode: ${XIBO_XMR_DEPLOY_MODE:-replicated}
+      replicas: ${XIBO_XMR_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${XIBO_XMR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${XIBO_XMR_MEMORY_LIMIT:-1G}
+
+  xibo-quickchart:
+    image: ${XIBO_QUICKCHART_IMAGE:-docker.io/ianw/quickchart:latest}
+    restart: ${XIBO_QUICKCHART_RESTART:-unless-stopped}
+    privileged: ${XIBO_QUICKCHART_PRIVILEGED:-false}
+    env_file:
+      - ${XIBO_QUICKCHART_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    deploy:
+      mode: ${XIBO_QUICKCHART_DEPLOY_MODE:-replicated}
+      replicas: ${XIBO_QUICKCHART_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${XIBO_QUICKCHART_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${XIBO_QUICKCHART_MEMORY_LIMIT:-1G}
+
+  xibo:
+    image: ${XIBO_IMAGE:-ghcr.io/xibosignage/xibo-cms:release-4.5.1}
+    restart: ${XIBO_RESTART:-unless-stopped}
+    privileged: ${XIBO_PRIVILEGED:-false}
+    env_file:
+      - ${XIBO_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - MYSQL_HOST=${XIBO_MYSQL_HOST:-mysql}
+      - MYSQL_PORT=${XIBO_MYSQL_PORT:-3306}
+      - MYSQL_DATABASE=${XIBO_MYSQL_DATABASE:-cms}
+      - MYSQL_USER=${XIBO_MYSQL_USER:-cms}
+      - MYSQL_PASSWORD=${XIBO_MYSQL_PASSWORD:-}
+      - XMR_HOST=${XIBO_XMR_HOST:-xibo-xmr}
+      - CMS_USE_MEMCACHED=${XIBO_CMS_USE_MEMCACHED:-true}
+      - MEMCACHED_HOST=${XIBO_MEMCACHED_HOST:-memcached}
+      - MEMCACHED_PORT=${XIBO_MEMCACHED_PORT:-11211}
+      - CMS_SERVER_NAME=${XIBO_CMS_SERVER_NAME:-xibo.example.com}
+      - CMS_ALIAS=${XIBO_CMS_ALIAS:-}
+      - CMS_QUICK_CHART_URL=${XIBO_CMS_QUICK_CHART_URL:-http://xibo-quickchart:3400}
+      - CMS_SMTP_SERVER=${XIBO_CMS_SMTP_SERVER:-}
+      - CMS_SMTP_USERNAME=${XIBO_CMS_SMTP_USERNAME:-}
+      - CMS_SMTP_PASSWORD=${XIBO_CMS_SMTP_PASSWORD:-}
+      - CMS_SMTP_USE_TLS=${XIBO_CMS_SMTP_USE_TLS:-YES}
+      - CMS_SMTP_USE_STARTTLS=${XIBO_CMS_SMTP_USE_STARTTLS:-YES}
+      - CMS_SMTP_REWRITE_DOMAIN=${XIBO_CMS_SMTP_REWRITE_DOMAIN:-}
+      - CMS_SMTP_HOSTNAME=${XIBO_CMS_SMTP_HOSTNAME:-}
+      - CMS_SMTP_FROM_LINE_OVERRIDE=${XIBO_CMS_SMTP_FROM_LINE_OVERRIDE:-YES}
+      - CMS_PHP_POST_MAX_SIZE=${XIBO_CMS_PHP_POST_MAX_SIZE:-4G}
+      - CMS_PHP_UPLOAD_MAX_FILESIZE=${XIBO_CMS_PHP_UPLOAD_MAX_FILESIZE:-4G}
+    volumes:
+      - ${XIBO_CUSTOM_DIR:-xibo-custom}:/var/www/cms/custom
+      - ${XIBO_BACKUP_DIR:-xibo-backup}:/var/www/backup
+      - ${XIBO_LIBRARY_DIR:-xibo-library}:/var/www/cms/library
+      - ${XIBO_USERSCRIPT_DIR:-xibo-userscripts}:/var/www/cms/web/userscripts
+      - ${XIBO_CA_CERTS_DIR:-xibo-ca-certs}:/var/www/cms/ca-certs
+    deploy:
+      mode: ${XIBO_DEPLOY_MODE:-replicated}
+      replicas: ${XIBO_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${XIBO_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${XIBO_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${XIBO_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-xibo}.loadbalancer.server.port=80"
+        - "traefik.http.routers.${APP_NAME:-xibo}.entrypoints=${XIBO_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-xibo}.rule=Host(`${XIBO_DOMAIN:-xibo.example.com}`) && PathPrefix(`${XIBO_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-xibo}.service=${APP_NAME:-xibo}"
+        - "traefik.http.routers.${APP_NAME:-xibo}.middlewares=${XIBO_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-xibo}.tls=${XIBO_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-xibo}.tls.certresolver=${XIBO_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${XIBO_HOMEPAGE_GROUP:-Apps}"
+        - "homepage.name=${XIBO_HOMEPAGE_NAME:-Xibo}"
+        - "homepage.icon=${XIBO_HOMEPAGE_ICON:-xibo.png}"
+        - "homepage.href=${XIBO_APP_URL:-http://xibo.example.com/xibo}"
+        - "homepage.description=${XIBO_HOMEPAGE_DESCRIPTION:-Xibo CMS}"
+        - "homepage.siteMonitor=${XIBO_HOMEPAGE_SITEMONITOR:-http://xibo:80}"
+    labels:
+      - "traefik.enable=${XIBO_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-xibo}.loadbalancer.server.port=80"
+      - "traefik.http.routers.${APP_NAME:-xibo}.entrypoints=${XIBO_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-xibo}.rule=Host(`${XIBO_DOMAIN:-xibo.example.com}`) && PathPrefix(`${XIBO_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-xibo}.service=${APP_NAME:-xibo}"
+      - "traefik.http.routers.${APP_NAME:-xibo}.middlewares=${XIBO_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-xibo}.tls=${XIBO_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-xibo}.tls.certresolver=${XIBO_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${XIBO_HOMEPAGE_GROUP:-Apps}"
+      - "homepage.name=${XIBO_HOMEPAGE_NAME:-Xibo}"
+      - "homepage.icon=${XIBO_HOMEPAGE_ICON:-xibo.png}"
+      - "homepage.href=${XIBO_APP_URL:-http://xibo.example.com/xibo}"
+      - "homepage.description=${XIBO_HOMEPAGE_DESCRIPTION:-Xibo CMS}"
+      - "homepage.siteMonitor=${XIBO_HOMEPAGE_SITEMONITOR:-http://xibo:80}"
