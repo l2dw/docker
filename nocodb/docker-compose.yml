@@ -1,0 +1,78 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-nocodb-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  nocodb-data:
+    name: ${NOCODB_DATA_VOLUME_NAME:-nocodb-data}
+    external: ${NOCODB_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  nocodb:
+    image: ${NOCODB_IMAGE:-docker.io/nocodb/nocodb:2026.08.1}
+    restart: ${NOCODB_RESTART:-unless-stopped}
+    privileged: ${NOCODB_PRIVILEGED:-false}
+    env_file:
+      - ${NOCODB_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - PORT=${NOCODB_PORT:-8080}
+      - NC_SITE_URL=${NOCODB_SITE_URL:-http://nocodb.example.com}
+      - NC_AUTH_JWT_SECRET=${NOCODB_AUTH_JWT_SECRET:-}
+      - NC_DISABLE_TELE=${NOCODB_DISABLE_TELE:-true}
+    volumes:
+      - ${NOCODB_DATA_DIR:-nocodb-data}:/usr/app/data/
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:8080/api/v1/health >/dev/null || curl -fsS http://127.0.0.1:8080/api/v1/health >/dev/null || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      mode: ${NOCODB_DEPLOY_MODE:-replicated}
+      replicas: ${NOCODB_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${NOCODB_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${NOCODB_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${NOCODB_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-nocodb}.loadbalancer.server.port=8080"
+        - "traefik.http.routers.${APP_NAME:-nocodb}.entrypoints=${NOCODB_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-nocodb}.rule=Host(`${NOCODB_DOMAIN:-nocodb.example.com}`) && PathPrefix(`${NOCODB_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-nocodb}.service=${APP_NAME:-nocodb}"
+        - "traefik.http.routers.${APP_NAME:-nocodb}.middlewares=${NOCODB_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-nocodb}.tls=${NOCODB_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-nocodb}.tls.certresolver=${NOCODB_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${NOCODB_HOMEPAGE_GROUP:-Apps}"
+        - "homepage.name=${NOCODB_HOMEPAGE_NAME:-NocoDB}"
+        - "homepage.icon=${NOCODB_HOMEPAGE_ICON:-nocodb.png}"
+        - "homepage.href=${NOCODB_APP_URL:-http://nocodb.example.com}"
+        - "homepage.description=${NOCODB_HOMEPAGE_DESCRIPTION:-NocoDB}"
+        - "homepage.siteMonitor=${NOCODB_HOMEPAGE_SITEMONITOR:-http://nocodb:8080}"
+    labels:
+      - "traefik.enable=${NOCODB_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-nocodb}.loadbalancer.server.port=8080"
+      - "traefik.http.routers.${APP_NAME:-nocodb}.entrypoints=${NOCODB_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-nocodb}.rule=Host(`${NOCODB_DOMAIN:-nocodb.example.com}`) && PathPrefix(`${NOCODB_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-nocodb}.service=${APP_NAME:-nocodb}"
+      - "traefik.http.routers.${APP_NAME:-nocodb}.middlewares=${NOCODB_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-nocodb}.tls=${NOCODB_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-nocodb}.tls.certresolver=${NOCODB_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${NOCODB_HOMEPAGE_GROUP:-Apps}"
+      - "homepage.name=${NOCODB_HOMEPAGE_NAME:-NocoDB}"
+      - "homepage.icon=${NOCODB_HOMEPAGE_ICON:-nocodb.png}"
+      - "homepage.href=${NOCODB_APP_URL:-http://nocodb.example.com}"
+      - "homepage.description=${NOCODB_HOMEPAGE_DESCRIPTION:-NocoDB}"
+      - "homepage.siteMonitor=${NOCODB_HOMEPAGE_SITEMONITOR:-http://nocodb:8080}"
