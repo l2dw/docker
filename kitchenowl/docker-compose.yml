@@ -1,0 +1,81 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-kitchenowl-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  kitchenowl-data:
+    name: ${KITCHENOWL_DATA_VOLUME_NAME:-kitchenowl-data}
+    external: ${KITCHENOWL_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  kitchenowl:
+    image: ${KITCHENOWL_IMAGE:-docker.io/tombursch/kitchenowl:latest}
+    restart: ${KITCHENOWL_RESTART:-unless-stopped}
+    privileged: ${KITCHENOWL_PRIVILEGED:-false}
+    env_file:
+      - ${KITCHENOWL_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - JWT_SECRET_KEY=${KITCHENOWL_JWT_SECRET_KEY:-}
+      - FRONT_URL=${KITCHENOWL_FRONT_URL:-http://kitchenowl.example.com/kitchenowl}
+      - BASE_HREF=${KITCHENOWL_BASE_HREF:-/kitchenowl/}
+      - OPEN_REGISTRATION=${KITCHENOWL_OPEN_REGISTRATION:-false}
+      - DISABLE_ONBOARDING=${KITCHENOWL_DISABLE_ONBOARDING:-false}
+      - DB_DRIVER=${KITCHENOWL_DB_DRIVER:-sqlite}
+      - STORAGE_PATH=${KITCHENOWL_STORAGE_PATH:-/data}
+    volumes:
+      - ${KITCHENOWL_DATA_DIR:-kitchenowl-data}:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://127.0.0.1:8080/ >/dev/null || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    deploy:
+      mode: ${KITCHENOWL_DEPLOY_MODE:-replicated}
+      replicas: ${KITCHENOWL_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${KITCHENOWL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${KITCHENOWL_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${KITCHENOWL_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-kitchenowl}.loadbalancer.server.port=8080"
+        - "traefik.http.routers.${APP_NAME:-kitchenowl}.entrypoints=${KITCHENOWL_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-kitchenowl}.rule=Host(`${KITCHENOWL_DOMAIN:-kitchenowl.example.com}`) && PathPrefix(`${KITCHENOWL_BASE_PATH:-/kitchenowl}`)"
+        - "traefik.http.routers.${APP_NAME:-kitchenowl}.service=${APP_NAME:-kitchenowl}"
+        - "traefik.http.routers.${APP_NAME:-kitchenowl}.middlewares=${KITCHENOWL_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-kitchenowl}.tls=${KITCHENOWL_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-kitchenowl}.tls.certresolver=${KITCHENOWL_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${KITCHENOWL_HOMEPAGE_GROUP:-Apps}"
+        - "homepage.name=${KITCHENOWL_HOMEPAGE_NAME:-KitchenOwl}"
+        - "homepage.icon=${KITCHENOWL_HOMEPAGE_ICON:-kitchenowl.png}"
+        - "homepage.href=${KITCHENOWL_APP_URL:-http://kitchenowl.example.com/kitchenowl}"
+        - "homepage.description=${KITCHENOWL_HOMEPAGE_DESCRIPTION:-KitchenOwl}"
+        - "homepage.siteMonitor=${KITCHENOWL_HOMEPAGE_SITEMONITOR:-http://kitchenowl:8080}"
+    labels:
+      - "traefik.enable=${KITCHENOWL_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-kitchenowl}.loadbalancer.server.port=8080"
+      - "traefik.http.routers.${APP_NAME:-kitchenowl}.entrypoints=${KITCHENOWL_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-kitchenowl}.rule=Host(`${KITCHENOWL_DOMAIN:-kitchenowl.example.com}`) && PathPrefix(`${KITCHENOWL_BASE_PATH:-/kitchenowl}`)"
+      - "traefik.http.routers.${APP_NAME:-kitchenowl}.service=${APP_NAME:-kitchenowl}"
+      - "traefik.http.routers.${APP_NAME:-kitchenowl}.middlewares=${KITCHENOWL_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-kitchenowl}.tls=${KITCHENOWL_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-kitchenowl}.tls.certresolver=${KITCHENOWL_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${KITCHENOWL_HOMEPAGE_GROUP:-Apps}"
+      - "homepage.name=${KITCHENOWL_HOMEPAGE_NAME:-KitchenOwl}"
+      - "homepage.icon=${KITCHENOWL_HOMEPAGE_ICON:-kitchenowl.png}"
+      - "homepage.href=${KITCHENOWL_APP_URL:-http://kitchenowl.example.com/kitchenowl}"
+      - "homepage.description=${KITCHENOWL_HOMEPAGE_DESCRIPTION:-KitchenOwl}"
+      - "homepage.siteMonitor=${KITCHENOWL_HOMEPAGE_SITEMONITOR:-http://kitchenowl:8080}"
