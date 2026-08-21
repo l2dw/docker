@@ -11,6 +11,22 @@ Read this after [SKILL.md](SKILL.md) when generating files. Placeholders: `<proj
 
 Do not emit `stack-compose.yml` unless requested.
 
+## Network
+
+| Context | Default `DEFAULT_NETWORK_NAME` | `DEFAULT_NETWORK_EXTERNAL` |
+|---------|--------------------------------|----------------------------|
+| Application stack (`nextcloud`, `immich`, …) | `<projet>-network` | `false` |
+| `dokploy` stack (or user opts in) | `dokploy-network` | `true` when that name is used as an existing overlay |
+
+```yaml
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-myapp-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+```
+
+`<projet>-setup` should upsert `DEFAULT_NETWORK_EXTERNAL` to match NAME (`true` only for an opted-in shared overlay such as `dokploy-network`; otherwise `false`). Never bake `dokploy-postgresql` / `dokploy-redis` into application-stack compose defaults.
+
 **With labels:** keep two real files identical except labels (labels only in `docker-compose.yml`).
 
 **Without labels** (TCP/DB, or user omits Traefik/Homepage): write only `docker-compose.yml`, then:
@@ -26,7 +42,7 @@ Do not maintain a duplicate unlabeled file. Root symlinks still point at `<proje
 ```yaml
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    name: ${DEFAULT_NETWORK_NAME:-myapp-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
@@ -85,7 +101,7 @@ Rules:
 - Do **not** emit Compose `x-*` keys (`x-pull-policy`, etc.).
 - Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` — never `"${…}"`.
 - Pull images via Make (`<projet>-pull-images` / `*-stack-upgrade`), not `pull_policy` / `x-pull-policy` (Swarm rejects `pull_policy`).
-- Do **not** add `networks.default.aliases` by default. The Compose service name is already the DNS name. Add aliases **only** when the user asks, or when a stable alternate hostname is required (Dokploy-style: e.g. `dokploy-postgresql`, `dokploy-redis` for other services to resolve).
+- Do **not** add `networks.default.aliases` by default. The Compose service name is already the DNS name. Add aliases **only** when the user asks, or when scaffolding the **`dokploy`** stack (stable hostnames such as `dokploy-postgresql`, `dokploy-redis`). Application stacks must **not** default network or DB/Redis hosts to `dokploy-*`.
 - Do **not** add `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` to service `environment:` unless the user explicitly wants proxy passthrough (root `.env` may still define them for other tools).
 - Prefer Compose **`env_file` + `environment:`** together (see § Env file). Do not use Swarm `configs:` as a substitute for dotenv injection.
 
@@ -129,7 +145,7 @@ Prefix every project key with `<PREFIX>_`. Root Make `-include`s `.env` and **ex
 Typical keys:
 
 ```
-DEFAULT_NETWORK_NAME=dokploy-network
+DEFAULT_NETWORK_NAME=myapp-network
 DEFAULT_NETWORK_EXTERNAL=false
 MYAPP_IMAGE=
 MYAPP_RESTART=unless-stopped
@@ -160,6 +176,7 @@ MYAPP_ENV_FILE=.env.example
 - Always define `<PREFIX>_BASE_PATH`. If the app **supports** subpath (step 1b), default to `/<projet>` and align public URL vars; if not, default `/`. See § Base path.
 - Bind vs named volume: empty `MYAPP_DATA_DIR` → named volume default in compose.
 - Sync the same keys into **root** `.env.example` and `<projet>/.env.example`.
+- Do **not** add `APP_NAME` to `.env.example`. Dokploy often injects it; Traefik labels use `${APP_NAME:-<projet>}`.
 - GNU Make treats `$` in `.env` as Make syntax; prefer plain values. Compose hashes need `$$`.
 - Never commit `.env` (gitignored via `**/.*` except `*.example`).
 
@@ -274,18 +291,20 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 - Swarm: `traefik.enable=${MYAPP_TRAEFIK_LABELS_SWARM_ENABLE:-true}` under `deploy.labels`
 - Compose: `traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}` under service `labels`
 
+**`APP_NAME` (Traefik names only).** Hard-coded `routers.myapp` / `services.myapp` collide when several Dokploy apps share Traefik. Interpolate **every** Traefik router and Traefik service name as `${APP_NAME:-<projet>}`. Extra HTTP listeners append a suffix (concatenation, not nested `${}`): `${APP_NAME:-logto}-admin`. App-owned middlewares use the same prefix (`${APP_NAME:-myapp}-strip`). Keep the Compose YAML service key as `myapp` / `logto` (overlay DNS, `homepage.siteMonitor`). Do **not** add `APP_NAME` to `.env.example`. Do not put `APP_NAME` on `<projet>-setup` NOTIFY_VARS. If `<PREFIX>_MIDDLEWARES` defaults to a strip name, document that changing `APP_NAME` requires aligning that value (no nested `${A:-${B}}` in Swarm).
+
 ```yaml
 # deploy.labels (Swarm)
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
 # service labels (Compose) — same keys, but:
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-- "traefik.http.services.myapp.loadbalancer.server.port=8080"
-- "traefik.http.routers.myapp.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
-- "traefik.http.routers.myapp.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
-- "traefik.http.routers.myapp.service=myapp"
-- "traefik.http.routers.myapp.middlewares=${MYAPP_MIDDLEWARES:-}"
-- "traefik.http.routers.myapp.tls=${MYAPP_TLS_ENABLED:-false}"
-- "traefik.http.routers.myapp.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
+- "traefik.http.services.${APP_NAME:-myapp}.loadbalancer.server.port=8080"
+- "traefik.http.routers.${APP_NAME:-myapp}.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
+- "traefik.http.routers.${APP_NAME:-myapp}.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
+- "traefik.http.routers.${APP_NAME:-myapp}.service=${APP_NAME:-myapp}"
+- "traefik.http.routers.${APP_NAME:-myapp}.middlewares=${MYAPP_MIDDLEWARES:-}"
+- "traefik.http.routers.${APP_NAME:-myapp}.tls=${MYAPP_TLS_ENABLED:-false}"
+- "traefik.http.routers.${APP_NAME:-myapp}.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
 - "homepage.group=${MYAPP_HOMEPAGE_GROUP:-}"
 - "homepage.name=${MYAPP_HOMEPAGE_NAME:-Myapp}"
 - "homepage.icon=${MYAPP_HOMEPAGE_ICON:-myapp.png}"
@@ -294,7 +313,7 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 ```
 
 - Port = container listen port, not the published host port.
-- Do not add a second Traefik service. Apps use `DEFAULT_NETWORK_NAME` (usually `dokploy-network`).
+- Do not add a second Traefik service. Apps default to stack-local `DEFAULT_NETWORK_NAME=<projet>-network` (`EXTERNAL=false`). Join a shared overlay only when the user asks (e.g. `dokploy-network` + `EXTERNAL=true`).
 - Leave `MYAPP_MIDDLEWARES` empty unless the user wants extra middlewares; global WAF is on Traefik entrypoints.
 - `MYAPP_BASE_PATH` drives `PathPrefix` and `homepage.href`. Wire the app’s own base-path env only when step **1b** confirmed support (see § Base path).
 - Labels belong **only** in `docker-compose.yml`, never in a separate unlabeled `compose.yml`. If the stack has **no** labels, do not invent empty Traefik/Homepage blocks — symlink `compose.yml` → `docker-compose.yml` instead.

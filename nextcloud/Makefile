@@ -8,7 +8,7 @@ NEXTCLOUD_NOTIFY_VARS := NEXTCLOUD_APP_URL NEXTCLOUD_DOMAIN
 
 nextcloud-pull-images: ## Pull images for the nextcloud stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(NEXTCLOUD_STACK_NAME)
-nextcloud-setup: ## Ensure nextcloud/.env, generate admin/db passwords, warn on DOMAIN/APP_URL
+nextcloud-setup: ## Ensure nextcloud/.env, generate admin/db passwords, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(NEXTCLOUD_ENV)'; \
 	exf='$(NEXTCLOUD_ENV_EXAMPLE)'; \
@@ -69,6 +69,35 @@ nextcloud-setup: ## Ensure nextcloud/.env, generate admin/db passwords, warn on 
 		esac; \
 	done; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
+	app=$$(file_get "$$envf" APP_NAME); \
+	[ -n "$$app" ] || app=$$(file_get "$$root" APP_NAME); \
+	[ -n "$$app" ] || app='nextcloud'; \
+	bp=$$(file_get "$$envf" NEXTCLOUD_BASE_PATH); \
+	[ -n "$$bp" ] || bp=$$(file_get "$$root" NEXTCLOUD_BASE_PATH); \
+	[ -n "$$bp" ] || bp='/nextcloud'; \
+	case "$$bp" in \
+		/|'') \
+			upsert "$$envf" NEXTCLOUD_MIDDLEWARES ""; \
+			if [ -n "$$root" ]; then upsert "$$root" NEXTCLOUD_MIDDLEWARES ""; fi; \
+			echo "NEXTCLOUD_BASE_PATH=/ → cleared NEXTCLOUD_MIDDLEWARES (Host-only)."; \
+			;; \
+		*) \
+			mw="$$app-strip"; \
+			upsert "$$envf" NEXTCLOUD_MIDDLEWARES "$$mw"; \
+			if [ -n "$$root" ]; then upsert "$$root" NEXTCLOUD_MIDDLEWARES "$$mw"; fi; \
+			echo "NEXTCLOUD_MIDDLEWARES=$$mw (aligned with APP_NAME=$$app)."; \
+			;; \
+	esac; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='nextcloud-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
 	echo "Nextcloud env OK ($$envf)."
 .nextcloud-setup: nextcloud-setup
 nextcloud-stack-up: .nextcloud-setup ## Deploy the nextcloud stack

@@ -1,6 +1,6 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    name: ${DEFAULT_NETWORK_NAME:-nextcloud-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
@@ -24,19 +24,19 @@ services:
       - ${NEXTCLOUD_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Toronto}
-      - POSTGRES_HOST=${NEXTCLOUD_DB_HOST:-postgres}
+      - POSTGRES_HOST=${NEXTCLOUD_DB_HOST:-postgresql}
       - POSTGRES_DB=${NEXTCLOUD_DB_NAME:-nextcloud}
       - POSTGRES_USER=${NEXTCLOUD_DB_USER:-nextcloud}
       - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD:-}
       - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER:-admin}
       - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD:-}
-      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_TRUSTED_DOMAINS:-example.com}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_TRUSTED_DOMAINS:-nextcloud.example.com}
       - TRUSTED_PROXIES=${NEXTCLOUD_TRUSTED_PROXIES:-172.16.0.0/12}
       - APACHE_DISABLE_REWRITE_IP=${NEXTCLOUD_APACHE_DISABLE_REWRITE_IP:-1}
-      - OVERWRITEHOST=${NEXTCLOUD_OVERWRITEHOST:-example.com}
+      - OVERWRITEHOST=${NEXTCLOUD_OVERWRITEHOST:-nextcloud.example.com}
       - OVERWRITEPROTOCOL=${NEXTCLOUD_OVERWRITEPROTOCOL:-http}
       - OVERWRITEWEBROOT=${NEXTCLOUD_OVERWRITEWEBROOT:-/nextcloud}
-      - OVERWRITECLIURL=${NEXTCLOUD_APP_URL:-http://example.com/nextcloud}
+      - OVERWRITECLIURL=${NEXTCLOUD_APP_URL:-http://nextcloud.example.com/nextcloud}
     volumes:
       - ${NEXTCLOUD_HTML_DIR:-nextcloud-html}:/var/www/html
       - ${NEXTCLOUD_DATA_DIR:-nextcloud-data}:/var/www/html/data
@@ -45,7 +45,9 @@ services:
         target: /var/www/html/config/zzz-custom.config.php
         mode: 0444
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/status.php >/dev/null || exit 1"]
+      test:
+        - CMD-SHELL
+        - curl -fsS http://127.0.0.1/status.php >/dev/null || exit 1
       interval: 30s
       timeout: 10s
       retries: 10
@@ -58,38 +60,42 @@ services:
           - ${NEXTCLOUD_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
         condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
       resources:
         limits:
           memory: ${NEXTCLOUD_MEMORY_LIMIT:-1G}
       labels:
         - "traefik.enable=${NEXTCLOUD_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
-        - "traefik.http.middlewares.nextcloud-strip.stripprefix.prefixes=${NEXTCLOUD_BASE_PATH:-/nextcloud}"
-        - "traefik.http.routers.nextcloud.entrypoints=${NEXTCLOUD_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.nextcloud.rule=Host(`${NEXTCLOUD_DOMAIN:-example.com}`) && PathPrefix(`${NEXTCLOUD_BASE_PATH:-/nextcloud}`)"
-        - "traefik.http.routers.nextcloud.service=nextcloud"
-        - "traefik.http.routers.nextcloud.middlewares=${NEXTCLOUD_MIDDLEWARES:-nextcloud-strip}"
-        - "traefik.http.routers.nextcloud.tls=${NEXTCLOUD_TLS_ENABLED:-false}"
-        - "traefik.http.routers.nextcloud.tls.certresolver=${NEXTCLOUD_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.${APP_NAME:-nextcloud}.loadbalancer.server.port=80"
+        - "traefik.http.middlewares.${APP_NAME:-nextcloud}-strip.stripprefix.prefixes=${NEXTCLOUD_BASE_PATH:-/nextcloud}"
+        - "traefik.http.routers.${APP_NAME:-nextcloud}.entrypoints=${NEXTCLOUD_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-nextcloud}.rule=Host(`${NEXTCLOUD_DOMAIN:-nextcloud.example.com}`) && PathPrefix(`${NEXTCLOUD_BASE_PATH:-/nextcloud}`)"
+        - "traefik.http.routers.${APP_NAME:-nextcloud}.service=${APP_NAME:-nextcloud}"
+        - "traefik.http.routers.${APP_NAME:-nextcloud}.middlewares=${NEXTCLOUD_MIDDLEWARES}"
+        - "traefik.http.routers.${APP_NAME:-nextcloud}.tls=${NEXTCLOUD_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-nextcloud}.tls.certresolver=${NEXTCLOUD_TLS_CERTRESOLVER:-letsencrypt}"
         - "homepage.group=${NEXTCLOUD_HOMEPAGE_GROUP:-Apps}"
         - "homepage.name=${NEXTCLOUD_HOMEPAGE_NAME:-Nextcloud}"
         - "homepage.icon=${NEXTCLOUD_HOMEPAGE_ICON:-nextcloud.png}"
-        - "homepage.href=${NEXTCLOUD_APP_URL:-http://example.com/nextcloud}"
+        - "homepage.href=${NEXTCLOUD_APP_URL:-http://nextcloud.example.com/nextcloud}"
         - "homepage.description=${NEXTCLOUD_HOMEPAGE_DESCRIPTION:-Nextcloud}"
         - "homepage.siteMonitor=${NEXTCLOUD_HOMEPAGE_SITEMONITOR:-http://nextcloud:80}"
     labels:
       - "traefik.enable=${NEXTCLOUD_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
-      - "traefik.http.middlewares.nextcloud-strip.stripprefix.prefixes=${NEXTCLOUD_BASE_PATH:-/nextcloud}"
-      - "traefik.http.routers.nextcloud.entrypoints=${NEXTCLOUD_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.nextcloud.rule=Host(`${NEXTCLOUD_DOMAIN:-example.com}`) && PathPrefix(`${NEXTCLOUD_BASE_PATH:-/nextcloud}`)"
-      - "traefik.http.routers.nextcloud.service=nextcloud"
-      - "traefik.http.routers.nextcloud.middlewares=${NEXTCLOUD_MIDDLEWARES:-nextcloud-strip}"
-      - "traefik.http.routers.nextcloud.tls=${NEXTCLOUD_TLS_ENABLED:-false}"
-      - "traefik.http.routers.nextcloud.tls.certresolver=${NEXTCLOUD_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.${APP_NAME:-nextcloud}.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.${APP_NAME:-nextcloud}-strip.stripprefix.prefixes=${NEXTCLOUD_BASE_PATH:-/nextcloud}"
+      - "traefik.http.routers.${APP_NAME:-nextcloud}.entrypoints=${NEXTCLOUD_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-nextcloud}.rule=Host(`${NEXTCLOUD_DOMAIN:-nextcloud.example.com}`) && PathPrefix(`${NEXTCLOUD_BASE_PATH:-/nextcloud}`)"
+      - "traefik.http.routers.${APP_NAME:-nextcloud}.service=${APP_NAME:-nextcloud}"
+      - "traefik.http.routers.${APP_NAME:-nextcloud}.middlewares=${NEXTCLOUD_MIDDLEWARES}"
+      - "traefik.http.routers.${APP_NAME:-nextcloud}.tls=${NEXTCLOUD_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-nextcloud}.tls.certresolver=${NEXTCLOUD_TLS_CERTRESOLVER:-letsencrypt}"
       - "homepage.group=${NEXTCLOUD_HOMEPAGE_GROUP:-Apps}"
       - "homepage.name=${NEXTCLOUD_HOMEPAGE_NAME:-Nextcloud}"
       - "homepage.icon=${NEXTCLOUD_HOMEPAGE_ICON:-nextcloud.png}"
-      - "homepage.href=${NEXTCLOUD_APP_URL:-http://example.com/nextcloud}"
+      - "homepage.href=${NEXTCLOUD_APP_URL:-http://nextcloud.example.com/nextcloud}"
       - "homepage.description=${NEXTCLOUD_HOMEPAGE_DESCRIPTION:-Nextcloud}"
       - "homepage.siteMonitor=${NEXTCLOUD_HOMEPAGE_SITEMONITOR:-http://nextcloud:80}"
