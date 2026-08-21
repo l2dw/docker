@@ -81,7 +81,7 @@ Look for names such as: `base path`, `basePath`, `BASE_PATH`, `ROOT_PATH`, `CONT
 
 | Result | What to do |
 |--------|------------|
-| **Supported** | Default `<PREFIX>_BASE_PATH=/<projet>` (e.g. `/woodpecker`). Align public URL vars with that path (e.g. `WOODPECKER_HOST=http://example.com/woodpecker`, `APP_URL=…/myapp`). Wire the **app** vendor env when documented. Keep Traefik `PathPrefix(\`${<PREFIX>_BASE_PATH:-/<projet>}\`)` and `homepage.href` with the path. Document in README. User may override to `/` for a dedicated subdomain. |
+| **Supported** | Default `<PREFIX>_BASE_PATH=/<projet>` in `.env.example`. Traefik: `PathPrefix(\`${<PREFIX>_BASE_PATH:-/}\`)` so empty/`/` stays Host-only (do **not** use `${…:-/<projet>}` — that overrides intentional empty). Align public URL vars. Wire vendor env; for optional vendor path use `${VAR:-}` (empty default), never `${VAR-}` (invalid / ambiguous in Compose). Document that empty/`/` is always allowed. |
 | **Not supported / unclear** | Default `<PREFIX>_BASE_PATH=/`. Prefer **Host-only** routing (subdomain). Do **not** invent a fake app base-path env. Do **not** rely on Traefik `stripPrefix` alone unless the user explicitly asks — many SPAs break. State in the README that subpath deploy is unsupported. |
 
 If the user asked for a subpath but the app cannot do it: warn and keep `/` (or Host-only), do not silently configure a broken PathPrefix.
@@ -94,10 +94,10 @@ Details and label examples: [conventions.md](conventions.md) (§ Base path).
 |-------|------|---------|
 | Directory / branch / stack | kebab-case, `[a-z0-9-]+` | `myapp` |
 | Env prefix | `SCREAMING_SNAKE` + `_` | `MYAPP_` |
-| Compose services | `<projet>` or `<projet>-<role>` | `myapp`, `myapp-db` |
-| Router/service Traefik | same as compose service | `myapp` |
+| Compose services | YAML key `<projet>` or `<projet>-<role>` (overlay DNS). Do **not** rename the Compose key to `${APP_NAME}` | `myapp`, `myapp-db` |
+| Router/service Traefik | `${APP_NAME:-<projet>}` (and `${APP_NAME:-<projet>}-<role>` for extra HTTP listeners). Dokploy often injects `APP_NAME` | `traefik.http.routers.${APP_NAME:-myapp}` |
 
-Do not reuse `tpl` / `TPL` in generated files.
+Do not reuse `tpl` / `TPL` in generated files. Do **not** put `APP_NAME` in `.env.example` (Dokploy / the host env supplies it; Compose default is `<projet>`).
 
 ### 3. Mettre `master` à jour, puis branche dédiée
 
@@ -158,6 +158,8 @@ Network: `name: ${DEFAULT_NETWORK_NAME:-<projet>-network}` and `external: ${DEFA
 **Memory:** on **every** service, under `deploy.resources.limits`, set `memory: ${<PREFIX>_MEMORY_LIMIT:-1G}` (single service) or `${<PREFIX>_<ROLE>_MEMORY_LIMIT:-1G}` (multi-role). Default is always **1G** unless the user asks for another value. Put the same key(s) in `.env.example`.
 
 If step **1b** found a supported base path **and** labels are used: include the vendor env in `environment:` and use `<PREFIX>_BASE_PATH` in Traefik/Homepage labels (labeled file only).
+
+Traefik **router and Traefik service** names (not the Compose YAML service key) must be `${APP_NAME:-<projet>}` so two Dokploy apps of the same template do not collide on the shared Traefik. Extra listeners suffix the same prefix (`${APP_NAME:-logto}-admin`). Middleware names that belong to the app (e.g. stripPrefix) should follow the same prefix (`${APP_NAME:-myapp}-strip`). `homepage.siteMonitor` still uses the Compose DNS name (`http://myapp:8080`). See [conventions.md](conventions.md) (§ Traefik).
 
 ### 5b. Per-service compose (plusieurs services)
 
@@ -220,6 +222,7 @@ Rules:
 - Include `<PREFIX>_MEMORY_LIMIT=1G` (or per-role `*_SERVER_MEMORY_LIMIT=1G`, etc.)
 - Include `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
 - Include `<PREFIX>_ENV_FILE=.env.example` (or per-role `*_SERVER_ENV_FILE` / `*_AGENT_ENV_FILE`, etc.)
+- **Do not** add `APP_NAME` to root or project `.env.example`. Traefik labels default it in compose (`${APP_NAME:-<projet>}`). Dokploy creates this variable.
 - Placeholders only (`ChangeMe`, empty secrets). Never copy real passwords.
 
 ### 7. Cibles Makefile
@@ -251,6 +254,8 @@ Short `<projet>/README.md`: what the stack is, `make <projet>-setup`, `make <pro
 Include a short **Base path** note: supported or not, vendor env name if any. If supported, default is `<PREFIX>_BASE_PATH=/<projet>` (aligned public URL); if not, `/`.
 
 Document `env_file` vars (`*_ENV_FILE`), that `environment:` overrides the file, and that Swarm uses Make export + `environment:` (not Compose `env_file`).
+
+When Traefik labels are used, note that `APP_NAME` (Dokploy) scopes router/service names; it is **not** listed in `.env.example`.
 
 ### 8b. Symlinks racine (README + compose)
 

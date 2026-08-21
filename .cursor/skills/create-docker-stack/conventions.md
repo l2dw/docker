@@ -177,7 +177,7 @@ Traefik always has `<PREFIX>_BASE_PATH` in the **labeled** file (`PathPrefix` + 
 
 | App supports subpath? | Config |
 |-----------------------|--------|
-| Yes | **Default** `<PREFIX>_BASE_PATH=/<projet>` (e.g. `/woodpecker`, `/myapp`) in `.env.example` and compose `${…:-/<projet>}`. Align public URL vars (`WOODPECKER_HOST`, `APP_URL`, `BASE_URL`, …) to `http(s)://${DOMAIN}${BASE_PATH}` (no trailing slash on HOST). Map vendor env when documented. User may set `/` for subdomain-only. |
+| Yes | **Default** `<PREFIX>_BASE_PATH=/<projet>` in `.env.example` only. In compose Traefik labels use `PathPrefix(\`${<PREFIX>_BASE_PATH:-/}\`)` so **empty or unset becomes `/` (Host-only)** — never `${…:-/<projet>}` (that re-fills an intentional empty). Align public URL vars to the chosen path. Map vendor env when documented. Always allow `/` or empty for a dedicated subdomain even when the app supports subpath. |
 | No / unknown | Keep `<PREFIX>_BASE_PATH=/`. Prefer subdomain (`Host` only). Do not invent vendor env vars. Do not add `stripPrefix` unless the user explicitly requests it. |
 
 Example when the app supports a path (Woodpecker-style `HOST` includes the path):
@@ -285,24 +285,26 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
 # service labels (Compose) — same keys, but:
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-- "traefik.http.services.myapp.loadbalancer.server.port=8080"
-- "traefik.http.routers.myapp.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
-- "traefik.http.routers.myapp.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
-- "traefik.http.routers.myapp.service=myapp"
-- "traefik.http.routers.myapp.middlewares=${MYAPP_MIDDLEWARES:-}"
-- "traefik.http.routers.myapp.tls=${MYAPP_TLS_ENABLED:-false}"
-- "traefik.http.routers.myapp.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
+- "traefik.http.services.${APP_NAME:-myapp}.loadbalancer.server.port=8080"
+- "traefik.http.routers.${APP_NAME:-myapp}.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
+- "traefik.http.routers.${APP_NAME:-myapp}.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/}`)"
+- "traefik.http.routers.${APP_NAME:-myapp}.service=${APP_NAME:-myapp}"
+- "traefik.http.routers.${APP_NAME:-myapp}.middlewares=${MYAPP_MIDDLEWARES:-}"
+- "traefik.http.routers.${APP_NAME:-myapp}.tls=${MYAPP_TLS_ENABLED:-false}"
+- "traefik.http.routers.${APP_NAME:-myapp}.tls.certresolver=${MYAPP_TLS_CERTRESOLVER:-letsencrypt}"
 - "homepage.group=${MYAPP_HOMEPAGE_GROUP:-}"
 - "homepage.name=${MYAPP_HOMEPAGE_NAME:-Myapp}"
 - "homepage.icon=${MYAPP_HOMEPAGE_ICON:-myapp.png}"
 - "homepage.href=${MYAPP_APP_URL:-http://myapp.example.com/myapp}"
 - "homepage.description=${MYAPP_HOMEPAGE_DESCRIPTION:-}"
+- "homepage.siteMonitor=${MYAPP_HOMEPAGE_SITEMONITOR:-http://myapp:8080}"
 ```
 
+- **`APP_NAME`:** Traefik router/service (and app-owned middleware) names use `${APP_NAME:-<projet>}`. Compose service YAML key stays `<projet>` for DNS; `homepage.siteMonitor` uses that DNS name. Do **not** list `APP_NAME` in `.env.example`.
 - Port = container listen port, not the published host port.
 - Do not add a second Traefik service. Default stack network is `<projet>-network` (local). For Traefik on the shared overlay, set `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true`.
 - Leave `MYAPP_MIDDLEWARES` empty unless the user wants extra middlewares; global WAF is on Traefik entrypoints.
-- `MYAPP_BASE_PATH` drives `PathPrefix` and `homepage.href`. Wire the app’s own base-path env only when step **1b** confirmed support (see § Base path).
+- `MYAPP_BASE_PATH` drives `PathPrefix` and `homepage.href`. Use `PathPrefix(\`${MYAPP_BASE_PATH:-/}\`)` so empty/`/` is Host-compatible (never `${…:-/<projet>}` which re-fills intentional empty). Wire the app’s own base-path env only when step **1b** confirmed support (see § Base path).
 - Labels belong **only** in `docker-compose.yml`, never in a separate unlabeled `compose.yml`. If the stack has **no** labels, do not invent empty Traefik/Homepage blocks — symlink `compose.yml` → `docker-compose.yml` instead.
 
 ## Git — `master` before new stack
