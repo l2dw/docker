@@ -24,6 +24,8 @@ On the `wallos` branch, root `README.md` / `compose.yml` / `docker-compose.yml` 
 | [`compose.yml`](compose.yml) | None (no Traefik / Homepage) |
 | [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage — used by `make` |
 
+`APP_NAME` (Dokploy) scopes Traefik router/service names; it is **not** listed in `.env.example`. Compose service DNS stays `wallos` (`homepage.siteMonitor`).
+
 ## Base path
 
 **Not supported.** Wallos expects to be served at `/`. Keep `WALLOS_BASE_PATH=/` on a dedicated subdomain (Host-only). Do not rely on Traefik `stripPrefix` for a subpath — the UI will break. `wallos-setup` warns if `BASE_PATH` is not `/`.
