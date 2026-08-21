@@ -10,7 +10,7 @@ volumes:
 
 services:
   kitchenowl:
-    image: ${KITCHENOWL_IMAGE:-docker.io/tombursch/kitchenowl:latest}
+    image: ${KITCHENOWL_IMAGE:-docker.io/tombursch/kitchenowl:v0.7.10}
     restart: ${KITCHENOWL_RESTART:-unless-stopped}
     privileged: ${KITCHENOWL_PRIVILEGED:-false}
     env_file:
@@ -23,6 +23,12 @@ services:
       - OPEN_REGISTRATION=${KITCHENOWL_OPEN_REGISTRATION:-false}
       - DISABLE_ONBOARDING=${KITCHENOWL_DISABLE_ONBOARDING:-false}
       - DB_DRIVER=${KITCHENOWL_DB_DRIVER:-sqlite}
+      - DB_HOST=${KITCHENOWL_DB_HOST:-}
+      - DB_PORT=${KITCHENOWL_DB_PORT:-}
+      - DB_NAME=${KITCHENOWL_DB_NAME:-}
+      - DB_USER=${KITCHENOWL_DB_USER:-}
+      - DB_PASSWORD=${KITCHENOWL_DB_PASSWORD:-}
+      - DB_SQLITE_SYNCHRONOUS=${KITCHENOWL_DB_SQLITE_SYNCHRONOUS:-FULL}
       - STORAGE_PATH=${KITCHENOWL_STORAGE_PATH:-/data}
     volumes:
       - ${KITCHENOWL_DATA_DIR:-kitchenowl-data}:/data

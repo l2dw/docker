@@ -5,6 +5,7 @@ KITCHENOWL_ENV := $(KITCHENOWL_STACK_NAME)/.env
 KITCHENOWL_ENV_EXAMPLE := $(KITCHENOWL_STACK_NAME)/.env.example
 KITCHENOWL_SECRET_VARS := KITCHENOWL_JWT_SECRET_KEY
 KITCHENOWL_NOTIFY_VARS := KITCHENOWL_APP_URL KITCHENOWL_DOMAIN KITCHENOWL_FRONT_URL
+KITCHENOWL_PG_REQUIRED := KITCHENOWL_DB_HOST KITCHENOWL_DB_NAME KITCHENOWL_DB_USER
 
 kitchenowl-pull-images: ## Pull images for the kitchenowl stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(KITCHENOWL_STACK_NAME)
@@ -32,6 +33,12 @@ kitchenowl-setup: ## Ensure kitchenowl/.env, generate JWT secret, sync BASE_HREF
 			KITCHENOWL_APP_URL) printf '%s' '$(KITCHENOWL_APP_URL)' ;; \
 			KITCHENOWL_DOMAIN) printf '%s' '$(KITCHENOWL_DOMAIN)' ;; \
 			KITCHENOWL_FRONT_URL) printf '%s' '$(KITCHENOWL_FRONT_URL)' ;; \
+			KITCHENOWL_DB_DRIVER) printf '%s' '$(KITCHENOWL_DB_DRIVER)' ;; \
+			KITCHENOWL_DB_HOST) printf '%s' '$(KITCHENOWL_DB_HOST)' ;; \
+			KITCHENOWL_DB_PORT) printf '%s' '$(KITCHENOWL_DB_PORT)' ;; \
+			KITCHENOWL_DB_NAME) printf '%s' '$(KITCHENOWL_DB_NAME)' ;; \
+			KITCHENOWL_DB_USER) printf '%s' '$(KITCHENOWL_DB_USER)' ;; \
+			KITCHENOWL_DB_PASSWORD) printf '%s' '$(KITCHENOWL_DB_PASSWORD)' ;; \
 		esac; \
 	}; \
 	for k in $(KITCHENOWL_SECRET_VARS); do \
@@ -68,6 +75,57 @@ kitchenowl-setup: ## Ensure kitchenowl/.env, generate JWT secret, sync BASE_HREF
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
 		esac; \
 	done; \
+	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
+	driver=$$(make_get KITCHENOWL_DB_DRIVER); \
+	[ -n "$$driver" ] || driver=$$(file_get "$$envf" KITCHENOWL_DB_DRIVER); \
+	[ -n "$$driver" ] || driver=$$(file_get "$$root" KITCHENOWL_DB_DRIVER); \
+	[ -n "$$driver" ] || driver='sqlite'; \
+	case "$$driver" in \
+		sqlite) \
+			echo "DB_DRIVER=sqlite (file under STORAGE_PATH; uploads still use the data volume)."; \
+			;; \
+		postgresql|postgres) \
+			upsert "$$envf" KITCHENOWL_DB_DRIVER postgresql; \
+			if [ -n "$$root" ]; then upsert "$$root" KITCHENOWL_DB_DRIVER postgresql; fi; \
+			for k in $(KITCHENOWL_PG_REQUIRED); do \
+				v=$$(make_get "$$k"); \
+				[ -n "$$v" ] || v=$$(file_get "$$envf" "$$k"); \
+				[ -n "$$v" ] || v=$$(file_get "$$root" "$$k"); \
+				if [ -z "$$v" ]; then \
+					echo "Missing $$k for DB_DRIVER=postgresql — set host/name/user (external Postgres)." >&2; \
+					missing=1; \
+					continue; \
+				fi; \
+				if [ -n "$$(make_get "$$k")" ]; then \
+					upsert "$$envf" "$$k" "$$v"; \
+					if [ -n "$$root" ]; then upsert "$$root" "$$k" "$$v"; fi; \
+				fi; \
+			done; \
+			port=$$(make_get KITCHENOWL_DB_PORT); \
+			[ -n "$$port" ] || port=$$(file_get "$$envf" KITCHENOWL_DB_PORT); \
+			[ -n "$$port" ] || port=$$(file_get "$$root" KITCHENOWL_DB_PORT); \
+			[ -n "$$port" ] || port='5432'; \
+			upsert "$$envf" KITCHENOWL_DB_PORT "$$port"; \
+			if [ -n "$$root" ]; then upsert "$$root" KITCHENOWL_DB_PORT "$$port"; fi; \
+			v=$$(make_get KITCHENOWL_DB_PASSWORD); \
+			[ -n "$$v" ] || v=$$(file_get "$$envf" KITCHENOWL_DB_PASSWORD); \
+			[ -n "$$v" ] || v=$$(file_get "$$root" KITCHENOWL_DB_PASSWORD); \
+			if [ -z "$$v" ]; then \
+				if ! command -v openssl >/dev/null 2>&1; then \
+					echo "Error: KITCHENOWL_DB_PASSWORD is empty and openssl is not available." >&2; exit 1; \
+				fi; \
+				v=$$(openssl rand -hex 24); \
+				upsert "$$envf" KITCHENOWL_DB_PASSWORD "$$v"; \
+				if [ -n "$$root" ]; then upsert "$$root" KITCHENOWL_DB_PASSWORD "$$v"; fi; \
+				echo "Generated KITCHENOWL_DB_PASSWORD → $$envf (create matching role on Postgres)."; \
+			fi; \
+			echo "DB_DRIVER=postgresql → $$envf (external; this stack does not run Postgres)."; \
+			;; \
+		mysql|mariadb|*) \
+			echo "Unsupported KITCHENOWL_DB_DRIVER=$$driver — KitchenOwl only supports sqlite and postgresql." >&2; \
+			exit 1; \
+			;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	bp=$$(file_get "$$envf" KITCHENOWL_BASE_PATH); \
 	[ -n "$$bp" ] || bp=$$(file_get "$$root" KITCHENOWL_BASE_PATH); \

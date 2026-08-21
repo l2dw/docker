@@ -1,10 +1,10 @@
 # KitchenOwl
 
-[KitchenOwl](https://docs.kitchenowl.org/latest/self-hosting/) grocery and recipe manager — all-in-one image `tombursch/kitchenowl:v0.7.10` (HTTP **8080**). Default database is **SQLite** under `/data`.
+[KitchenOwl](https://docs.kitchenowl.org/latest/self-hosting/) grocery and recipe manager — all-in-one image `tombursch/kitchenowl:v0.7.10` (HTTP **8080**). Default database is **SQLite** under `/data`. Vendor DB drivers: **`sqlite`** and **`postgresql` only** — MySQL/MariaDB are not supported.
 
-Default overlay is **`kitchenowl-network`** (`DEFAULT_NETWORK_EXTERNAL=false`). To reach Traefik on a shared overlay, set `DEFAULT_NETWORK_NAME` / `DEFAULT_NETWORK_EXTERNAL=true`.
+Default overlay is **`kitchenowl-network`** (`DEFAULT_NETWORK_EXTERNAL=false`). To reach Traefik or an external Postgres on a shared overlay, set `DEFAULT_NETWORK_NAME` / `DEFAULT_NETWORK_EXTERNAL=true`.
 
-Docs: [getting started](https://docs.kitchenowl.org/latest/self-hosting/), [advanced](https://docs.kitchenowl.org/latest/self-hosting/advanced/), [reverse proxy](https://docs.kitchenowl.org/latest/self-hosting/reverse-proxy/).
+Docs: [getting started](https://docs.kitchenowl.org/latest/self-hosting/), [advanced](https://docs.kitchenowl.org/latest/self-hosting/advanced/), [reverse proxy](https://docs.kitchenowl.org/latest/self-hosting/reverse-proxy/), [official Postgres compose](https://github.com/TomBursch/kitchenowl/blob/main/docker-compose-postgres.yml).
 
 `.env` is **not** read by `docker stack deploy` alone — use Make (root `.env` is exported). Compose `env_file` loads `${KITCHENOWL_ENV_FILE:-.env.example}`; `environment:` wins on conflicts. Production: `KITCHENOWL_ENV_FILE=.env`.
 
@@ -18,6 +18,21 @@ make kitchenowl-stack-up
 make kitchenowl-compose-up
 ```
 
+PostgreSQL (external — this stack does **not** run Postgres):
+
+```sh
+make kitchenowl-setup \
+  KITCHENOWL_DB_DRIVER=postgresql \
+  KITCHENOWL_DB_HOST=postgresql \
+  KITCHENOWL_DB_NAME=kitchenowl \
+  KITCHENOWL_DB_USER=kitchenowl \
+  KITCHENOWL_DB_PASSWORD=ChangeMe \
+  KITCHENOWL_DOMAIN=kitchenowl.example.com \
+  KITCHENOWL_APP_URL=https://kitchenowl.example.com/kitchenowl \
+  KITCHENOWL_FRONT_URL=https://kitchenowl.example.com/kitchenowl
+```
+
+Create the database and role on the external Postgres **before** first boot. Keep `/data` volume for uploads even with Postgres.
 On the `kitchenowl` branch, root `README.md` / `compose.yml` / `docker-compose.yml` are symlinks into `kitchenowl/`.
 
 | File | Labels |
@@ -52,7 +67,7 @@ make kitchenowl-compose-down
 make kitchenowl-compose-restart
 ```
 
-Setup generates `KITCHENOWL_JWT_SECRET_KEY` when empty, warns on `example.com`, syncs `BASE_HREF` / `FRONT_URL`, and syncs `DEFAULT_NETWORK_EXTERNAL` (`false` for `kitchenowl-network`; `true` only when NAME is an opted-in shared overlay such as `dokploy-network`).
+Setup generates `KITCHENOWL_JWT_SECRET_KEY` when empty, warns on `example.com`, syncs `BASE_HREF` / `FRONT_URL`, and syncs `DEFAULT_NETWORK_EXTERNAL` (`false` for `kitchenowl-network`; `true` only when NAME is an opted-in shared overlay such as `dokploy-network`). For `DB_DRIVER=postgresql`, setup requires host/name/user, defaults port `5432`, and generates `KITCHENOWL_DB_PASSWORD` when empty. Other drivers (e.g. MySQL) fail setup.
 
 ## Required env
 
@@ -64,6 +79,8 @@ Setup generates `KITCHENOWL_JWT_SECRET_KEY` when empty, warns on `example.com`, 
 | `KITCHENOWL_FRONT_URL` | CORS origin — same as public URL |
 | `KITCHENOWL_BASE_PATH` | Traefik `PathPrefix` (default `/kitchenowl`) |
 | `KITCHENOWL_BASE_HREF` | Vendor subpath (default `/kitchenowl/`) |
+| `KITCHENOWL_DB_DRIVER` | `sqlite` (default) or `postgresql` |
+| `KITCHENOWL_DB_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Required for PostgreSQL (external) |
 | `KITCHENOWL_MEMORY_LIMIT` | Default `1G` |
 | `KITCHENOWL_ENV_FILE` | Compose dotenv (default `.env.example`; use `.env` in production) |
 | `DEFAULT_NETWORK_NAME` / `DEFAULT_NETWORK_EXTERNAL` | Default `kitchenowl-network` / `false` |
