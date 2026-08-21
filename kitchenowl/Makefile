@@ -127,18 +127,25 @@ kitchenowl-setup: ## Ensure kitchenowl/.env, generate JWT secret, sync BASE_HREF
 			;; \
 	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
-	bp=$$(file_get "$$envf" KITCHENOWL_BASE_PATH); \
-	[ -n "$$bp" ] || bp=$$(file_get "$$root" KITCHENOWL_BASE_PATH); \
-	[ -n "$$bp" ] || bp='/kitchenowl'; \
+	# Preserve empty BASE_PATH (Host-only). Only default when the key is absent.
+	bp_set=0; \
+	if grep -q '^KITCHENOWL_BASE_PATH=' "$$envf" 2>/dev/null; then \
+		bp=$$(file_get "$$envf" KITCHENOWL_BASE_PATH); bp_set=1; \
+	elif [ -n "$$root" ] && grep -q '^KITCHENOWL_BASE_PATH=' "$$root" 2>/dev/null; then \
+		bp=$$(file_get "$$root" KITCHENOWL_BASE_PATH); bp_set=1; \
+	fi; \
+	[ "$$bp_set" -eq 1 ] || bp='/kitchenowl'; \
 	case "$$bp" in \
 		/|'') \
+			upsert "$$envf" KITCHENOWL_BASE_PATH "/"; \
 			upsert "$$envf" KITCHENOWL_BASE_HREF ""; \
 			upsert "$$envf" KITCHENOWL_MIDDLEWARES ""; \
 			if [ -n "$$root" ]; then \
+				upsert "$$root" KITCHENOWL_BASE_PATH "/"; \
 				upsert "$$root" KITCHENOWL_BASE_HREF ""; \
 				upsert "$$root" KITCHENOWL_MIDDLEWARES ""; \
 			fi; \
-			echo "KITCHENOWL_BASE_PATH=/ → cleared BASE_HREF (Host-only)."; \
+			echo "KITCHENOWL_BASE_PATH=/ (or empty) → Host-only; cleared BASE_HREF."; \
 			;; \
 		*) \
 			href="$$bp"; \

@@ -81,7 +81,7 @@ Look for names such as: `base path`, `basePath`, `BASE_PATH`, `ROOT_PATH`, `CONT
 
 | Result | What to do |
 |--------|------------|
-| **Supported** | Default `<PREFIX>_BASE_PATH=/<projet>` (e.g. `/woodpecker`). Align public URL vars with that path (e.g. `WOODPECKER_HOST=http://example.com/woodpecker`, `APP_URL=…/myapp`). Wire the **app** vendor env when documented. Keep Traefik `PathPrefix(\`${<PREFIX>_BASE_PATH:-/<projet>}\`)` and `homepage.href` with the path. Document in README. User may override to `/` for a dedicated subdomain. |
+| **Supported** | Default `<PREFIX>_BASE_PATH=/<projet>` in `.env.example`. Traefik: `PathPrefix(\`${<PREFIX>_BASE_PATH:-/}\`)` so empty/`/` stays Host-only (do **not** use `${…:-/<projet>}` — that overrides intentional empty). Align public URL vars. Wire vendor env; for optional vendor path use `${VAR:-}` (empty default), never `${VAR-}` (invalid / ambiguous in Compose). Document that empty/`/` is always allowed. |
 | **Not supported / unclear** | Default `<PREFIX>_BASE_PATH=/`. Prefer **Host-only** routing (subdomain). Do **not** invent a fake app base-path env. Do **not** rely on Traefik `stripPrefix` alone unless the user explicitly asks — many SPAs break. State in the README that subpath deploy is unsupported. |
 
 If the user asked for a subpath but the app cannot do it: warn and keep `/` (or Host-only), do not silently configure a broken PathPrefix.

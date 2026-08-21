@@ -19,7 +19,7 @@ services:
       - TZ=${TZ:-America/Toronto}
       - JWT_SECRET_KEY=${KITCHENOWL_JWT_SECRET_KEY:-}
       - FRONT_URL=${KITCHENOWL_FRONT_URL:-http://kitchenowl.example.com/kitchenowl}
-      - BASE_HREF=${KITCHENOWL_BASE_HREF:-/kitchenowl/}
+      - BASE_HREF=${KITCHENOWL_BASE_HREF:-}
       - OPEN_REGISTRATION=${KITCHENOWL_OPEN_REGISTRATION:-false}
       - DISABLE_ONBOARDING=${KITCHENOWL_DISABLE_ONBOARDING:-false}
       - DB_DRIVER=${KITCHENOWL_DB_DRIVER:-sqlite}
@@ -59,7 +59,7 @@ services:
         - "traefik.enable=${KITCHENOWL_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
         - "traefik.http.services.${APP_NAME:-kitchenowl}.loadbalancer.server.port=8080"
         - "traefik.http.routers.${APP_NAME:-kitchenowl}.entrypoints=${KITCHENOWL_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.${APP_NAME:-kitchenowl}.rule=Host(`${KITCHENOWL_DOMAIN:-kitchenowl.example.com}`) && PathPrefix(`${KITCHENOWL_BASE_PATH:-/kitchenowl}`)"
+        - "traefik.http.routers.${APP_NAME:-kitchenowl}.rule=Host(`${KITCHENOWL_DOMAIN:-kitchenowl.example.com}`) && PathPrefix(`${KITCHENOWL_BASE_PATH:-/}`)"
         - "traefik.http.routers.${APP_NAME:-kitchenowl}.service=${APP_NAME:-kitchenowl}"
         - "traefik.http.routers.${APP_NAME:-kitchenowl}.middlewares=${KITCHENOWL_MIDDLEWARES:-}"
         - "traefik.http.routers.${APP_NAME:-kitchenowl}.tls=${KITCHENOWL_TLS_ENABLED:-false}"
@@ -74,7 +74,7 @@ services:
       - "traefik.enable=${KITCHENOWL_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.${APP_NAME:-kitchenowl}.loadbalancer.server.port=8080"
       - "traefik.http.routers.${APP_NAME:-kitchenowl}.entrypoints=${KITCHENOWL_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_NAME:-kitchenowl}.rule=Host(`${KITCHENOWL_DOMAIN:-kitchenowl.example.com}`) && PathPrefix(`${KITCHENOWL_BASE_PATH:-/kitchenowl}`)"
+      - "traefik.http.routers.${APP_NAME:-kitchenowl}.rule=Host(`${KITCHENOWL_DOMAIN:-kitchenowl.example.com}`) && PathPrefix(`${KITCHENOWL_BASE_PATH:-/}`)"
       - "traefik.http.routers.${APP_NAME:-kitchenowl}.service=${APP_NAME:-kitchenowl}"
       - "traefik.http.routers.${APP_NAME:-kitchenowl}.middlewares=${KITCHENOWL_MIDDLEWARES:-}"
       - "traefik.http.routers.${APP_NAME:-kitchenowl}.tls=${KITCHENOWL_TLS_ENABLED:-false}"

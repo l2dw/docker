@@ -44,12 +44,15 @@ On the `kitchenowl` branch, root `README.md` / `compose.yml` / `docker-compose.y
 
 ## Base path
 
-Supported via vendor **`BASE_HREF`** (must begin and end with `/`, e.g. `/kitchenowl/`). Traefik uses `PathPrefix` on `KITCHENOWL_BASE_PATH` — **do not** use `stripPrefix` (leave `KITCHENOWL_MIDDLEWARES` empty).
+Supported via vendor **`BASE_HREF`** (must begin and end with `/` when set, e.g. `/kitchenowl/`). Traefik uses `PathPrefix` on `KITCHENOWL_BASE_PATH` — **do not** use `stripPrefix` (leave `KITCHENOWL_MIDDLEWARES` empty).
 
-- Default: `KITCHENOWL_BASE_PATH=/kitchenowl`, `KITCHENOWL_BASE_HREF=/kitchenowl/`, `KITCHENOWL_APP_URL` / `KITCHENOWL_FRONT_URL` include `/kitchenowl`
-- Root on a dedicated subdomain: `KITCHENOWL_BASE_PATH=/`, `KITCHENOWL_BASE_HREF=` (empty), URLs without a path suffix
+Empty / root is always allowed even though subpath is supported:
 
-`kitchenowl-setup` syncs `BASE_HREF` from `BASE_PATH` and keeps middlewares empty. Align `FRONT_URL` with the public URL (CORS).
+- Default scaffold: `KITCHENOWL_BASE_PATH=/kitchenowl`, `KITCHENOWL_BASE_HREF=/kitchenowl/`
+- Host-only subdomain: `KITCHENOWL_BASE_PATH=/` or empty → setup clears `BASE_HREF`; Traefik falls back to `PathPrefix(/)`
+- Compose does **not** use `${…:-/kitchenowl}` for these keys (that would re-fill an intentional empty value). Use `${KITCHENOWL_BASE_HREF:-}` (empty default) and `PathPrefix(${KITCHENOWL_BASE_PATH:-/})`.
+
+Align `APP_URL` / `FRONT_URL` with the public URL (CORS). `kitchenowl-setup` syncs `BASE_HREF` from `BASE_PATH` and keeps middlewares empty.
 
 ## Makefile
 
@@ -77,8 +80,8 @@ Setup generates `KITCHENOWL_JWT_SECRET_KEY` when empty, warns on `example.com`, 
 | `KITCHENOWL_DOMAIN` | Traefik `Host()` |
 | `KITCHENOWL_APP_URL` | Public URL including base path |
 | `KITCHENOWL_FRONT_URL` | CORS origin — same as public URL |
-| `KITCHENOWL_BASE_PATH` | Traefik `PathPrefix` (default `/kitchenowl`) |
-| `KITCHENOWL_BASE_HREF` | Vendor subpath (default `/kitchenowl/`) |
+| `KITCHENOWL_BASE_PATH` | Traefik `PathPrefix` (scaffold `/kitchenowl`; empty or `/` = Host-only) |
+| `KITCHENOWL_BASE_HREF` | Vendor subpath (scaffold `/kitchenowl/`; empty when Host-only) |
 | `KITCHENOWL_DB_DRIVER` | `sqlite` (default) or `postgresql` |
 | `KITCHENOWL_DB_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Required for PostgreSQL (external) |
 | `KITCHENOWL_MEMORY_LIMIT` | Default `1G` |

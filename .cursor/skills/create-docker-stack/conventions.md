@@ -177,7 +177,7 @@ Traefik always has `<PREFIX>_BASE_PATH` in the **labeled** file (`PathPrefix` + 
 
 | App supports subpath? | Config |
 |-----------------------|--------|
-| Yes | **Default** `<PREFIX>_BASE_PATH=/<projet>` (e.g. `/woodpecker`, `/myapp`) in `.env.example` and compose `${…:-/<projet>}`. Align public URL vars (`WOODPECKER_HOST`, `APP_URL`, `BASE_URL`, …) to `http(s)://${DOMAIN}${BASE_PATH}` (no trailing slash on HOST). Map vendor env when documented. User may set `/` for subdomain-only. |
+| Yes | **Default** `<PREFIX>_BASE_PATH=/<projet>` in `.env.example` only. In compose Traefik labels use `PathPrefix(\`${<PREFIX>_BASE_PATH:-/}\`)` so **empty or unset becomes `/` (Host-only)** — never `${…:-/<projet>}` (that re-fills an intentional empty). Align public URL vars to the chosen path. Map vendor env when documented. Always allow `/` or empty for a dedicated subdomain even when the app supports subpath. |
 | No / unknown | Keep `<PREFIX>_BASE_PATH=/`. Prefer subdomain (`Host` only). Do not invent vendor env vars. Do not add `stripPrefix` unless the user explicitly requests it. |
 
 Example when the app supports a path (Woodpecker-style `HOST` includes the path):
@@ -192,7 +192,14 @@ MYAPP_APP_URL=http://myapp.example.com/myapp
 environment:
   - TZ=${TZ:-America/Toronto}
   - APP_URL=${MYAPP_APP_URL:-http://myapp.example.com/myapp}
-  # or BASE_PATH=${MYAPP_BASE_PATH:-/myapp} when the vendor uses that name
+  # Vendor path: ${VAR:-} keeps empty; do not use ${VAR:-/subpath} or bare ${VAR-}
+  - BASE_HREF=${MYAPP_BASE_HREF:-}
+```
+
+Traefik (labeled file):
+
+```yaml
+- "traefik.http.routers.${APP_NAME:-myapp}.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/}`)"
 ```
 
 Trailing slash: follow the vendor. If unspecified, use `/myapp` (no trailing slash on the path segment) and include that path in the public URL default.
@@ -287,7 +294,7 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 - "traefik.enable=${MYAPP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
 - "traefik.http.services.myapp.loadbalancer.server.port=8080"
 - "traefik.http.routers.myapp.entrypoints=${MYAPP_ENTRYPOINTS:-web}"
-- "traefik.http.routers.myapp.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/myapp}`)"
+- "traefik.http.routers.myapp.rule=Host(`${MYAPP_DOMAIN:-myapp.example.com}`) && PathPrefix(`${MYAPP_BASE_PATH:-/}`)"
 - "traefik.http.routers.myapp.service=myapp"
 - "traefik.http.routers.myapp.middlewares=${MYAPP_MIDDLEWARES:-}"
 - "traefik.http.routers.myapp.tls=${MYAPP_TLS_ENABLED:-false}"

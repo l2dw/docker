@@ -19,7 +19,7 @@ services:
       - TZ=${TZ:-America/Toronto}
       - JWT_SECRET_KEY=${KITCHENOWL_JWT_SECRET_KEY:-}
       - FRONT_URL=${KITCHENOWL_FRONT_URL:-http://kitchenowl.example.com/kitchenowl}
-      - BASE_HREF=${KITCHENOWL_BASE_HREF:-/kitchenowl/}
+      - BASE_HREF=${KITCHENOWL_BASE_HREF:-}
       - OPEN_REGISTRATION=${KITCHENOWL_OPEN_REGISTRATION:-false}
       - DISABLE_ONBOARDING=${KITCHENOWL_DISABLE_ONBOARDING:-false}
       - DB_DRIVER=${KITCHENOWL_DB_DRIVER:-sqlite}
