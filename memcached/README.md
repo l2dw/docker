@@ -2,7 +2,7 @@
 
 Official [Memcached](https://hub.docker.com/_/memcached) (`memcached:1.6.45-alpine`) on **TCP 11211**. **Not an HTTP app**: no Traefik/Homepage labels (`compose.yml` → symlink of `docker-compose.yml`).
 
-Port **11211 is not published on the host**. Other stacks on the same overlay reach it as `memcached:11211` (Compose service name). Example: Xibo `XIBO_MEMCACHED_HOST=memcached`.
+Port **11211 is not published on the host**. Other stacks on the overlay reach it as `memcached:11211` (Compose service name / default `MEMCACHED_NETWORK_ALIAS`). Do **not** default Dokploy names — set `MEMCACHED_NETWORK_ALIAS` explicitly only if you need another hostname. Example: Xibo `XIBO_MEMCACHED_HOST=memcached`.
 
 `.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${MEMCACHED_ENV_FILE:-.env.example}`; production: `MEMCACHED_ENV_FILE=.env`. `environment:` wins on key conflicts.
 

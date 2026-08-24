@@ -16,6 +16,10 @@ services:
       - --conn-limit=${MEMCACHED_CONN_LIMIT:-1024}
       - --memory-limit=${MEMCACHED_CACHE_MEMORY:-64}
       - --threads=${MEMCACHED_THREADS:-4}
+    networks:
+      default:
+        aliases:
+          - ${MEMCACHED_NETWORK_ALIAS:-memcached}
     deploy:
       mode: ${MEMCACHED_DEPLOY_MODE:-replicated}
       replicas: ${MEMCACHED_DEPLOY_REPLICAS:-1}
