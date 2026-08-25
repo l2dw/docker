@@ -1,0 +1,87 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-teleport-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  teleport-data:
+    name: ${TELEPORT_DATA_VOLUME_NAME:-teleport-data}
+    external: ${TELEPORT_DATA_VOLUME_EXTERNAL:-false}
+
+configs:
+  teleport.yaml:
+    file: ${TELEPORT_CONFIG_FILE:-./config/teleport.yaml.example}
+
+services:
+  teleport:
+    image: ${TELEPORT_IMAGE:-public.ecr.aws/gravitational/teleport-distroless:18.10.0}
+    restart: ${TELEPORT_RESTART:-unless-stopped}
+    privileged: ${TELEPORT_PRIVILEGED:-false}
+    hostname: ${TELEPORT_HOSTNAME:-teleport}
+    env_file:
+      - ${TELEPORT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    configs:
+      - source: teleport.yaml
+        target: /etc/teleport/teleport.yaml
+        mode: 0444
+    volumes:
+      - ${TELEPORT_DATA_DIR:-teleport-data}:/var/lib/teleport
+    deploy:
+      mode: ${TELEPORT_DEPLOY_MODE:-replicated}
+      replicas: ${TELEPORT_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${TELEPORT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${TELEPORT_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${TELEPORT_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.middlewares.${APP_NAME:-teleport}-br.headers.customrequestheaders.Accept-Encoding=br"
+        - "traefik.http.services.${APP_NAME:-teleport}.loadbalancer.server.port=3080"
+        - "traefik.http.services.${APP_NAME:-teleport}.loadbalancer.server.scheme=https"
+        - "traefik.http.routers.${APP_NAME:-teleport}.entrypoints=websecure"
+        - "traefik.http.routers.${APP_NAME:-teleport}.rule=Host(`${TELEPORT_DOMAIN:-teleport.example.com}`) && PathPrefix(`${TELEPORT_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-teleport}.service=${APP_NAME:-teleport}"
+        - "traefik.http.routers.${APP_NAME:-teleport}.middlewares=${APP_NAME:-teleport}-br"
+        - "traefik.http.routers.${APP_NAME:-teleport}.tls=true"
+        - "traefik.http.routers.${APP_NAME:-teleport}.tls.certresolver=${TELEPORT_TLS_CERTRESOLVER:-}"
+        - "traefik.http.routers.${APP_NAME:-teleport}-http.entrypoints=web"
+        - "traefik.http.routers.${APP_NAME:-teleport}-http.rule=Host(`${TELEPORT_DOMAIN:-teleport.example.com}`) && PathPrefix(`${TELEPORT_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-teleport}-http.middlewares=${TELEPORT_HTTP_MIDDLEWARES:-redirect-to-https@swarm}"
+        - "traefik.http.routers.${APP_NAME:-teleport}-http.service=${APP_NAME:-teleport}"
+        - "homepage.group=${TELEPORT_HOMEPAGE_GROUP:-Apps}"
+        - "homepage.name=${TELEPORT_HOMEPAGE_NAME:-Teleport}"
+        - "homepage.icon=${TELEPORT_HOMEPAGE_ICON:-teleport.png}"
+        - "homepage.href=${TELEPORT_APP_URL:-https://teleport.example.com}"
+        - "homepage.description=${TELEPORT_HOMEPAGE_DESCRIPTION:-Teleport}"
+        - "homepage.siteMonitor=${TELEPORT_HOMEPAGE_SITEMONITOR:-https://teleport:3080/webapi/ping}"
+    labels:
+      - "traefik.enable=${TELEPORT_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.middlewares.${APP_NAME:-teleport}-br.headers.customrequestheaders.Accept-Encoding=br"
+      - "traefik.http.services.${APP_NAME:-teleport}.loadbalancer.server.port=3080"
+      - "traefik.http.services.${APP_NAME:-teleport}.loadbalancer.server.scheme=https"
+      - "traefik.http.routers.${APP_NAME:-teleport}.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME:-teleport}.rule=Host(`${TELEPORT_DOMAIN:-teleport.example.com}`) && PathPrefix(`${TELEPORT_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-teleport}.service=${APP_NAME:-teleport}"
+      - "traefik.http.routers.${APP_NAME:-teleport}.middlewares=${APP_NAME:-teleport}-br"
+      - "traefik.http.routers.${APP_NAME:-teleport}.tls=true"
+      - "traefik.http.routers.${APP_NAME:-teleport}.tls.certresolver=${TELEPORT_TLS_CERTRESOLVER:-}"
+      - "traefik.http.routers.${APP_NAME:-teleport}-http.entrypoints=web"
+      - "traefik.http.routers.${APP_NAME:-teleport}-http.rule=Host(`${TELEPORT_DOMAIN:-teleport.example.com}`) && PathPrefix(`${TELEPORT_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-teleport}-http.middlewares=${TELEPORT_HTTP_MIDDLEWARES:-redirect-to-https@swarm}"
+      - "traefik.http.routers.${APP_NAME:-teleport}-http.service=${APP_NAME:-teleport}"
+      - "homepage.group=${TELEPORT_HOMEPAGE_GROUP:-Apps}"
+      - "homepage.name=${TELEPORT_HOMEPAGE_NAME:-Teleport}"
+      - "homepage.icon=${TELEPORT_HOMEPAGE_ICON:-teleport.png}"
+      - "homepage.href=${TELEPORT_APP_URL:-https://teleport.example.com}"
+      - "homepage.description=${TELEPORT_HOMEPAGE_DESCRIPTION:-Teleport}"
+      - "homepage.siteMonitor=${TELEPORT_HOMEPAGE_SITEMONITOR:-https://teleport:3080/webapi/ping}"

@@ -1,0 +1,45 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-teleport-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  teleport-data:
+    name: ${TELEPORT_DATA_VOLUME_NAME:-teleport-data}
+    external: ${TELEPORT_DATA_VOLUME_EXTERNAL:-false}
+
+configs:
+  teleport.yaml:
+    file: ${TELEPORT_CONFIG_FILE:-./config/teleport.yaml.example}
+
+services:
+  teleport:
+    image: ${TELEPORT_IMAGE:-public.ecr.aws/gravitational/teleport-distroless:18.10.0}
+    restart: ${TELEPORT_RESTART:-unless-stopped}
+    privileged: ${TELEPORT_PRIVILEGED:-false}
+    hostname: ${TELEPORT_HOSTNAME:-teleport}
+    env_file:
+      - ${TELEPORT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    configs:
+      - source: teleport.yaml
+        target: /etc/teleport/teleport.yaml
+        mode: 0444
+    volumes:
+      - ${TELEPORT_DATA_DIR:-teleport-data}:/var/lib/teleport
+    deploy:
+      mode: ${TELEPORT_DEPLOY_MODE:-replicated}
+      replicas: ${TELEPORT_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${TELEPORT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${TELEPORT_MEMORY_LIMIT:-1G}

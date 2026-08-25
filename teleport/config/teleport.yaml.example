@@ -1,0 +1,29 @@
+version: v3
+teleport:
+  nodename: teleport
+  data_dir: /var/lib/teleport
+  log:
+    output: stderr
+    severity: INFO
+    format:
+      output: text
+
+auth_service:
+  enabled: true
+  cluster_name: teleport.example.com
+  listen_addr: 0.0.0.0:3025
+  proxy_listener_mode: multiplex
+  authentication:
+    type: local
+    second_factor: otp
+
+proxy_service:
+  enabled: true
+  web_listen_addr: 0.0.0.0:3080
+  public_addr: teleport.example.com:443
+  trust_x_forwarded_for: true
+  https_keypairs: []
+  acme: {}
+
+ssh_service:
+  enabled: false
