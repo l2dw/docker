@@ -1,56 +1,57 @@
 # Dokploy stack
 
-WordPress platform stack: **Dokploy** + **PostgreSQL** + **Redis** + **Traefik** + **certs-dumper** + **WAF** (ModSecurity CRS).
+Infra platform: **Dokploy** + **PostgreSQL** + **Redis** + **Traefik** + **certs-dumper** + **WAF** (ModSecurity CRS).
 
-Compose file: [`docker-compose.yml`](docker-compose.yml) (Swarm `stack deploy` and Compose).
+This is the shared overlay host (`dokploy-network`), not an app stack that joins it. Service DNS aliases (`dokploy-postgresql`, `dokploy-redis`, `dokploy-waf`, `dokploy-traefik`) stay stable for other stacks.
 
-`.env` is **not** read by `docker stack deploy` alone — export it (or use `make`, which loads the repo-root `.env`):
+## Layout
 
-```sh
-# From devops/docker-templates (parent of dokploy/)
-make dokploy-stack-up
-# or:
-set -a && source .env && set +a
-docker stack deploy -c dokploy/docker-compose.yml dokploy --with-registry-auth
-```
+| File | Role |
+|------|------|
+| [`docker-compose.yml`](docker-compose.yml) | Full stack (Make / Swarm). Traefik + Homepage labels on `dokploy` and `traefik`. |
+| [`dokploy-compose.yml`](dokploy-compose.yml) | Console service only (`dokploy`) + same Traefik/Homepage labels. Expects Postgres/Redis (and Traefik) already on the overlay. |
+| [`compose.yml`](compose.yml) | Symlink → `dokploy-compose.yml` |
 
-Copy [`dokploy/.env.example`](.env.example) keys into the root `.env` (and/or `dokploy/.env`) and set secrets before deploy.
+Root symlinks (on this branch): `README.md`, `compose.yml`, `docker-compose.yml` → `dokploy/…`.
 
-## Deploy (Swarm)
+Routers `dokploy-console` / `dokploy-traefik` and global middlewares (`waf`, `redirect-to-https`, …) use **fixed** infra names (not `${APP_NAME}`).
 
-`docker stack deploy` does **not** support nested interpolation (`${A:-${B:-x}}`). Each service uses a **single-level** default in compose (e.g. `${DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS:-node.role == manager}`). Set per-service keys in `.env` explicitly.
+## Deploy
 
-| Service | Mode | Replicas | Placement |
-|---------|------|----------|-----------|
-| postgresql | `DOKPLOY_POSTGRES_DEPLOY_MODE` | `DOKPLOY_POSTGRES_DEPLOY_REPLICAS` | `DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS` |
-| redis | `DOKPLOY_REDIS_DEPLOY_MODE` | `DOKPLOY_REDIS_DEPLOY_REPLICAS` | `DOKPLOY_REDIS_PLACEMENT_CONSTRAINTS` |
-| dokploy | `DOKPLOY_DOKPLOY_DEPLOY_MODE` | `DOKPLOY_DOKPLOY_DEPLOY_REPLICAS` | `DOKPLOY_DOKPLOY_PLACEMENT_CONSTRAINTS` |
-| traefik | `DOKPLOY_TRAEFIK_DEPLOY_MODE` | `DOKPLOY_TRAEFIK_DEPLOY_REPLICAS` | `DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS` |
-| certs-dumper | `DOKPLOY_CERTS_DUMPER_DEPLOY_MODE` | `DOKPLOY_CERTS_DUMPER_DEPLOY_REPLICAS` | `DOKPLOY_CERTS_DUMPER_PLACEMENT_CONSTRAINTS` |
-| waf | `DOKPLOY_WAF_DEPLOY_MODE` | `DOKPLOY_WAF_DEPLOY_REPLICAS` | `DOKPLOY_WAF_PLACEMENT_CONSTRAINTS` |
-
-`mode`: `replicated` (default) or `global` (replicas ignored). Stateful services (postgres/redis) should stay at `replicas=1`.
-
-Compose-only: `restart: unless-stopped` via `DOKPLOY_*_RESTART` (default `unless-stopped`; Swarm uses `deploy.restart_policy`).
+`.env` is **not** read by `docker stack deploy` alone — use Make (exports root `.env`) or export manually:
 
 ```sh
-DOKPLOY_TRAEFIK_DEPLOY_MODE=replicated
-DOKPLOY_TRAEFIK_DEPLOY_REPLICAS=1
-DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS=node.labels.ingress==true
-DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS=node.role == manager
+make dokploy-setup
+make dokploy-stack-up      # or: make dokploy-compose-up
 ```
 
-Network: `DEFAULT_NETWORK_NAME` (default `dokploy-network`). `make dokploy-setup` creates that name (not a hard-coded string).
+Compose also loads `env_file` (`DOKPLOY_*_ENV_FILE`, default `.env.example` under `dokploy/`). `environment:` overrides the file. For Swarm, rely on Make export + `environment:` interpolation.
 
-## Makefile (from repo root)
+Copy [`dokploy/.env.example`](.env.example) keys into root `.env` and set secrets before deploy.
+
+`docker stack deploy` does **not** support nested interpolation (`${A:-${B:-x}}`). Each key uses a single-level default.
+
+| Service | Mode | Replicas | Placement | Memory |
+|---------|------|----------|-----------|--------|
+| postgresql | `DOKPLOY_POSTGRES_DEPLOY_MODE` | `DOKPLOY_POSTGRES_DEPLOY_REPLICAS` | `DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS` | `DOKPLOY_POSTGRES_MEMORY_LIMIT` (default 1G) |
+| redis | `DOKPLOY_REDIS_*` | … | … | `DOKPLOY_REDIS_MEMORY_LIMIT` |
+| dokploy | `DOKPLOY_DOKPLOY_*` | … | … | `DOKPLOY_MEMORY_LIMIT` |
+| traefik | `DOKPLOY_TRAEFIK_*` | … | … | `DOKPLOY_TRAEFIK_MEMORY_LIMIT` |
+| certs-dumper | `DOKPLOY_CERTS_DUMPER_*` | … | … | `DOKPLOY_CERTS_DUMPER_MEMORY_LIMIT` |
+| waf | `DOKPLOY_WAF_*` | … | … | `DOKPLOY_WAF_MEMORY_LIMIT` |
+
+Stateful services (postgres/redis) should stay at `replicas=1`. Network: `DEFAULT_NETWORK_NAME=dokploy-network` ⇒ `DEFAULT_NETWORK_EXTERNAL=true` (`make dokploy-setup` upserts the pair).
+
+## Makefile
 
 ```sh
 make dokploy-pull-images
+make dokploy-setup
 make dokploy-stack-up
 make dokploy-stack-upgrade
 make dokploy-stack-down
 make dokploy-stack-logs
-make dokploy-debug          # inspects dokploy_traefik ports
+make dokploy-debug
 make dokploy-debug-logs
 make dokploy-compose-up
 make dokploy-compose-down
@@ -58,7 +59,7 @@ make dokploy-compose-down
 
 ## Traefik
 
-Configuration is entirely via `command:` in [`docker-compose.yml`](docker-compose.yml) (no `traefik.yml`). Dynamic middlewares live in [`etc/traefik/rules/`](../etc/traefik/rules/).
+Configuration is via `command:` in [`docker-compose.yml`](docker-compose.yml) (no `traefik.yml`). Dynamic middlewares live in [`etc/traefik/rules/`](../etc/traefik/rules/).
 
 ### Global WAF middleware
 
@@ -67,55 +68,37 @@ Configuration is entirely via `command:` in [`docker-compose.yml`](docker-compos
 | Traefik service labels (swarm + docker) | `waf` / `waf@swarm` / `waf@docker` |
 | [`etc/traefik/rules/middlewares.yml`](../etc/traefik/rules/middlewares.yml) | `waf@file` |
 
-Entrypoints attach WAF for **all** HTTP(S) traffic (no per-app label required):
-
 | Variable | Default |
 |----------|---------|
 | `DOKPLOY_TRAEFIK_WEB_MIDDLEWARES` | `waf` |
 | `DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES` | `waf` |
 
 ```sh
-DOKPLOY_TRAEFIK_WEB_MIDDLEWARES=waf
-DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES=waf
-# or: waf@file
-DOKPLOY_WAF_MODSECURITY_URL=http://waf:8080
+DOKPLOY_WAF_MODSECURITY_URL=http://dokploy-waf:8080
 ```
 
-### Real client IP (logs + backends)
+### Real client IP
 
-- Access log keeps `ClientHost` / `ClientAddr` and headers `X-Forwarded-For` / `X-Real-Ip`.
-- `DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS` — when the peer is in this list, Traefik uses `X-Forwarded-*` for logs and for outbound `X-Forwarded-For` / `X-Real-Ip`.
-- Edge (host ports, no LB): `ClientHost` is the TCP client; Traefik still injects that IP toward backends.
-- Do **not** set `X-Forwarded-For` in `forward-https-headers` (Proto/Port only).
-- WAF: `DOKPLOY_WAF_PROXY=1` + `DOKPLOY_WAF_REMOTEIP_INT_PROXY` (space-separated CIDRs, not commas — Apache `RemoteIPInternalProxy`) so ModSecurity trusts Traefik’s docker/overlay IPs.
-
-Behind Cloudflare / a public LB, put that provider’s CIDRs in `TRUSTED_IPS`. Avoid `DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE=true` in production.
+- Access log keeps `ClientHost` / `ClientAddr` and `X-Forwarded-For` / `X-Real-Ip`.
+- `DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS` — trusted peers for `X-Forwarded-*`.
+- WAF: `DOKPLOY_WAF_PROXY=1` + `DOKPLOY_WAF_REMOTEIP_INT_PROXY` (space-separated CIDRs).
 
 ## WAF custom rules
 
-Versioned under [`etc/waf/rules/`](../etc/waf/rules/). Delivered as **Swarm configs** (not host binds):
+Versioned under [`etc/waf/rules/`](../etc/waf/rules/). Delivered as **Swarm configs**:
 
 | Config | Source env | Target in container |
 |--------|------------|---------------------|
 | `dokploy_waf_before_crs` | `DOKPLOY_WAF_BEFORE_CRS_RULES` | `…/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf` |
 | `dokploy_waf_after_crs` | `DOKPLOY_WAF_AFTER_CRS_RULES` | `…/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf` |
 
-Do not bind-mount the whole CRS `rules/` directory (that hides upstream rules). After editing rule files, bump `DOKPLOY_WAF_*_CRS_CONFIG_NAME` and redeploy.
+After editing rule files, bump `DOKPLOY_WAF_*_CRS_CONFIG_NAME` and redeploy.
+
+## Base path
+
+Dokploy console: `DOKPLOY_BASE_PATH=/` (Host-only by default). Traefik dashboard: `DOKPLOY_TRAEFIK_BASE_PATH=/traefik`.
 
 ## Troubleshoot
 
-1. Permissions (Podman / SELinux example):
-
-```sh
-podman unshare bash -c '
-  chown -R 999:999 /home/admin/appdata/dokploy/redis
-  chown -R 999:999 /home/admin/appdata/logs/redis
-  chown -R 999:999 /home/admin/appdata/logs/apache2
-  chmod -R u+rwX /home/admin/appdata/logs/apache2
-  chcon -R -t container_file_t -l s0 /home/admin/appdata/logs/apache2
-'
-podman start dokploy_waf_1
-```
-
-2. Swarm service `0/1`: `make dokploy-debug` / `dokploy-debug-logs`.
-3. Image tag unchanged but digest moved: `make dokploy-stack-upgrade`.
+1. Swarm service `0/1`: `make dokploy-debug` / `dokploy-debug-logs`.
+2. Image tag unchanged but digest moved: `make dokploy-stack-upgrade`.
