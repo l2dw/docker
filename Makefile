@@ -6,8 +6,10 @@ ENV=prod
 BIN_DIR=./bin
 # BACKUPS_DIR=$(APPDATA_DIR)/backups
 
-# Export environment variables from .env file if it exists
-ENV_FILE ?= $(CURDIR)/.env
+# Export environment variables from .env under INFRA_DIR (never ~/).
+# Default INFRA_DIR to the Makefile directory so local clones and /infra deploys both work.
+INFRA_DIR ?= $(CURDIR)
+ENV_FILE ?= $(INFRA_DIR)/.env
 ENV_EXPORT_KEYS := $(shell test -f "$(ENV_FILE)" && sed -n '/^[[:space:]]*\#/d;/^[[:space:]]*$$/d;/^[A-Za-z_][A-Za-z0-9_]*=/s/=.*$$//p' "$(ENV_FILE)" 2>/dev/null | tr '\n' ' ')
 
 ifneq (,$(wildcard $(ENV_FILE)))
@@ -257,7 +259,7 @@ stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — ke
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
 ## —— Infrastructure 🐳 ————————————————————————————————————————————————————————————————
-setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want a real TTY)
+setup: ## Setup infrastructure (see docs/MAKE.md; remote: ssh -t host make setup)
 	@echo "Setting up infrastructure..."
 	@$(BIN_DIR)/setup-environment.sh
 	@$(BIN_DIR)/setup-filesystem.sh
