@@ -35,6 +35,7 @@ MAKE            = make
 
 SWAP_SIZE ?= 4G
 SWAP_FILE ?= /var/0.swap
+export SWAP_SIZE SWAP_FILE
 
 # Misc
 .DEFAULT_GOAL = help
@@ -50,9 +51,9 @@ help: ## Outputs this help screen
 docker-login: ## Login to the Docker registry (DOCKER_REGISTRY_HOST)
 	@test -n "$(or $(DOCKER_REGISTRY_HOST),)" || (echo "Error: set DOCKER_REGISTRY_HOST in .env" && exit 1)
 	@echo "Logging in to the Docker registry '$(DOCKER_REGISTRY_HOST)' as $(DOCKER_REGISTRY_USER)"
-	@$(DOCKER) login $(DOCKER_REGISTRY_HOST) \
-		-u $(DOCKER_REGISTRY_USER) \
-		-p $(DOCKER_REGISTRY_PASS)
+	@printf '%s' "$(DOCKER_REGISTRY_PASS)" | $(DOCKER) login "$(DOCKER_REGISTRY_HOST)" \
+		-u "$(DOCKER_REGISTRY_USER)" \
+		--password-stdin
 
 docker-ps: ## List all running containers
 	$(DOCKER) ps
@@ -106,7 +107,7 @@ docker-pull-images: .docker-exists-project # Pull images for a docker-compose st
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" pull; \
 	"$$@"
@@ -117,7 +118,7 @@ docker-project-up: .docker-exists-project # Deploy a docker-compose stack
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" up -d; \
 	"$$@"
@@ -128,7 +129,7 @@ docker-project-down: .docker-exists-project # Remove a docker-compose stack
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" down; \
 	"$$@"
@@ -143,23 +144,29 @@ docker-project-restart: .docker-exists-project # Restart a docker-compose projec
 		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
 	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" restart; \
 	"$$@"
 
 docker-project-logs: .docker-exists-project ## Show logs of a docker-compose project
 	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" logs; \
 	"$$@"
 
 docker-project-watch: .docker-exists-project ## Watch logs of a docker-compose project
 	@eval "$$(COMPOSE_FILE='$(DOCKER_COMPOSE_FILE)' COMPOSE_OVERRIDE='$(DOCKER_COMPOSE_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(PROJECT_NAME)')"; \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
+		echo "No compose file under $(PROJECT_NAME)/ (stack-compose.yml or docker-compose.yml)"; exit 1; \
+	fi; \
 	set -- $(DOCKER_COMPOSE) -p $(PROJECT_NAME) -f "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -f "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -f "$$override"; fi; \
 	if [ -n "$$env_file" ]; then set -- "$$@" --env-file "$$env_file"; fi; \
 	set -- "$$@" logs -f; \
 	"$$@"
@@ -198,21 +205,22 @@ swarm-unlock-key: ## Show the unlock key
 		exit 1; \
 	fi;
 	@# Check if the stack file exists
-	@if [ ! -f "$(STACK_FILE)" ]; then \
+	@if [ ! -f "$(STACK_FILE)" ] && [ ! -L "$(STACK_FILE)" ]; then \
 		echo "Stack file $(STACK_FILE) does not exist"; \
 		exit 1; \
 	fi;
 # Default: no detach flag (CLI without `--detach` rejects it). STACK_DEPLOY_WAIT=1 passes --detach=false only if `docker stack deploy --help` lists `--detach`; else prints a stderr note so older hosts remain usable.
 STACK_DEPLOY_WAIT ?= 1
 
+STACK_EXTRA ?=
 stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
 	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(STACK_NAME)')"; \
-	if [ -z "$$compose" ] || [ ! -f "$$compose" ]; then \
+	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
 		echo "STACK_FILE is unset and no compose file found under $(STACK_NAME)/ (stack-compose.yml or docker-compose.yml)."; exit 1; \
 	fi; \
 	if [ -n "$$env_file" ]; then set -a && . "$$env_file" && set +a; fi; \
 	set -- -c "$$compose"; \
-	if [ -n "$$override" ] && [ -f "$$override" ]; then set -- "$$@" -c "$$override"; fi; \
+	if [ -n "$$override" ] && { [ -f "$$override" ] || [ -L "$$override" ]; }; then set -- "$$@" -c "$$override"; fi; \
 	deploy_extra=""; \
 	case "$(STACK_DEPLOY_WAIT)" in 1|true|yes|on) \
 	  if $(DOCKER) stack deploy --help 2>/dev/null | grep -q -- '--detach'; then \
@@ -249,44 +257,21 @@ stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — ke
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
 ## —— Infrastructure 🐳 ————————————————————————————————————————————————————————————————
-commit-changes: ## Commit changes to the infrastructure
-	@echo "Committing changes to the infrastructure..."
-	chmod +x $(BIN_DIR)/*.sh
-	git add .
-	git commit -m "Update infrastructure: $(DATETIME)"
-	git push origin
-
 setup: ## Setup infrastructure (remote: use `ssh -t host make setup` if you want a real TTY)
 	@echo "Setting up infrastructure..."
 	@$(BIN_DIR)/setup-environment.sh
 	@$(BIN_DIR)/setup-filesystem.sh
-	@$(BIN_DIR)/fix-profilerc.sh
-	@# TODO: Install sexy-bash-prompt if not installed
-	@if [ ! -f /etc/profile.d/zz-bash_prompt.sh ]; then \
-		$(BIN_DIR)/install-sexy-bash-prompt.sh; \
-	fi
-	@$(BIN_DIR)/install-utilities-packages.sh
-	@$(BIN_DIR)/install-docker-ce.sh
-	@$(BIN_DIR)/fix-dns-resolv.sh
-	@$(BIN_DIR)/server-update.sh
-	@# NFS Volumes
-	@sudo mkdir -p /nfs/${INFRA_NAME}/prod /nfs/${INFRA_NAME}/tools /nfs/${INFRA_NAME}/shares /nfs/${INFRA_NAME}/backups
-	@sudo chown ${ADMIN_USER}:${ADMIN_USER} /nfs/${INFRA_NAME}/prod /nfs/${INFRA_NAME}/tools /nfs/${INFRA_NAME}/shares /nfs/${INFRA_NAME}/backups
-	@if [ ! -f $(SWAP_FILE) ] && [ "$(SWAP_SIZE)" != "0" ]; then \
-		$(MAKE) add-swap-file SWAP_SIZE="$(SWAP_SIZE)" SWAP_FILE="$(SWAP_FILE)"; \
-	elif [ "$(SWAP_SIZE)" = "0" ]; then \
-		echo "Swap file memory is not needed"; \
-		sudo swapoff -a; \
-	fi
+	@$(BIN_DIR)/install-sexy-bash-prompt.sh
+	@$(BIN_DIR)/add-swap-file.sh
 
 update-server: ## Update server
 	@echo "Updating server..."
 	@$(BIN_DIR)/server-update.sh
 
-deploy-infrastructure: ## Deploy infrastructure
-	@echo "Deploying infrastructure..."
-	@$(BIN_DIR)/setup-swarm.sh
-	@$(BIN_DIR)/deploy-infrastructure.sh
+# deploy-infrastructure: ## Deploy infrastructure
+# 	@echo "Deploying infrastructure..."
+# 	@$(BIN_DIR)/setup-swarm.sh
+# 	@$(BIN_DIR)/deploy-infrastructure.sh
 
 fix-dns-resolv: ## Fix DNS resolver
 	@echo "Fixing DNS resolv.conf..."
@@ -296,36 +281,13 @@ services-list: ## List services
 	@echo "Listing services..."
 	@docker service ls
 
-.create-db: ## Create database
+.create-db: ## Create database (DB_USER DB_PASS DB_NAME)
 	@echo "Creating database..."
-	@# Swarm: task container name isn't stable; exec into the running task container.
-	@# Requires vars: DB_USER, DB_PASS, DB_NAME
-	@bash -lc 'set -euo pipefail; \
-	: "$${DB_USER:?Missing DB_USER}"; : "$${DB_PASS:?Missing DB_PASS}"; : "$${DB_NAME:?Missing DB_NAME}"; \
-	cid="$$(docker ps -q --filter "label=com.docker.swarm.service.name=infrastructure_postgresql" | head -n 1)"; \
-	if [ -z "$$cid" ]; then \
-		echo "Error: no running container found for Swarm service infrastructure_postgresql."; \
-		echo "Hint: run: docker service ps infrastructure_postgresql"; \
-		exit 1; \
-	fi; \
-	echo "Using postgresql task container: $$cid"; \
-	role_exists="$$(docker exec "$$cid" psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '\''$${DB_USER}'\'';")"; \
-	if [ "$$role_exists" != "1" ]; then \
-		echo "Creating role $${DB_USER} ..."; \
-		docker exec "$$cid" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE USER \"$${DB_USER}\" WITH PASSWORD '\''$${DB_PASS}'\'';"; \
-	else \
-		echo "Role $${DB_USER} already exists."; \
-	fi; \
-	db_exists="$$(docker exec "$$cid" psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '\''$${DB_NAME}'\'';")"; \
-	if [ "$$db_exists" != "1" ]; then \
-		echo "Creating database $${DB_NAME} ..."; \
-		docker exec "$$cid" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$${DB_NAME}\" OWNER \"$${DB_USER}\";"; \
-	else \
-		echo "Database $${DB_NAME} already exists."; \
-	fi'
+	@$(BIN_DIR)/create-db.sh
 
 .connect-db: ## Connect to database
 	@echo "Connecting to database with user: postgres"
+	@# Use -it only when we have a TTY (prevents failures when run over non-interactive SSH).
 	@bash -lc 'set -euo pipefail; \
 	cid="$$(docker ps -q --filter "label=com.docker.swarm.service.name=infrastructure_postgresql" | head -n 1)"; \
 	if [ -z "$$cid" ]; then \
@@ -341,31 +303,15 @@ services-list: ## List services
 		docker exec -i "$$cid" psql -U postgres -d postgres; \
 	fi'
 
-# —— 🐝 git commands ———————————————————————————————————
-push-udem: ## Push changes to the UDEM repository
-	@if [ -z "$(CURRENT_BRANCH)" ]; then \
-		echo "Error: could not determine current git branch (CURRENT_BRANCH is empty)"; \
-		exit 1; \
-	fi
-	git push ti-udem $(CURRENT_BRANCH)
+#
+add-swap-file: ## Add swap file memory: SWAP_SIZE=4G and SWAP_FILE=/var/0.swap are optional parameters
+	@echo "Adding swap file memory: SWAP_SIZE=$(SWAP_SIZE) and SWAP_FILE=$(SWAP_FILE)..."
+	@$(BIN_DIR)/add-swap-file.sh
 
-#  Add swap file memory, user define size in parameter SWAP_FILE_SIZE; default is 4G
-# if swap file already exists, remove it first
-add-swap-file: ## Add swap file memory
-	@echo "Adding swap file memory..."
-	@# if swap file already exists, remove it first
-	@if [ -f $(SWAP_FILE) ]; then \
-		sudo swapoff $(SWAP_FILE); \
-		sudo rm -f $(SWAP_FILE); \
-	fi
-	@sudo fallocate -l $(SWAP_SIZE) $(SWAP_FILE)
-	@sudo chmod 600 $(SWAP_FILE)
-	@sudo mkswap $(SWAP_FILE)
-	@# add to fstab: check if already exists
-	@if ! grep -q "$(SWAP_FILE)" /etc/fstab; then \
-		echo "$(SWAP_FILE) swap swap defaults 0 0" | sudo tee -a /etc/fstab; \
-	fi
-	@# reload systemd
-	@sudo systemctl daemon-reload && sudo mount -a
-	@sleep 2 && sudo swapon -a
-	@sudo swapon --show
+## —— 🐝 git commands ———————————————————————————————————
+commit-changes: ## Commit changes to the infrastructure
+	@echo "Committing changes to the infrastructure..."
+	chmod +x $(BIN_DIR)/*.sh
+	git add .
+	git commit -m "Update infrastructure: $(DATETIME)"
+	git push origin

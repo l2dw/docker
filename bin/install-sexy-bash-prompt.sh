@@ -31,8 +31,9 @@ else
   BASHRC="${HOME}/.bashrc"
   if [ -f "${BASHRC}" ] && ! grep -qF 'bash_prompt' "${BASHRC}"; then
     cat >> "${BASHRC}" << 'EOF'
-
-# sexy-bash-prompt (user install; no passwordless sudo for system-wide profile.d)
+# #########################################################
+# # sexy-bash-prompt (user install; no passwordless sudo for system-wide profile.d)
+# #########################################################
 [ -r ~/.bash_prompt ] && . ~/.bash_prompt
 EOF
     echo "install-sexy-bash-prompt: hooked ~/.bash_prompt in ~/.bashrc"
