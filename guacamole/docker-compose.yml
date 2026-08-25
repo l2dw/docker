@@ -4,7 +4,7 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 services:
-  guacamole-guacd:
+  guacd:
     image: ${GUACAMOLE_GUACD_IMAGE:-docker.io/guacamole/guacd:1.6.0}
     restart: ${GUACAMOLE_GUACD_RESTART:-unless-stopped}
     privileged: ${GUACAMOLE_GUACD_PRIVILEGED:-false}
@@ -13,6 +13,11 @@ services:
     environment:
       - TZ=${TZ:-America/Toronto}
       - LOG_LEVEL=${GUACAMOLE_GUACD_LOG_LEVEL:-info}
+    ports:
+      - target: 4822
+        published: ${GUACAMOLE_GUACD_PORT_PUBLISHED:-4822}
+        protocol: tcp
+        mode: ${GUACAMOLE_GUACD_PORT_MODE:-host}
     deploy:
       mode: ${GUACAMOLE_GUACD_DEPLOY_MODE:-replicated}
       replicas: ${GUACAMOLE_GUACD_DEPLOY_REPLICAS:-1}
@@ -29,7 +34,7 @@ services:
         limits:
           memory: ${GUACAMOLE_GUACD_MEMORY_LIMIT:-1G}
 
-  guacamole:
+  ui:
     image: ${GUACAMOLE_IMAGE:-docker.io/guacamole/guacamole:1.6.0}
     restart: ${GUACAMOLE_RESTART:-unless-stopped}
     privileged: ${GUACAMOLE_PRIVILEGED:-false}
@@ -37,7 +42,7 @@ services:
       - ${GUACAMOLE_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Toronto}
-      - GUACD_HOSTNAME=${GUACAMOLE_GUACD_HOSTNAME:-guacamole-guacd}
+      - GUACD_HOSTNAME=${GUACAMOLE_GUACD_HOSTNAME:-guacd}
       - GUACD_PORT=${GUACAMOLE_GUACD_PORT:-4822}
       - WEBAPP_CONTEXT=${GUACAMOLE_WEBAPP_CONTEXT:-guacamole}
       - REMOTE_IP_VALVE_ENABLED=${GUACAMOLE_REMOTE_IP_VALVE_ENABLED:-true}

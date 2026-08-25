@@ -6,8 +6,31 @@ GUACAMOLE_ENV_EXAMPLE := $(GUACAMOLE_STACK_NAME)/.env.example
 GUACAMOLE_SECRET_VARS := GUACAMOLE_POSTGRESQL_PASSWORD
 GUACAMOLE_NOTIFY_VARS := GUACAMOLE_APP_URL GUACAMOLE_DOMAIN GUACAMOLE_POSTGRESQL_HOSTNAME
 
+# Postgres Swarm service for create-db / schema init (empty = auto dokploy|infrastructure).
+GUACAMOLE_PG_SERVICE ?=
+
 guacamole-pull-images: ## Pull images for the guacamole stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(GUACAMOLE_STACK_NAME)
+
+# Create role/DB (guacamole_user / guacamole_db) + load JDBC schema if missing.
+guacamole-db-init: .guacamole-setup ## Create Postgres role/DB and Guacamole schema
+	@set -e; \
+	envf='$(GUACAMOLE_ENV)'; \
+	file_get() { _f=$$1; _k=$$2; [ -f "$$_f" ] || return 0; sed -n "s/^$${_k}=//p" "$$_f" | head -n 1; }; \
+	DB_USER=$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_USERNAME); \
+	DB_PASS=$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_PASSWORD); \
+	DB_NAME=$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_DATABASE); \
+	IMG=$$(file_get "$$envf" GUACAMOLE_IMAGE); \
+	[ -n "$$DB_USER" ] || DB_USER=guacamole_user; \
+	[ -n "$$DB_NAME" ] || DB_NAME=guacamole_db; \
+	[ -n "$$DB_PASS" ] || { echo "Error: GUACAMOLE_POSTGRESQL_PASSWORD empty in $$envf" >&2; exit 1; }; \
+	[ -n "$$IMG" ] || IMG=docker.io/guacamole/guacamole:1.6.0; \
+	export DB_USER DB_PASS DB_NAME GUACAMOLE_IMAGE="$$IMG"; \
+	if [ -n "$(GUACAMOLE_PG_SERVICE)" ]; then export PG_SERVICE="$(GUACAMOLE_PG_SERVICE)"; fi; \
+	echo "guacamole-db-init: $$DB_USER / $$DB_NAME (PG_SERVICE=$${PG_SERVICE:-auto})"; \
+	$(BIN_DIR)/create-db.sh; \
+	$(BIN_DIR)/guacamole-init-schema.sh
+
 guacamole-setup: ## Ensure guacamole/.env, generate DB password, sync WEBAPP_CONTEXT / network
 	@set -e; \
 	envf='$(GUACAMOLE_ENV)'; \
@@ -45,9 +68,16 @@ guacamole-setup: ## Ensure guacamole/.env, generate DB password, sync WEBAPP_CON
 			v=$$(openssl rand -hex 24); \
 			upsert "$$envf" "$$k" "$$v"; \
 			if [ -n "$$root" ]; then upsert "$$root" "$$k" "$$v"; fi; \
-			echo "Generated $$k → $$envf (create matching role on external Postgres)."; \
+			echo "Generated $$k → $$envf (run make guacamole-db-init to create the role)."; \
 		fi; \
 	done; \
+	[ -n "$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_USERNAME)" ] || upsert "$$envf" GUACAMOLE_POSTGRESQL_USERNAME "guacamole_user"; \
+	[ -n "$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_DATABASE)" ] || upsert "$$envf" GUACAMOLE_POSTGRESQL_DATABASE "guacamole_db"; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" GUACAMOLE_POSTGRESQL_USERNAME "$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_USERNAME)"; \
+		upsert "$$root" GUACAMOLE_POSTGRESQL_DATABASE "$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_DATABASE)"; \
+		upsert "$$root" GUACAMOLE_POSTGRESQL_PASSWORD "$$(file_get "$$envf" GUACAMOLE_POSTGRESQL_PASSWORD)"; \
+	fi; \
 	missing=0; \
 	for k in $(GUACAMOLE_NOTIFY_VARS); do \
 		from_make=$$(make_get "$$k"); \
@@ -114,9 +144,9 @@ guacamole-setup: ## Ensure guacamole/.env, generate DB password, sync WEBAPP_CON
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
 	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
-	echo "Guacamole env OK ($$envf)."
+	echo "Guacamole env OK ($$envf). Next: make guacamole-db-init (role+schema) then compose/stack up."
 .guacamole-setup: guacamole-setup
-guacamole-stack-up: .guacamole-setup ## Deploy the guacamole stack
+guacamole-stack-up: guacamole-db-init ## Deploy the guacamole stack (DB init first)
 	$(MAKE) stack-deploy STACK_NAME=$(GUACAMOLE_STACK_NAME)
 guacamole-stack-down: ## Remove the guacamole stack
 	$(MAKE) stack-rm STACK_NAME=$(GUACAMOLE_STACK_NAME)
@@ -142,7 +172,7 @@ guacamole-debug-logs: ## Tail recent logs for each guacamole service
 	done
 guacamole-compose-upgrade: ## Upgrade the guacamole compose project
 	$(MAKE) docker-project-upgrade PROJECT_NAME=$(GUACAMOLE_STACK_NAME)
-guacamole-compose-up: .guacamole-setup ## Deploy guacamole (compose)
+guacamole-compose-up: guacamole-db-init ## Deploy guacamole (compose; DB init first)
 	$(MAKE) docker-project-up PROJECT_NAME=$(GUACAMOLE_STACK_NAME)
 guacamole-compose-down: ## Remove guacamole (compose)
 	$(MAKE) docker-project-down PROJECT_NAME=$(GUACAMOLE_STACK_NAME)

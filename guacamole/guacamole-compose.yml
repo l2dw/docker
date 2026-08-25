@@ -4,7 +4,7 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 services:
-  guacamole:
+  ui:
     image: ${GUACAMOLE_IMAGE:-docker.io/guacamole/guacamole:1.6.0}
     restart: ${GUACAMOLE_RESTART:-unless-stopped}
     privileged: ${GUACAMOLE_PRIVILEGED:-false}
@@ -12,7 +12,7 @@ services:
       - ${GUACAMOLE_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Toronto}
-      - GUACD_HOSTNAME=${GUACAMOLE_GUACD_HOSTNAME:-guacamole-guacd}
+      - GUACD_HOSTNAME=${GUACAMOLE_GUACD_HOSTNAME:-guacd}
       - GUACD_PORT=${GUACAMOLE_GUACD_PORT:-4822}
       - WEBAPP_CONTEXT=${GUACAMOLE_WEBAPP_CONTEXT:-guacamole}
       - REMOTE_IP_VALVE_ENABLED=${GUACAMOLE_REMOTE_IP_VALVE_ENABLED:-true}
