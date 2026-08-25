@@ -1,0 +1,67 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-netbox-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  netbox-media:
+    name: ${NETBOX_MEDIA_VOLUME_NAME:-netbox-media}
+    external: ${NETBOX_MEDIA_VOLUME_EXTERNAL:-false}
+  netbox-reports:
+    name: ${NETBOX_REPORTS_VOLUME_NAME:-netbox-reports}
+    external: ${NETBOX_REPORTS_VOLUME_EXTERNAL:-false}
+  netbox-scripts:
+    name: ${NETBOX_SCRIPTS_VOLUME_NAME:-netbox-scripts}
+    external: ${NETBOX_SCRIPTS_VOLUME_EXTERNAL:-false}
+
+services:
+  netbox-worker:
+    image: ${NETBOX_WORKER_IMAGE:-docker.io/netboxcommunity/netbox:v4.6-5.0.2}
+    restart: ${NETBOX_WORKER_RESTART:-unless-stopped}
+    privileged: ${NETBOX_WORKER_PRIVILEGED:-false}
+    env_file:
+      - ${NETBOX_WORKER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - TIME_ZONE=${NETBOX_TIME_ZONE:-America/Toronto}
+      - ALLOWED_HOSTS=${NETBOX_ALLOWED_HOSTS:-netbox.example.com}
+      - SECRET_KEY=${NETBOX_SECRET_KEY:-}
+      - DB_HOST=${NETBOX_DB_HOST:-postgresql}
+      - DB_PORT=${NETBOX_DB_PORT:-5432}
+      - DB_NAME=${NETBOX_DB_NAME:-netbox}
+      - DB_USER=${NETBOX_DB_USER:-netbox}
+      - DB_PASSWORD=${NETBOX_DB_PASSWORD:-}
+      - REDIS_HOST=${NETBOX_REDIS_HOST:-redis}
+      - REDIS_PORT=${NETBOX_REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${NETBOX_REDIS_PASSWORD:-}
+      - REDIS_DATABASE=${NETBOX_REDIS_DATABASE:-0}
+      - REDIS_CACHE_HOST=${NETBOX_REDIS_CACHE_HOST:-redis}
+      - REDIS_CACHE_PORT=${NETBOX_REDIS_CACHE_PORT:-6379}
+      - REDIS_CACHE_PASSWORD=${NETBOX_REDIS_CACHE_PASSWORD:-}
+      - REDIS_CACHE_DATABASE=${NETBOX_REDIS_CACHE_DATABASE:-1}
+      - SKIP_SUPERUSER=${NETBOX_SKIP_SUPERUSER:-true}
+      - WEBHOOKS_ENABLED=${NETBOX_WEBHOOKS_ENABLED:-true}
+      - MEDIA_ROOT=${NETBOX_MEDIA_ROOT:-/opt/netbox/netbox/media}
+    command:
+      - /opt/netbox/venv/bin/python
+      - /opt/netbox/netbox/manage.py
+      - rqworker
+    volumes:
+      - ${NETBOX_MEDIA_DIR:-netbox-media}:/opt/netbox/netbox/media
+      - ${NETBOX_REPORTS_DIR:-netbox-reports}:/opt/netbox/netbox/reports
+      - ${NETBOX_SCRIPTS_DIR:-netbox-scripts}:/opt/netbox/netbox/scripts
+    deploy:
+      mode: ${NETBOX_WORKER_DEPLOY_MODE:-replicated}
+      replicas: ${NETBOX_WORKER_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${NETBOX_WORKER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${NETBOX_WORKER_MEMORY_LIMIT:-1G}
