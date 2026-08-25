@@ -1,0 +1,72 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-guacamole-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  guacamole-guacd:
+    image: ${GUACAMOLE_GUACD_IMAGE:-docker.io/guacamole/guacd:1.6.0}
+    restart: ${GUACAMOLE_GUACD_RESTART:-unless-stopped}
+    privileged: ${GUACAMOLE_GUACD_PRIVILEGED:-false}
+    env_file:
+      - ${GUACAMOLE_GUACD_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - LOG_LEVEL=${GUACAMOLE_GUACD_LOG_LEVEL:-info}
+    deploy:
+      mode: ${GUACAMOLE_GUACD_DEPLOY_MODE:-replicated}
+      replicas: ${GUACAMOLE_GUACD_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${GUACAMOLE_GUACD_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${GUACAMOLE_GUACD_MEMORY_LIMIT:-1G}
+
+  guacamole:
+    image: ${GUACAMOLE_IMAGE:-docker.io/guacamole/guacamole:1.6.0}
+    restart: ${GUACAMOLE_RESTART:-unless-stopped}
+    privileged: ${GUACAMOLE_PRIVILEGED:-false}
+    env_file:
+      - ${GUACAMOLE_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - GUACD_HOSTNAME=${GUACAMOLE_GUACD_HOSTNAME:-guacamole-guacd}
+      - GUACD_PORT=${GUACAMOLE_GUACD_PORT:-4822}
+      - WEBAPP_CONTEXT=${GUACAMOLE_WEBAPP_CONTEXT:-guacamole}
+      - REMOTE_IP_VALVE_ENABLED=${GUACAMOLE_REMOTE_IP_VALVE_ENABLED:-true}
+      - POSTGRESQL_ENABLED=${GUACAMOLE_POSTGRESQL_ENABLED:-true}
+      - POSTGRESQL_HOSTNAME=${GUACAMOLE_POSTGRESQL_HOSTNAME:-postgresql}
+      - POSTGRESQL_PORT=${GUACAMOLE_POSTGRESQL_PORT:-5432}
+      - POSTGRESQL_DATABASE=${GUACAMOLE_POSTGRESQL_DATABASE:-guacamole_db}
+      - POSTGRESQL_USERNAME=${GUACAMOLE_POSTGRESQL_USERNAME:-guacamole_user}
+      - POSTGRESQL_PASSWORD=${GUACAMOLE_POSTGRESQL_PASSWORD:-}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://127.0.0.1:8080/guacamole/ >/dev/null || curl -fsS http://127.0.0.1:8080/ >/dev/null || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      mode: ${GUACAMOLE_DEPLOY_MODE:-replicated}
+      replicas: ${GUACAMOLE_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${GUACAMOLE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${GUACAMOLE_MEMORY_LIMIT:-1G}

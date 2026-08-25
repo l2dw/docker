@@ -1,0 +1,30 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-guacamole-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  guacamole-guacd:
+    image: ${GUACAMOLE_GUACD_IMAGE:-docker.io/guacamole/guacd:1.6.0}
+    restart: ${GUACAMOLE_GUACD_RESTART:-unless-stopped}
+    privileged: ${GUACAMOLE_GUACD_PRIVILEGED:-false}
+    env_file:
+      - ${GUACAMOLE_GUACD_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - LOG_LEVEL=${GUACAMOLE_GUACD_LOG_LEVEL:-info}
+    deploy:
+      mode: ${GUACAMOLE_GUACD_DEPLOY_MODE:-replicated}
+      replicas: ${GUACAMOLE_GUACD_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${GUACAMOLE_GUACD_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      resources:
+        limits:
+          memory: ${GUACAMOLE_GUACD_MEMORY_LIMIT:-1G}
