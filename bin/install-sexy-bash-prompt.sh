@@ -30,14 +30,14 @@ if sudo -n true 2>/dev/null; then
 else
   BASHRC="${HOME}/.bashrc"
   if [ -f "${BASHRC}" ] && ! grep -qF 'bash_prompt' "${BASHRC}"; then
-    cat >> "${BASHRC}" << 'EOF'
+    cat >> "${BASHRC}" << EOF
 # #########################################################
 # # sexy-bash-prompt (user install; no passwordless sudo for system-wide profile.d)
 # #########################################################
-[ -r ~/.bash_prompt ] && . ~/.bash_prompt
+[ -r "${HOME}/.bash_prompt" ] && . "${HOME}/.bash_prompt"
 EOF
-    echo "install-sexy-bash-prompt: hooked ~/.bash_prompt in ~/.bashrc"
+    echo "install-sexy-bash-prompt: hooked ${HOME}/.bash_prompt in ${HOME}/.bashrc"
   else
-    echo "install-sexy-bash-prompt: ~/.bash_prompt updated; ensure ~/.bashrc sources it" >&2
+    echo "install-sexy-bash-prompt: ${HOME}/.bash_prompt updated; ensure ${HOME}/.bashrc sources it" >&2
   fi
 fi
