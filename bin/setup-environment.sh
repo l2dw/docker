@@ -140,14 +140,32 @@ fi
 
 echo "==> Git configuration..."
 GIT_CONFIG="${HOME_DIR}/.gitconfig"
-rm -f "${GIT_CONFIG}"
+# Prefer etc/gitconfig (aliases); accept legacy etc/.gitconfig
+GITCONFIG_SRC=""
 if [ -f "${INFRA_DIR}/etc/gitconfig" ]; then
-	cp "${INFRA_DIR}/etc/gitconfig" "${GIT_CONFIG}" || setup_warn "could not copy ${INFRA_DIR}/etc/gitconfig"
-else
-	touch "${GIT_CONFIG}" || setup_warn "could not create ${GIT_CONFIG}"
+	GITCONFIG_SRC="${INFRA_DIR}/etc/gitconfig"
+elif [ -f "${INFRA_DIR}/etc/.gitconfig" ]; then
+	GITCONFIG_SRC="${INFRA_DIR}/etc/.gitconfig"
+fi
+# include.path must be absolute so ~/.gitconfig resolves it from any cwd
+if [ -n "${GITCONFIG_SRC}" ]; then
+	GITCONFIG_SRC="$(cd "$(dirname "${GITCONFIG_SRC}")" && pwd)/$(basename "${GITCONFIG_SRC}")"
 fi
 
+rm -f "${GIT_CONFIG}"
+touch "${GIT_CONFIG}" || setup_warn "could not create ${GIT_CONFIG}"
+
 if command -v git >/dev/null 2>&1; then
+	if [ -n "${GITCONFIG_SRC}" ]; then
+		# Keep aliases in ${INFRA_DIR}/etc/gitconfig; user identity stays in ~/.gitconfig
+		if ! git config --file "${GIT_CONFIG}" include.path "${GITCONFIG_SRC}"; then
+			setup_warn "git config include.path failed for ${GITCONFIG_SRC}"
+		else
+			echo "Included git aliases from ${GITCONFIG_SRC}"
+		fi
+	else
+		setup_warn "missing ${INFRA_DIR}/etc/gitconfig — git aliases not installed"
+	fi
 	if ! git config --file "${GIT_CONFIG}" http.sslVerify false; then
 		setup_warn "git config http.sslVerify failed for ${GIT_CONFIG}"
 	fi
