@@ -215,10 +215,10 @@ swarm-unlock-key: ## Show the unlock key
 STACK_DEPLOY_WAIT ?= 1
 
 STACK_EXTRA ?=
-stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
-	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(STACK_NAME)')"; \
+stack-deploy: .check-stack-name ## Deploy a stack (STACK_FILE or $(INFRA_DIR)/$(STACK_NAME)/{stack-,docker-}compose.yml; STACK_DEPLOY_WAIT=1 waits when CLI supports --detach)
+	@eval "$$(COMPOSE_FILE='$(STACK_FILE)' COMPOSE_OVERRIDE='$(STACK_OVERRIDE)' $(BIN_DIR)/resolve-project-compose.sh '$(INFRA_DIR)/$(STACK_NAME)')"; \
 	if [ -z "$$compose" ] || { [ ! -f "$$compose" ] && [ ! -L "$$compose" ]; }; then \
-		echo "STACK_FILE is unset and no compose file found under $(STACK_NAME)/ (stack-compose.yml or docker-compose.yml)."; exit 1; \
+		echo "STACK_FILE is unset and no compose file found under $(INFRA_DIR)/$(STACK_NAME)/ (stack-compose.yml or docker-compose.yml)."; exit 1; \
 	fi; \
 	if [ -n "$$env_file" ]; then set -a && . "$$env_file" && set +a; fi; \
 	set -- -c "$$compose"; \
@@ -316,3 +316,6 @@ commit-changes: ## Commit changes to the infrastructure
 	git add .
 	git commit -m "Update infrastructure: $(DATETIME)"
 	git push origin
+
+
+-include $(INFRA_DIR)/dokploy/Makefile
