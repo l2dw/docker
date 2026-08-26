@@ -319,3 +319,4 @@ commit-changes: ## Commit changes to the infrastructure
 
 
 -include $(INFRA_DIR)/dokploy/Makefile
+-include portainer/Makefile

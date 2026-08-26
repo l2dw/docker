@@ -1,0 +1,40 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-portainer-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  portainer_data:
+    name: ${PORTAINER_DATA_VOLUME_NAME:-portainer_data}
+    external: ${PORTAINER_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  portainer:
+    image: ${PORTAINER_IMAGE:-docker.io/portainer/portainer-ce:lts}
+    restart: ${PORTAINER_RESTART:-unless-stopped}
+    privileged: ${PORTAINER_PRIVILEGED:-false}
+    command:
+      - -H
+      - unix:///var/run/docker.sock
+      - --http-enabled
+      - --base-url=${PORTAINER_BASE_PATH:-/}
+      - --trusted-origins=${PORTAINER_TRUSTED_ORIGINS:-portainer.example.com}
+    env_file:
+      - ${PORTAINER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${PORTAINER_DATA_DIR:-portainer_data}:/data
+    deploy:
+      mode: ${PORTAINER_DEPLOY_MODE:-replicated}
+      replicas: ${PORTAINER_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${PORTAINER_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${PORTAINER_MEMORY_LIMIT:-1G}

@@ -1,0 +1,38 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-portainer-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  portainer-agent:
+    image: ${PORTAINER_AGENT_IMAGE:-docker.io/portainer/agent:lts}
+    restart: ${PORTAINER_AGENT_RESTART:-unless-stopped}
+    privileged: ${PORTAINER_AGENT_PRIVILEGED:-false}
+    env_file:
+      - ${PORTAINER_AGENT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      # Shared secret required when the Agent API is reachable outside a private overlay
+      - AGENT_SECRET=${PORTAINER_AGENT_SECRET:-}
+    volumes:
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${DOCKER_VOLUMES_PATH:-/var/lib/docker/volumes}:/var/lib/docker/volumes
+    # Optional: publish Agent API (TCP 9001) for a remote Portainer Server.
+    # Omit publish when agent and server share the same overlay (no host exposure).
+    ports:
+      - target: 9001
+        published: ${PORTAINER_AGENT_PUBLISHED_PORT:-9001}
+        protocol: tcp
+        mode: ${PORTAINER_AGENT_PORT_MODE:-ingress}
+    deploy:
+      mode: ${PORTAINER_AGENT_DEPLOY_MODE:-replicated}
+      replicas: ${PORTAINER_AGENT_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${PORTAINER_AGENT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${PORTAINER_AGENT_MEMORY_LIMIT:-1G}
