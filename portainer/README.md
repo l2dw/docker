@@ -1,6 +1,6 @@
 # Portainer CE
 
-Docker Swarm / Compose stack for [Portainer CE](https://docs.portainer.io/). Main stack = `server` only (`compose.yml` → `docker-compose.yml`). Agent is separate: `agent-compose.yml`.
+Docker Swarm / Compose stack for [Portainer CE](https://docs.portainer.io/). Main stack = `server` only. `docker-compose.yml` has Traefik/Homepage labels; unlabeled twin is `compose.yml`. Agent is separate: `agent-compose.yml`.
 
 ## Quick start
 
@@ -19,7 +19,7 @@ For Traefik on the shared Dokploy overlay: set `DEFAULT_NETWORK_NAME=dokploy-net
 
 | Compose service | Role | File |
 |-----------------|------|------|
-| `server` | CE UI (HTTP 9000 via Traefik); local Docker via `DOCKER_RUNTIME_SOCKET` | `docker-compose.yml` (`compose.yml` → symlink) |
+| `server` | CE UI (HTTP 9000 via Traefik); local Docker via `DOCKER_RUNTIME_SOCKET` | `docker-compose.yml` (labels) + `compose.yml` (no labels) |
 | `agent` | Agent API (TCP 9001) + Docker sock/volumes | `agent-compose.yml` only |
 ## Environment variables
 
@@ -150,7 +150,8 @@ Validate:
 
 ```sh
 docker compose -f portainer/compose.yml --env-file portainer/.env.example config
+docker compose -f portainer/docker-compose.yml --env-file portainer/.env.example config
 docker compose -f portainer/agent-compose.yml --env-file portainer/.env.example config
-# compose.yml must resolve to docker-compose.yml
-test -L portainer/compose.yml && test "$(readlink portainer/compose.yml)" = docker-compose.yml
+# compose.yml must not carry Traefik/Homepage labels
+! rg -q 'traefik\.|homepage\.' portainer/compose.yml
 ```
