@@ -241,7 +241,8 @@ services:
     command:
       - "--global.sendAnonymousUsage=false"
       - "--api.dashboard=true"
-      - "--api.insecure=true"
+      # Incompatible with api.basePath (Traefik ≥3.6). Keep false when using DOKPLOY_TRAEFIK_BASE_PATH.
+      - "--api.insecure=${DOKPLOY_TRAEFIK_API_INSECURE:-false}"
       - "--api.basePath=${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.middlewares=${DOKPLOY_TRAEFIK_WEB_MIDDLEWARES:-}"
