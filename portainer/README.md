@@ -1,14 +1,14 @@
 # Portainer CE
 
-Docker Swarm / Compose stack for [Portainer CE](https://docs.portainer.io/). The **Portainer Agent** lives in a separate compose file (`agent-compose.yml`), not in the main stack.
+Docker Swarm / Compose stack for [Portainer CE](https://docs.portainer.io/). Main stack = `server` only (`compose.yml` → `docker-compose.yml`). Agent is separate: `agent-compose.yml`.
 
 ## Quick start
 
 ```sh
 make portainer-setup
-make portainer-stack-up      # Swarm (server only)
+make portainer-stack-up      # Swarm (server)
 # or
-make portainer-compose-up    # Compose (server only)
+make portainer-compose-up    # Compose (server)
 ```
 
 Set real values in `portainer/.env` (created from `.env.example`). Mirror keys also live in the root `.env.example` for Make/`stack deploy` export.
@@ -19,11 +19,8 @@ For Traefik on the shared Dokploy overlay: set `DEFAULT_NETWORK_NAME=dokploy-net
 
 | Compose service | Role | File |
 |-----------------|------|------|
-| `portainer` | CE UI (HTTP 9000 via Traefik) | `docker-compose.yml` / `compose.yml` / `portainer-compose.yml` |
-| `portainer-agent` | Global agent (Docker sock + volumes) | `agent-compose.yml` only |
-
-Main stack uses the local Docker socket (`DOCKER_RUNTIME_SOCKET`). Add other environments later via the Portainer UI (Agent / Edge Agent).
-
+| `server` | CE UI (HTTP 9000 via Traefik); local Docker via `DOCKER_RUNTIME_SOCKET` | `docker-compose.yml` (`compose.yml` → symlink) |
+| `agent` | Agent API (TCP 9001) + Docker sock/volumes | `agent-compose.yml` only |
 ## Environment variables
 
 Types below are conceptual (Compose interpolates everything as strings). Booleans must be unquoted `true`/`false` in compose.
@@ -54,7 +51,7 @@ Types below are conceptual (Compose interpolates everything as strings). Boolean
 | `PORTAINER_DOMAIN` | hostname | `portainer.example.com` | Traefik `Host()` |
 | `PORTAINER_BASE_PATH` | path | `/portainer` | `/portainer` or `/` (Host-only). Drives `--base-url` + PathPrefix |
 | `PORTAINER_APP_URL` | URL | `http://portainer.example.com/portainer` | Public URL (Homepage `href`) |
-| `PORTAINER_TRUSTED_ORIGINS` | CSV hosts | `portainer.example.com` | Hostnames only (no scheme), for `--trusted-origins` |
+| `PORTAINER_TRUSTED_ORIGINS` | CSV hosts | `localhost,127.0.0.1,portainer.example.com` | Hostnames/IPs only (no scheme), for `--trusted-origins` |
 | `PORTAINER_TRAEFIK_LABELS_SWARM_ENABLE` | bool | `true` | Gate `deploy.labels` Traefik |
 | `PORTAINER_TRAEFIK_LABELS_DOCKER_ENABLE` | bool | `true` | Gate service `labels` Traefik |
 | `PORTAINER_ENTRYPOINTS` | string | `web` | Traefik entrypoint name(s) |
@@ -64,7 +61,7 @@ Types below are conceptual (Compose interpolates everything as strings). Boolean
 | `PORTAINER_DEPLOY_MODE` | enum | `replicated` | `replicated` \| `global` |
 | `PORTAINER_DEPLOY_REPLICAS` | int | `1` | Used when `replicated` |
 | `PORTAINER_PLACEMENT_CONSTRAINTS` | string | `node.role==manager` | Swarm placement constraint |
-| `PORTAINER_HOMEPAGE_*` | string | see `.env.example` | Homepage labels (`GROUP`, `NAME`, `ICON`, `HREF`, `DESCRIPTION`, `SITEMONITOR`) |
+| `PORTAINER_HOMEPAGE_*` | string | see `.env.example` | Homepage labels (`GROUP`, `NAME`, `ICON`, `HREF`, `DESCRIPTION`, `SITEMONITOR` default `http://server:9000`) |
 
 `APP_NAME` is **not** listed in `.env.example` (Dokploy / host may set it). Traefik router/service names default to `portainer`.
 
@@ -154,4 +151,6 @@ Validate:
 ```sh
 docker compose -f portainer/compose.yml --env-file portainer/.env.example config
 docker compose -f portainer/agent-compose.yml --env-file portainer/.env.example config
+# compose.yml must resolve to docker-compose.yml
+test -L portainer/compose.yml && test "$(readlink portainer/compose.yml)" = docker-compose.yml
 ```

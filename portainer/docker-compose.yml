@@ -9,7 +9,7 @@ volumes:
     external: ${PORTAINER_DATA_VOLUME_EXTERNAL:-false}
 
 services:
-  portainer:
+  server:
     image: ${PORTAINER_IMAGE:-docker.io/portainer/portainer-ce:lts}
     restart: ${PORTAINER_RESTART:-unless-stopped}
     privileged: ${PORTAINER_PRIVILEGED:-false}
@@ -18,7 +18,7 @@ services:
       - unix:///var/run/docker.sock
       - --http-enabled
       - --base-url=${PORTAINER_BASE_PATH:-/}
-      - --trusted-origins=${PORTAINER_TRUSTED_ORIGINS:-portainer.example.com}
+      - --trusted-origins=${PORTAINER_TRUSTED_ORIGINS:-localhost,127.0.0.1,portainer.example.com}
     env_file:
       - ${PORTAINER_ENV_FILE:-.env.example}
     environment:
@@ -53,7 +53,7 @@ services:
         - "homepage.icon=${PORTAINER_HOMEPAGE_ICON:-portainer.png}"
         - "homepage.href=${PORTAINER_APP_URL:-http://portainer.example.com/portainer}"
         - "homepage.description=${PORTAINER_HOMEPAGE_DESCRIPTION:-Portainer CE}"
-        - "homepage.siteMonitor=${PORTAINER_HOMEPAGE_SITEMONITOR:-http://portainer:9000}"
+        - "homepage.siteMonitor=${PORTAINER_HOMEPAGE_SITEMONITOR:-http://server:9000}"
     labels:
       - "traefik.enable=${PORTAINER_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.middlewares.${APP_NAME:-portainer}-strip.stripprefix.prefixes=${PORTAINER_BASE_PATH:-/}"
@@ -69,4 +69,4 @@ services:
       - "homepage.icon=${PORTAINER_HOMEPAGE_ICON:-portainer.png}"
       - "homepage.href=${PORTAINER_APP_URL:-http://portainer.example.com/portainer}"
       - "homepage.description=${PORTAINER_HOMEPAGE_DESCRIPTION:-Portainer CE}"
-      - "homepage.siteMonitor=${PORTAINER_HOMEPAGE_SITEMONITOR:-http://portainer:9000}"
+      - "homepage.siteMonitor=${PORTAINER_HOMEPAGE_SITEMONITOR:-http://server:9000}"

@@ -1,6 +1,6 @@
 ## —— 🐝 Portainer commands ———————————————————————————————————
 PORTAINER_STACK_NAME := portainer
-PORTAINER_SERVICES_SHORT := portainer
+PORTAINER_SERVICES_SHORT := server
 PORTAINER_ENV := $(PORTAINER_STACK_NAME)/.env
 PORTAINER_ENV_EXAMPLE := $(PORTAINER_STACK_NAME)/.env.example
 PORTAINER_NOTIFY_VARS := PORTAINER_APP_URL PORTAINER_DOMAIN
@@ -56,7 +56,7 @@ portainer-setup: ## Ensure portainer/.env, sync strip middleware / network pairi
 	domain=$$(file_get "$$envf" PORTAINER_DOMAIN); \
 	[ -n "$$domain" ] || domain=$$(file_get "$$root" PORTAINER_DOMAIN); \
 	origins=$$(file_get "$$envf" PORTAINER_TRUSTED_ORIGINS); \
-	[ -n "$$origins" ] || origins="$$domain"; \
+	[ -n "$$origins" ] || origins="localhost,127.0.0.1,$$domain"; \
 	upsert "$$envf" PORTAINER_TRUSTED_ORIGINS "$$origins"; \
 	if [ -n "$$root" ]; then upsert "$$root" PORTAINER_TRUSTED_ORIGINS "$$origins"; fi; \
 	bp=$$(file_get "$$envf" PORTAINER_BASE_PATH); \

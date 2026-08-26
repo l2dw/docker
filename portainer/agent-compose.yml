@@ -4,7 +4,7 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 services:
-  portainer-agent:
+  agent:
     image: ${PORTAINER_AGENT_IMAGE:-docker.io/portainer/agent:lts}
     restart: ${PORTAINER_AGENT_RESTART:-unless-stopped}
     privileged: ${PORTAINER_AGENT_PRIVILEGED:-false}
