@@ -72,10 +72,19 @@ Configuration is via `command:` in [`docker-compose.yml`](docker-compose.yml) (n
 |----------|---------|
 | `DOKPLOY_TRAEFIK_WEB_MIDDLEWARES` | `waf` |
 | `DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES` | `waf` |
+| `DOKPLOY_WAF_MODSECURITY_URL` | `http://dokploy-waf:8080` |
+| `DOKPLOY_WAF_BACKEND` | `http://dokploy-waf-dummy:80` |
 
 ```sh
 DOKPLOY_WAF_MODSECURITY_URL=http://dokploy-waf:8080
+DOKPLOY_WAF_BACKEND=http://dokploy-waf-dummy:80
 ```
+
+**`waf-dummy`** (`traefik/whoami`) is the CRS Apache upstream (`BACKEND`). Without a reachable backend, ModSecurity proxies to `localhost:80` inside the WAF container and Traefik’s plugin returns **503**. Keep `DOKPLOY_WAF_BACKEND` on `dokploy-waf-dummy` (or another real HTTP service on the overlay).
+
+Certificates bind path: set `DOKPLOY_TRAEFIK_CERTIFICATES_DIR` when using a host directory instead of the named volume (Traefik + certs-dumper + Dokploy console mount).
+
+`stack-deploy` resolves compose under `$(INFRA_DIR)/$(STACK_NAME)/` and sources that project’s `.env` before deploy.
 
 ### Real client IP
 

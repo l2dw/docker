@@ -1,8 +1,8 @@
 ## —— 🐝 Dokploy commands ———————————————————————————————————
 DOKPLOY_STACK_NAME := dokploy
-DOKPLOY_SERVICES_SHORT := dokploy postgresql redis traefik waf certs-dumper
-DOKPLOY_ENV := $(DOKPLOY_STACK_NAME)/.env
-DOKPLOY_ENV_EXAMPLE := $(DOKPLOY_STACK_NAME)/.env.example
+DOKPLOY_SERVICES_SHORT := dokploy postgresql redis traefik waf waf-dummy certs-dumper
+DOKPLOY_ENV := $(INFRA_DIR)/dokploy/.env
+DOKPLOY_ENV_EXAMPLE := $(INFRA_DIR)/dokploy/.env.example
 NETWORK_DRIVER ?= overlay
 DEFAULT_NETWORK_NAME ?= dokploy-network
 

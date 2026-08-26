@@ -10,11 +10,13 @@ http:
       redirectScheme:
         scheme: https
         permanent: true
-    # Traefik → ModSecurity CRS (service `waf`). Also declared on Traefik service labels; entrypoints use DOKPLOY_TRAEFIK_WEB*_MIDDLEWARES (default waf).
-    # CRS apache listens on 8080 by default.
+    # Traefik → ModSecurity CRS (service `waf` / alias `dokploy-waf`). Also on Traefik labels;
+    # entrypoints use DOKPLOY_TRAEFIK_WEB*_MIDDLEWARES (default waf).
+    # CRS apache listens on 8080. Its BACKEND must be dokploy-waf-dummy (or another real upstream)
+    # — empty/localhost:80 inside the WAF container causes Traefik 503.
     waf:
       plugin:
         traefik-modsecurity-plugin:
-          modSecurityUrl: http://waf:8080
+          modSecurityUrl: http://dokploy-waf:8080
           maxBodySize: 10485760
           timeoutMillis: 2000
