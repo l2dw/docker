@@ -8,11 +8,13 @@ Default network is stack-local `registry-network`. For Traefik on Dokploy set `D
 
 The registry binary does **not** read username/password from the environment. This stack’s `docker-entrypoint.sh` (Compose/Swarm **config**) builds a bcrypt htpasswd at start from:
 
-| Variable | Default | Role |
-|----------|---------|------|
-| `REGISTRY_USER_NAME` | `dockeradm` | Basic-auth user |
-| `REGISTRY_USER_PASS` | `ChangeMe` | Basic-auth password — **rotate in production** |
-| `REGISTRY_AUTH_HTPASSWD_PATH` | `/auth/htpasswd` | File written inside the container |
+
+| Variable                      | Default          | Role                                           |
+| ----------------------------- | ---------------- | ---------------------------------------------- |
+| `REGISTRY_USER_NAME`          | `dockeradm`      | Basic-auth user                                |
+| `REGISTRY_USER_PASS`          | `ChangeMe`       | Basic-auth password — **rotate in production** |
+| `REGISTRY_AUTH_HTPASSWD_PATH` | `/auth/htpasswd` | File written inside the container              |
+
 
 Set them in `registry/.env`, root `.env` (Swarm/Make), or the Dokploy UI. First start needs outbound access to Alpine repos once (`apk add apache2-utils` for `htpasswd`).
 
@@ -25,11 +27,11 @@ REGISTRY_USER_PASS=your-strong-password
 docker login registry.example.com -u dockeradm -p 'your-strong-password'
 ```
 
-Unlabeled `compose.yml` and labeled `docker-compose.yml` both publish **`REGISTRY_HOST_PORT`** (default **5000**). Prefer **Host-only** Traefik path (`REGISTRY_BASE_PATH=/`) if you also enable Traefik.
+Unlabeled `compose.yml` and labeled `docker-compose.yml` both publish `REGISTRY_HOST_PORT` (default **5000**). Prefer **Host-only** Traefik path (`REGISTRY_BASE_PATH=/`) if you also enable Traefik.
 
 ## Direct access from nodes (no Traefik)
 
-Default: Traefik labels **off**; port published with **`REGISTRY_PORT_MODE=ingress`** so **any Swarm node** accepts `IP_du_noeud:5000` and the mesh routes to the registry task.
+Default: Traefik labels **off**; port published with `REGISTRY_PORT_MODE=ingress` so **any Swarm node** accepts `IP_du_noeud:5000` and the mesh routes to the registry task.
 
 ```sh
 # On any cluster node (or LAN client that can reach a node IP)
@@ -37,11 +39,13 @@ docker login 10.0.0.12:5000 -u dockeradm -p '…'
 docker pull 10.0.0.12:5000/myimage:tag
 ```
 
-| Setting | Effect |
-|---------|--------|
-| `REGISTRY_PORT_MODE=ingress` (default) | `:5000` on **every** node via routing mesh |
-| `REGISTRY_PORT_MODE=host` | `:5000` only on the node running the task |
-| `REGISTRY_HOST_PORT=5001` | Change if `:5000` is already taken on the mesh / host |
+
+| Setting                                | Effect                                                |
+| -------------------------------------- | ----------------------------------------------------- |
+| `REGISTRY_PORT_MODE=ingress` (default) | `:5000` on **every** node via routing mesh            |
+| `REGISTRY_PORT_MODE=host`              | `:5000` only on the node running the task             |
+| `REGISTRY_HOST_PORT=5001`              | Change if `:5000` is already taken on the mesh / host |
+
 
 Containers on the **same Docker network** can use DNS without the published port: `registry:5000` (Compose) or `registry_registry:5000` (Swarm stack name).
 
@@ -82,6 +86,8 @@ docker login "$REG" -u "$REGISTRY_USER_NAME" -p "$REGISTRY_USER_PASS"
 docker logout "$REG"
 ```
 
+
+
 ### Push / pull
 
 ```sh
@@ -114,6 +120,8 @@ curl -fsS "${AUTH[@]}" "http://$REG/v2/_catalog?n=1000"
 curl -fsS "${AUTH[@]}" "http://$REG/v2/_catalog" | jq -r '.repositories[]'
 ```
 
+
+
 ### List tags for an image
 
 ```sh
@@ -137,6 +145,8 @@ curl -fsSI "${AUTH[@]}" \
   "http://$REG/v2/$IMG/manifests/$TAG" | tr -d '\r' | grep -i Docker-Content-Digest
 ```
 
+
+
 ### Delete a tag/manifest (optional)
 
 Requires `REGISTRY_STORAGE_DELETE_ENABLED=true` (default in this stack). GC inside the registry is a separate ops step.
@@ -145,6 +155,8 @@ Requires `REGISTRY_STORAGE_DELETE_ENABLED=true` (default in this stack). GC insi
 DIGEST='sha256:…'   # from Docker-Content-Digest above
 curl -fsS -X DELETE "${AUTH[@]}" "http://$REG/v2/$IMG/manifests/$DIGEST"
 ```
+
+
 
 ### Quick smoke test
 
@@ -160,7 +172,7 @@ curl -fsS -u dockeradm:ChangeMe "http://$REG/v2/busybox/tags/list"
 
 `.env` is **not** read by `docker stack deploy` alone — use Make or export env in Dokploy. Compose `env_file` + `environment:` (`environment:` wins).
 
-`APP_NAME` (Dokploy) scopes Traefik names; not listed in `.env.example`.
+`APP_NAME` scopes Traefik router/service names (`${APP_NAME:-registry}`). Listed in `.env.example` (default `registry`) so Compose/Swarm stay unique without Dokploy; if you change it, also rename `REGISTRY_ENTRYPOINT_CONFIG_NAME` and `REGISTRY_DATA_VOLUME_NAME` (Compose `.env` does not expand `${APP_NAME}` inside other values).
 
 ## Base path
 
@@ -172,12 +184,14 @@ Defaults: Docker **named volume** (interne). `driver=local` with **empty** `driv
 
 Service mount: `${REGISTRY_DATA_DIR:-registry_data}:/var/lib/registry` (empty `REGISTRY_DATA_DIR` → named volume).
 
-| Mode | Env |
-|------|-----|
-| **Interne** (défaut) | `REGISTRY_DATA_VOLUME_EXTERNAL=false`, leave `REGISTRY_DATA_DRIVER_TYPE` / `_O` / `_DEVICE` empty |
-| **Externe** | Pré-créer le volume, puis `REGISTRY_DATA_VOLUME_EXTERNAL=true` (Compose n’applique plus `driver_opts`) |
+
+| Mode                    | Env                                                                                                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Interne** (défaut)    | `REGISTRY_DATA_VOLUME_EXTERNAL=false`, leave `REGISTRY_DATA_DRIVER_TYPE` / `_O` / `_DEVICE` empty                                                                                                                   |
+| **Externe**             | Pré-créer le volume, puis `REGISTRY_DATA_VOLUME_EXTERNAL=true` (Compose n’applique plus `driver_opts`)                                                                                                              |
 | **Disque local (bind)** | `REGISTRY_DATA_DRIVER_TYPE=none`, `REGISTRY_DATA_DRIVER_O=bind`, `REGISTRY_DATA_DRIVER_DEVICE=/abs/path` (Compose peut résoudre `./data` → absolu ; Swarm : chemin **absolu** sur le nœud). Créer le dossier avant. |
-| **NFS** | `REGISTRY_DATA_DRIVER_TYPE=nfs`, `REGISTRY_DATA_DRIVER_O=addr=nfs.example.com,rw,nfsvers=4,nolock`, `REGISTRY_DATA_DRIVER_DEVICE=:/exports/registry_data` |
+| **NFS**                 | `REGISTRY_DATA_DRIVER_TYPE=nfs`, `REGISTRY_DATA_DRIVER_O=addr=nfs.example.com,rw,nfsvers=4,nolock`, `REGISTRY_DATA_DRIVER_DEVICE=:/exports/registry_data`                                                           |
+
 
 **Bind alternatif** (sans `driver_opts`) : `REGISTRY_DATA_DIR=/mnt/registry` sur le mount service.
 
@@ -231,15 +245,19 @@ make registry-compose-down
 make registry-compose-logs
 ```
 
+
+
 ## Required env
 
-| Variable | Notes |
-|----------|--------|
-| `REGISTRY_DOMAIN` / `REGISTRY_APP_URL` | Traefik Host + public URL |
-| `REGISTRY_USER_NAME` / `REGISTRY_USER_PASS` | Auth (entrypoint → htpasswd) |
-| `REGISTRY_HTTP_SECRET` | Optional upload signing key |
-| `REGISTRY_ENV_FILE` | Compose dotenv (default `.env.example`) |
+
+| Variable                                    | Notes                                                   |
+| ------------------------------------------- | ------------------------------------------------------- |
+| `REGISTRY_DOMAIN` / `REGISTRY_APP_URL`      | Traefik Host + public URL                               |
+| `REGISTRY_USER_NAME` / `REGISTRY_USER_PASS` | Auth (entrypoint → htpasswd)                            |
+| `REGISTRY_HTTP_SECRET`                      | Optional upload signing key                             |
+| `REGISTRY_ENV_FILE`                         | Compose dotenv (default `.env.example`)                 |
 | `REGISTRY_HOST_PORT` / `REGISTRY_PORT_MODE` | Direct `:5000` on nodes (`ingress` = mesh on all nodes) |
-| `REGISTRY_TRAEFIK_LABELS_*_ENABLE` | Default `false` — optional public Traefik route |
+| `REGISTRY_TRAEFIK_LABELS_*_ENABLE`          | Default `false` — optional public Traefik route         |
+
 
 Do not commit `registry/.env` or real secrets.
