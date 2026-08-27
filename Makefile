@@ -316,50 +316,5 @@ push-udem: ## Push changes to the UDEM repository
 	git push ti-udem $(CURRENT_BRANCH)
 
 
-## —— 🐝 REGISTRY commands ———————————————————————————————————
-REGISTRY_STACK_NAME := registry
-REGISTRY_SERVICES_SHORT := registry postgresql redis traefik
-registry-pull-images: ## Pull images for the registry stack
-	$(MAKE) docker-pull-images PROJECT_NAME=$(REGISTRY_STACK_NAME)
-registry-stack-up: .registry-stack-setup ## Deploy the registry stack
-	$(MAKE) stack-deploy STACK_NAME=$(REGISTRY_STACK_NAME)
-registry-stack-down: ## Remove the registry stack
-	$(MAKE) stack-rm STACK_NAME=$(REGISTRY_STACK_NAME)
-registry-stack-recreate: registry-stack-down registry-stack-up ## Recreate the registry stack
-registry-stack-logs: ## Show logs of the registry stack
-	$(MAKE) stack-logs STACK_NAME=$(REGISTRY_STACK_NAME)
-registry-stack-watch-logs: ## Watch logs of the registry stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(REGISTRY_STACK_NAME)
-registry-debug: ## Debug registry swarm stack: services, tasks (states/errors), traefik ports
-	@echo "--- docker stack services ($(REGISTRY_STACK_NAME))"
-	@$(DOCKER) stack services $(REGISTRY_STACK_NAME) 2>/dev/null || echo "(stack missing or swarm unavailable)"
-	@echo
-	@echo "--- docker service ls (${REGISTRY_STACK_NAME}_*) ---"
-	@$(DOCKER) service ls --filter label=com.docker.stack.namespace=$(REGISTRY_STACK_NAME) 2>/dev/null \
-		|| $(DOCKER) service ls | grep '$(REGISTRY_STACK_NAME)_' \
-		|| echo "(could not filter services)"
-	@echo
-	@echo "--- docker stack ps --no-trunc ($(REGISTRY_STACK_NAME))"
-	@$(DOCKER) stack ps $(REGISTRY_STACK_NAME) --no-trunc
-	@echo
-	@echo "--- traefik published ports ---"
-	@$(DOCKER) service inspect $(REGISTRY_STACK_NAME)_registry-traefik --format '{{json .Endpoint.Ports}}' 2>/dev/null || echo "(no traefik service or inspect failed)"
-registry-debug-logs: ## Tail recent logs for each registry service (e.g. services at 0/1)
-	@for s in $(REGISTRY_SERVICES_SHORT); do \
-		echo "==================== $(REGISTRY_STACK_NAME)_$$s ===================="; \
-		$(DOCKER) service logs "$(REGISTRY_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
-		echo; \
-	done
-registry-compose-upgrade: ## Upgrade the registry stack
-	make docker-project-upgrade PROJECT_NAME=$(REGISTRY_STACK_NAME)
-registry-compose-up: ## Deploy the registry stack
-	make docker-project-up PROJECT_NAME=$(REGISTRY_STACK_NAME)
-registry-compose-down: ## Remove the registry stack
-	make docker-project-down PROJECT_NAME=$(REGISTRY_STACK_NAME)
-registry-compose-restart: ## Restart the registry stack
-	make docker-project-restart PROJECT_NAME=$(REGISTRY_STACK_NAME)
-registry-compose-recreate: registry-compose-down registry-compose-up ## Recreate the registry stack
-registry-compose-logs: ## Show logs of the registry stack
-	make docker-project-logs PROJECT_NAME=$(REGISTRY_STACK_NAME)
-registry-compose-watch-logs: ## Watch logs of the registry stack
-	make docker-project-watch PROJECT_NAME=$(REGISTRY_STACK_NAME)
+# Per-project targets (e.g. registry-stack-up)
+-include registry/Makefile

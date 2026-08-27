@@ -4,6 +4,8 @@
 !**/.*.example
 **/*.override.*
 **/*.password
+**/registry-htpasswd
+**/registry/data/
 **/*.backup
 **/*_trash
 var/

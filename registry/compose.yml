@@ -1,0 +1,64 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-registry-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  registry_data:
+    name: ${REGISTRY_DATA_VOLUME_NAME:-registry_data}
+    external: ${REGISTRY_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${REGISTRY_DATA_VOLUME_DRIVER:-local}
+    # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
+    driver_opts:
+      type: ${REGISTRY_DATA_DRIVER_TYPE:-}
+      o: ${REGISTRY_DATA_DRIVER_O:-}
+      device: ${REGISTRY_DATA_DRIVER_DEVICE:-}
+
+configs:
+  registry-entrypoint:
+    file: ./docker-entrypoint.sh
+    name: ${REGISTRY_ENTRYPOINT_CONFIG_NAME:-registry-entrypoint}
+
+services:
+  registry:
+    image: ${REGISTRY_IMAGE:-docker.io/library/registry:2}
+    restart: ${REGISTRY_RESTART:-unless-stopped}
+    privileged: ${REGISTRY_PRIVILEGED:-false}
+    entrypoint: ["/bin/sh", "/registry-entrypoint.sh"]
+    env_file:
+      - ${REGISTRY_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - REGISTRY_STORAGE_DELETE_ENABLED=${REGISTRY_STORAGE_DELETE_ENABLED:-true}
+      - REGISTRY_HEALTH_STORAGEDRIVER_ENABLED=${REGISTRY_HEALTH_STORAGEDRIVER_ENABLED:-true}
+      - REGISTRY_HTTP_SECRET=${REGISTRY_HTTP_SECRET:-}
+      - REGISTRY_HTTP_RELATIVEURLS=${REGISTRY_HTTP_RELATIVEURLS:-true}
+      - REGISTRY_AUTH=${REGISTRY_AUTH:-htpasswd}
+      - REGISTRY_AUTH_HTPASSWD_REALM=${REGISTRY_AUTH_HTPASSWD_REALM:-Registry Realm}
+      - REGISTRY_AUTH_HTPASSWD_PATH=${REGISTRY_AUTH_HTPASSWD_PATH:-/auth/htpasswd}
+      - REGISTRY_USER_NAME=${REGISTRY_USER_NAME:-dockeradm}
+      - REGISTRY_USER_PASS=${REGISTRY_USER_PASS:-ChangeMe}
+    configs:
+      - source: registry-entrypoint
+        target: /registry-entrypoint.sh
+        mode: 0555
+    volumes:
+      - ${REGISTRY_DATA_DIR:-registry_data}:/var/lib/registry
+    # Host publish (compose.yml only — not in labeled docker-compose.yml / Traefik path).
+    ports:
+      - target: 5000
+        published: ${REGISTRY_HOST_PORT:-5000}
+        protocol: tcp
+        mode: ${REGISTRY_PORT_MODE:-ingress}
+    deploy:
+      mode: ${REGISTRY_DEPLOY_MODE:-replicated}
+      replicas: ${REGISTRY_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${REGISTRY_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${REGISTRY_MEMORY_LIMIT:-1G}
