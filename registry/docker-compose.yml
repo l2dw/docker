@@ -44,7 +44,12 @@ services:
         mode: 0555
     volumes:
       - ${REGISTRY_DATA_DIR:-registry_data}:/var/lib/registry
-    # No host publish — Traefik ingress (see compose.yml for unlabeled host ports).
+    # Publish :5000 for node/daemon access without Traefik (ingress = any Swarm node IP).
+    ports:
+      - target: 5000
+        published: ${REGISTRY_HOST_PORT:-5000}
+        protocol: tcp
+        mode: ${REGISTRY_PORT_MODE:-ingress}
     deploy:
       mode: ${REGISTRY_DEPLOY_MODE:-replicated}
       replicas: ${REGISTRY_DEPLOY_REPLICAS:-1}

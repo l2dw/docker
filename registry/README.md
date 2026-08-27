@@ -25,7 +25,138 @@ REGISTRY_USER_PASS=your-strong-password
 docker login registry.example.com -u dockeradm -p 'your-strong-password'
 ```
 
-Unlabeled `compose.yml` publishes `REGISTRY_HOST_PORT` (default 5000). Labeled `docker-compose.yml` is Traefik-only. Prefer **Host-only** (`REGISTRY_BASE_PATH=/`) for docker CLI.
+Unlabeled `compose.yml` and labeled `docker-compose.yml` both publish **`REGISTRY_HOST_PORT`** (default **5000**). Prefer **Host-only** Traefik path (`REGISTRY_BASE_PATH=/`) if you also enable Traefik.
+
+## Direct access from nodes (no Traefik)
+
+Default: Traefik labels **off**; port published with **`REGISTRY_PORT_MODE=ingress`** so **any Swarm node** accepts `IP_du_noeud:5000` and the mesh routes to the registry task.
+
+```sh
+# On any cluster node (or LAN client that can reach a node IP)
+docker login 10.0.0.12:5000 -u dockeradm -p '…'
+docker pull 10.0.0.12:5000/myimage:tag
+```
+
+| Setting | Effect |
+|---------|--------|
+| `REGISTRY_PORT_MODE=ingress` (default) | `:5000` on **every** node via routing mesh |
+| `REGISTRY_PORT_MODE=host` | `:5000` only on the node running the task |
+| `REGISTRY_HOST_PORT=5001` | Change if `:5000` is already taken on the mesh / host |
+
+Containers on the **same Docker network** can use DNS without the published port: `registry:5000` (Compose) or `registry_registry:5000` (Swarm stack name).
+
+Optional HTTPS / public name: set `REGISTRY_TRAEFIK_LABELS_SWARM_ENABLE=true` (and Docker enable) + join `dokploy-network` — Traefik and `:5000` can coexist.
+
+## Docker client (login, insecure, catalog, tags)
+
+Replace `REG` with your endpoint (examples: `10.0.0.12:5000`, `registry.example.com:5000`). Plain HTTP on `:5000` needs an **insecure registry** entry on each Docker host that pulls/pushes.
+
+### Insecure registry (HTTP)
+
+Edit `/etc/docker/daemon.json` (create if missing), then restart Docker:
+
+```json
+{
+  "insecure-registries": ["10.0.0.12:5000", "registry.example.com:5000"]
+}
+```
+
+```sh
+# Linux
+sudo systemctl restart docker
+# confirm
+docker info 2>/dev/null | grep -A20 'Insecure Registries'
+```
+
+Without this, `docker pull/push` to `http://host:5000` fails with “HTTP response to HTTPS client” / similar. TLS via Traefik does **not** need `insecure-registries` (use normal HTTPS + `docker login` to the hostname).
+
+### Login / logout
+
+```sh
+export REG=10.0.0.12:5000
+export REGISTRY_USER_NAME=dockeradm
+export REGISTRY_USER_PASS='your-strong-password'
+
+docker login "$REG" -u "$REGISTRY_USER_NAME" -p "$REGISTRY_USER_PASS"
+# credentials stored under ~/.docker/config.json
+docker logout "$REG"
+```
+
+### Push / pull
+
+```sh
+export REG=10.0.0.12:5000
+docker pull alpine:latest
+docker tag alpine:latest "$REG/alpine:latest"
+docker push "$REG/alpine:latest"
+docker pull "$REG/alpine:latest"
+```
+
+Image names **must** include the registry host (`$REG/...`). Nested paths work: `$REG/team/app:1.2.3`.
+
+### List repositories (catalog)
+
+Docker CLI has no `docker search` for a private Distribution registry. Use the [Registry HTTP API V2](https://distribution.github.io/distribution/spec/api/):
+
+```sh
+export REG=10.0.0.12:5000
+export AUTH=(-u "$REGISTRY_USER_NAME:$REGISTRY_USER_PASS")
+
+# API reachable?
+curl -fsS "${AUTH[@]}" "http://$REG/v2/" && echo OK
+
+# List repositories (“packages” / images)
+curl -fsS "${AUTH[@]}" "http://$REG/v2/_catalog"
+# paginate if needed:
+curl -fsS "${AUTH[@]}" "http://$REG/v2/_catalog?n=1000"
+
+# Pretty (optional jq)
+curl -fsS "${AUTH[@]}" "http://$REG/v2/_catalog" | jq -r '.repositories[]'
+```
+
+### List tags for an image
+
+```sh
+IMG=alpine   # repository name from _catalog (no host prefix)
+curl -fsS "${AUTH[@]}" "http://$REG/v2/$IMG/tags/list"
+curl -fsS "${AUTH[@]}" "http://$REG/v2/$IMG/tags/list" | jq -r '.tags[]'
+```
+
+Nested repo: `curl … "http://$REG/v2/team/app/tags/list"`.
+
+### Inspect manifest / digest
+
+```sh
+TAG=latest
+curl -fsS "${AUTH[@]}" \
+  -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+  "http://$REG/v2/$IMG/manifests/$TAG"
+# digest header (for delete):
+curl -fsSI "${AUTH[@]}" \
+  -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+  "http://$REG/v2/$IMG/manifests/$TAG" | tr -d '\r' | grep -i Docker-Content-Digest
+```
+
+### Delete a tag/manifest (optional)
+
+Requires `REGISTRY_STORAGE_DELETE_ENABLED=true` (default in this stack). GC inside the registry is a separate ops step.
+
+```sh
+DIGEST='sha256:…'   # from Docker-Content-Digest above
+curl -fsS -X DELETE "${AUTH[@]}" "http://$REG/v2/$IMG/manifests/$DIGEST"
+```
+
+### Quick smoke test
+
+```sh
+export REG=10.0.0.12:5000
+docker login "$REG" -u dockeradm -p ChangeMe
+docker pull busybox:latest
+docker tag busybox:latest "$REG/busybox:test"
+docker push "$REG/busybox:test"
+curl -fsS -u dockeradm:ChangeMe "http://$REG/v2/_catalog"
+curl -fsS -u dockeradm:ChangeMe "http://$REG/v2/busybox/tags/list"
+```
 
 `.env` is **not** read by `docker stack deploy` alone — use Make or export env in Dokploy. Compose `env_file` + `environment:` (`environment:` wins).
 
@@ -108,6 +239,7 @@ make registry-compose-logs
 | `REGISTRY_USER_NAME` / `REGISTRY_USER_PASS` | Auth (entrypoint → htpasswd) |
 | `REGISTRY_HTTP_SECRET` | Optional upload signing key |
 | `REGISTRY_ENV_FILE` | Compose dotenv (default `.env.example`) |
-| `REGISTRY_HOST_PORT` | Host publish in `compose.yml` only |
+| `REGISTRY_HOST_PORT` / `REGISTRY_PORT_MODE` | Direct `:5000` on nodes (`ingress` = mesh on all nodes) |
+| `REGISTRY_TRAEFIK_LABELS_*_ENABLE` | Default `false` — optional public Traefik route |
 
 Do not commit `registry/.env` or real secrets.

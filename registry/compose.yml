@@ -44,7 +44,7 @@ services:
         mode: 0555
     volumes:
       - ${REGISTRY_DATA_DIR:-registry_data}:/var/lib/registry
-    # Host publish (compose.yml only — not in labeled docker-compose.yml / Traefik path).
+    # Publish :5000 for direct access (ingress = any Swarm node IP; host = task node only).
     ports:
       - target: 5000
         published: ${REGISTRY_HOST_PORT:-5000}
