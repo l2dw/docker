@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Track vars exported before defaults (e.g. make) so callers can still load ~/.env for missing ones.
+# Track vars exported before defaults (e.g. make) so callers can still load ${INFRA_DIR}/.env for missing ones.
 # Empty values (ADMIN_USER=) are treated as unset — common in partial .env files.
 _ADMIN_USER_EXPLICIT=0
 [ -n "${ADMIN_USER:-}" ] && _ADMIN_USER_EXPLICIT=1
@@ -10,17 +10,24 @@ _INSTANCE_NAME_EXPLICIT=0
 [ -n "${INSTANCE_NAME:-}" ] && _INSTANCE_NAME_EXPLICIT=1
 INSTANCE_NAME="${INSTANCE_NAME:-$(hostname -s)}"
 
+# Infra root (repo / deploy tree). Prefer this over ~/ for shared paths (.env, Makefile, bin).
+INFRA_DIR="${INFRA_DIR:-/infra}"
+
 # Resolve the admin user's home directory (works when setup runs via sudo/make as another user).
+# Prefer getent over tilde expansion so scripts do not rely on ~/.
 _ENV_FILE_WAS_SET=
 [ -n "${ENV_FILE+set}" ] && _ENV_FILE_WAS_SET=1
-HOME_DIR=$(eval echo "~${ADMIN_USER}")
-ENV_FILE="${ENV_FILE:-${HOME_DIR}/.env}"
+HOME_DIR="$(getent passwd "${ADMIN_USER}" 2>/dev/null | cut -d: -f6)"
+[ -n "${HOME_DIR}" ] || HOME_DIR="/home/${ADMIN_USER}"
+ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env}"
 
-# Recompute paths after ADMIN_USER may have changed (e.g. sourced from ~/.env).
+# Recompute paths after ADMIN_USER / INFRA_DIR may have changed (e.g. sourced from ${INFRA_DIR}/.env).
 resolve_admin_home() {
-	HOME_DIR=$(eval echo "~${ADMIN_USER}")
+	HOME_DIR="$(getent passwd "${ADMIN_USER}" 2>/dev/null | cut -d: -f6)"
+	[ -n "${HOME_DIR}" ] || HOME_DIR="/home/${ADMIN_USER}"
+	INFRA_DIR="${INFRA_DIR:-/infra}"
 	if [ -z "${_ENV_FILE_WAS_SET}" ]; then
-		ENV_FILE="${HOME_DIR}/.env"
+		ENV_FILE="${INFRA_DIR}/.env"
 	fi
 }
 
