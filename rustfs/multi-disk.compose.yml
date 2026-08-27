@@ -1,0 +1,101 @@
+# Example SNMD (single-node, multiple disk) — unlabeled Compose.
+# Docs: https://docs.rustfs.com/en/installation/linux/single-node-multiple-disk
+#
+# This file is a configuration example, not the default stack.
+# Prefer adapting it, or apply the same changes via docker-compose.override.yml /
+# stack-compose.override.yml / external volumes on the main compose.yml.
+#
+#   docker compose -f rustfs/multi-disk.compose.yml --env-file rustfs/.env up -d
+#
+# Mount distinct devices (or separate NFS exports) at /data/rustfs0…3.
+# Ownership: UID/GID 10001 (NFS: anonuid=10001,anongid=10001). Brace: {0...3}.
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-rustfs-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  rustfs-logs:
+    name: ${RUSTFS_LOGS_VOLUME_NAME:-rustfs-logs}
+    external: ${RUSTFS_LOGS_VOLUME_EXTERNAL:-false}
+
+  # Default: local named volumes. NFS example (uncomment driver_opts per disk):
+  #   driver: local
+  #   driver_opts:
+  #     type: nfs
+  #     o: addr=nfs.example.com,rw,nfsvers=4,nolock
+  #     device: ":/exports/rustfs0"
+  # Or bind a host NFS mount in the service: /mnt/nfs/rustfs0:/data/rustfs0
+  rustfs0:
+    name: rustfs0
+    # driver: local
+    # driver_opts:
+    #   type: nfs
+    #   o: addr=nfs.example.com,rw,nfsvers=4,nolock
+    #   device: ":/exports/rustfs0"
+  rustfs1:
+    name: rustfs1
+    # driver: local
+    # driver_opts:
+    #   type: nfs
+    #   o: addr=nfs.example.com,rw,nfsvers=4,nolock
+    #   device: ":/exports/rustfs1"
+  rustfs2:
+    name: rustfs2
+    # driver: local
+    # driver_opts:
+    #   type: nfs
+    #   o: addr=nfs.example.com,rw,nfsvers=4,nolock
+    #   device: ":/exports/rustfs2"
+  rustfs3:
+    name: rustfs3
+    # driver: local
+    # driver_opts:
+    #   type: nfs
+    #   o: addr=nfs.example.com,rw,nfsvers=4,nolock
+    #   device: ":/exports/rustfs3"
+
+services:
+  rustfs:
+    image: ${RUSTFS_IMAGE:-docker.io/rustfs/rustfs:latest}
+    restart: ${RUSTFS_RESTART:-unless-stopped}
+    privileged: ${RUSTFS_PRIVILEGED:-false}
+    env_file:
+      - ${RUSTFS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-}
+      - RUSTFS_CONSOLE_ENABLE=${RUSTFS_CONSOLE_ENABLE:-true}
+      - RUSTFS_VOLUMES=/data/rustfs{0...3}
+    volumes:
+      # Replace named volumes with binds or external volumes as needed, e.g.:
+      # - /mnt/disk0:/data/rustfs0
+      # - type: volume / source: my-ext-vol / target: /data/rustfs0 / volume: { external: true }
+      - rustfs0:/data/rustfs0
+      - rustfs1:/data/rustfs1
+      - rustfs2:/data/rustfs2
+      - rustfs3:/data/rustfs3
+      - ${RUSTFS_LOGS_DIR:-rustfs-logs}:${RUSTFS_LOGS_CONTAINER_PATH:-/var/log/rustfs}
+    ports:
+      - target: 9000
+        published: ${RUSTFS_S3_HOST_PORT:-9000}
+        protocol: tcp
+        mode: ${RUSTFS_S3_PORT_MODE:-ingress}
+      - target: 9001
+        published: ${RUSTFS_CONSOLE_HOST_PORT:-9001}
+        protocol: tcp
+        mode: ${RUSTFS_CONSOLE_PORT_MODE:-ingress}
+    deploy:
+      mode: ${RUSTFS_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${RUSTFS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${RUSTFS_MEMORY_LIMIT:-1G}

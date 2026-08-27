@@ -14,8 +14,7 @@ volumes:
 services:
   rustfs:
     image: ${RUSTFS_IMAGE:-docker.io/rustfs/rustfs:latest}
-    command:
-      - /data
+    # Volumes come from RUSTFS_VOLUMES (default /data = SNSD). Do not set command — it would override env.
     restart: ${RUSTFS_RESTART:-unless-stopped}
     privileged: ${RUSTFS_PRIVILEGED:-false}
     env_file:
@@ -25,8 +24,7 @@ services:
       - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-}
       - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-}
       - RUSTFS_CONSOLE_ENABLE=${RUSTFS_CONSOLE_ENABLE:-true}
-      - RUSTFS_OBS_LOGGER_LEVEL=${RUSTFS_OBS_LOGGER_LEVEL:-error}
-      - RUSTFS_OBS_LOG_DIRECTORY=${RUSTFS_OBS_LOG_DIRECTORY:-/var/log/rustfs/}
+      - RUSTFS_VOLUMES=${RUSTFS_VOLUMES:-/data}
     volumes:
       - ${RUSTFS_DATA_DIR:-rustfs-data}:${RUSTFS_DATA_CONTAINER_PATH:-/data}
       - ${RUSTFS_LOGS_DIR:-rustfs-logs}:${RUSTFS_LOGS_CONTAINER_PATH:-/var/log/rustfs}

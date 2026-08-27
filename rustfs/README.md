@@ -2,11 +2,13 @@
 
 [RustFS](https://rustfs.com) — S3-compatible object storage (`docker.io/rustfs/rustfs`) on **9000** (API) and **9001** (Console). Default network is stack-local `rustfs-network`. For Traefik on Dokploy set `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true` in `rustfs/.env`. Traefik/Homepage labels live only in `docker-compose.yml`.
 
-Ports **9000/9001 are not published on the host**. One DNS name is enough (default `s3.example.com`): S3 API at the host root, Console under PathPrefix **`/rustfs`** (UI at `/rustfs/console`).
+Ports **9000/9001** can be published on the host via **`compose.yml` only** (`RUSTFS_S3_HOST_PORT` / `RUSTFS_CONSOLE_HOST_PORT`). Labeled `docker-compose.yml` keeps Traefik-only ingress (no host publish). One DNS name is enough behind Traefik (default `s3.example.com`): S3 at the host root, Console under PathPrefix **`/rustfs`** (UI at `/rustfs/console`).
 
 `.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${RUSTFS_ENV_FILE:-.env.example}`; production: `RUSTFS_ENV_FILE=.env`. `environment:` wins on key conflicts.
 
 `APP_NAME` (Dokploy) scopes Traefik router/service names (`${APP_NAME:-rustfs}-s3` / `-console`). It is **not** listed in `.env.example`.
+
+Environment variable reference (upstream): [RustFS environment variables](https://docs.rustfs.com/en/reference/environment-variables) · [Docker install](https://docs.rustfs.com/en/installation/container/docker) · [Credentials](https://docs.rustfs.com/en/operations/credentials).
 
 ```sh
 make rustfs-setup \
@@ -28,6 +30,51 @@ On the `rustfs` branch, root `README.md` / `compose.yml` / `docker-compose.yml` 
 
 Open **`http://s3.example.com/rustfs/console`** (or `/rustfs`). S3 clients: endpoint `http://s3.example.com`, **path-style** (`forcePathStyle: true`). Avoid a bucket named `rustfs` if objects would collide with `/rustfs/*`. A dedicated Console hostname remains the [official Traefik layout](https://docs.rustfs.com/en/developer/integration/reverse-proxy/traefik) if login/API calls to `/` mis-route to S3.
 
+## Host ports (`compose.yml` only)
+
+Unlabeled `compose.yml` (and `multi-disk.compose.yml`) publish S3 and Console on the host. Targets stay **9000** / **9001**; set the **host** ports with:
+
+| Variable | Default | Role |
+|----------|---------|------|
+| `RUSTFS_S3_HOST_PORT` | `9000` | Host port → container S3 `9000` |
+| `RUSTFS_CONSOLE_HOST_PORT` | `9001` | Host port → container Console `9001` |
+| `RUSTFS_S3_PORT_MODE` / `RUSTFS_CONSOLE_PORT_MODE` | `ingress` | Swarm publish mode: `ingress` \| `host` |
+
+```sh
+# Local Compose with host mapping
+docker compose -f rustfs/compose.yml --env-file rustfs/.env up -d
+# → localhost:9000 (S3), localhost:9001 (Console)
+```
+
+Do **not** rely on these publishes when Traefik is the ingress (`docker-compose.yml` / `make rustfs-stack-up`).
+
+## MinIO Client (`mc`)
+
+RustFS is S3-compatible — use the [MinIO Client (`mc`)](https://min.io/docs/minio/linux/reference/minio-mc.html) against the API endpoint.
+
+**Install** (pick one):
+
+```sh
+# Homebrew
+brew install minio/stable/mc
+# or: brew install minio-mc   # may conflict with midnight-commander’s `mc` binary
+
+# Linux amd64 binary
+curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+chmod +x /usr/local/bin/mc
+```
+
+Upstream install notes: [mc Quickstart](https://minio.github.io/mc/) · [MinIO mc reference](https://min.io/docs/minio/linux/reference/minio-mc.html).
+
+**Alias + smoke test** (after setup; path-style endpoint):
+
+```sh
+mc alias set rustfs http://127.0.0.1:9000 "$RUSTFS_ACCESS_KEY" "$RUSTFS_SECRET_KEY"
+# or via Traefik: mc alias set rustfs http://s3.example.com "$RUSTFS_ACCESS_KEY" "$RUSTFS_SECRET_KEY"
+mc mb rustfs/my-bucket
+mc ls rustfs
+```
+
 ## Credentials and volumes
 
 `make rustfs-setup` generates `RUSTFS_ACCESS_KEY` / `RUSTFS_SECRET_KEY` if empty. Do not use the well-known `rustfsadmin` pair in production.
@@ -36,98 +83,58 @@ Named volumes: `/data` (objects) and `/var/log/rustfs` (logs). Container runs as
 
 ## Multiple disks (SNMD)
 
-The committed stack is **single-node, single-disk (SNSD)**: `command: [/data]` plus one volume. Extra capacity on **one** RustFS process uses [Single Node Multiple Disk (SNMD)](https://docs.rustfs.com/en/installation/linux/single-node-multiple-disk): several paths in one erasure set.
+Default stack is **SNSD** (single disk): `RUSTFS_VOLUMES=/data` and one mount at `/data`. There is **no** `command:` — RustFS reads volumes from `RUSTFS_VOLUMES` ([env reference](https://docs.rustfs.com/en/reference/environment-variables), [SNMD](https://docs.rustfs.com/en/installation/linux/single-node-multiple-disk)).
 
-Do **not** treat extra mounts as separate S3 buckets. RustFS sees them as **one pool**.
+Do **not** treat extra mounts as separate S3 buckets — they form **one** erasure pool.
 
 | Goal | How |
 |------|-----|
-| More disks, one server | SNMD: extra mounts + replace `command` (and/or `RUSTFS_VOLUMES`) |
-| HA / several servers | [MNMD](https://docs.rustfs.com/en/installation/linux/multiple-node-multiple-disk): several RustFS nodes, `RUSTFS_VOLUMES` with HTTP URLs — not `replicas: N` sharing one volume |
-| One NFS share | Keep SNSD: one NFS (or bind) → `/data` |
+| More disks, one server | SNMD: set `RUSTFS_VOLUMES=/data/rustfs{0...3}` (**three** dots) + mount each path |
+| HA / several servers | [MNMD](https://docs.rustfs.com/en/installation/linux/multiple-node-multiple-disk) — not `replicas: N` on one volume |
+| One NFS share | Keep SNSD: one bind/NFS → `/data`, `RUSTFS_VOLUMES=/data` |
 
-**Syntax:** official env uses **three dots** in braces: `RUSTFS_VOLUMES=/data/rustfs{0...3}` (not `{0..3}`). The image/systemd start is `rustfs $RUSTFS_VOLUMES`. This stack’s `command: [/data]` **wins** over the image CMD — an override **must replace `command`** with the disk paths (or the process stays SNSD and ignores extra mounts).
+**Independence:** each path should be a different device (`st_dev`). Bind each disk (or NFS export) separately. **UID 10001:10001** on all data paths.
 
-**Independence:** recent RustFS builds check that each path is a **different physical device** (`st_dev`). Bind-mount **each disk (or NFS export) separately** into the container (`/data/rustfs0`, `/data/rustfs1`, …). Do not bind one parent directory and expect nested host mounts to show up as distinct devices.
+### How to enable multi-disk
 
-**UID:** all data paths must be writable by **10001:10001**. NFS: `anonuid=10001,anongid=10001` (or matching ownership on the export).
+**1. Example file (copy / try):** `rustfs/multi-disk.compose.yml` — unlabeled SNMD sample (4 named volumes + host ports). Not the default Make target.
 
-**NFS:** lab/small SNMD can use several NFS exports. Latency and NFS semantics are weaker than local XFS/ext4; if the independence check fails (same NFS server/`st_dev`), use local disks or MNMD with disks **per node**. Pin Swarm tasks to a node that can reach the exports (`deploy.placement.constraints`).
+```sh
+docker compose -f rustfs/multi-disk.compose.yml --env-file rustfs/.env up -d
+```
 
-Do **not** commit override files (gitignored: `**/*.override.*`).
+Edit that file to swap named volumes for **binds** (`/mnt/disk0:/data/rustfs0`) or **external** volumes (`external: true`).
 
-### Override files (Compose vs Swarm)
-
-Make merges an override when the file exists. Resolution (`bin/resolve-project-compose.sh`):
-
-1. `rustfs/stack-compose.override.yml` if present
-2. else `rustfs/docker-compose.override.yml`
-
-| Target | Make | Extra `-f` / `-c` |
-|--------|------|-------------------|
-| Compose | `make rustfs-compose-up` | `-f rustfs/docker-compose.yml` then `-f` the override |
-| Swarm | `make rustfs-stack-up` | `docker stack deploy -c … -c` the override |
-
-One `docker-compose.override.yml` is picked up by **both** Compose and Swarm. Use `stack-compose.override.yml` when Swarm should differ, or set `DOCKER_COMPOSE_OVERRIDE` / `STACK_OVERRIDE` on the Make command.
-
-Compose **appends** `volumes:` lists — the base `rustfs-data:/data` mount stays. Leave it unused, or (Compose v2.24+) reset with `volumes: !override` then list every mount. `command:` from the override **replaces** the base `command`.
-
-Swarm interpolates from the **root** `.env` exported by Make (not Compose `env_file`). Keep NFS `driver_opts` (`addr=…`) in the override file.
-
-### Compose / Swarm override example (4 NFS disks)
-
-`rustfs/docker-compose.override.yml` (or `stack-compose.override.yml`):
+**2. Override on the main stack** (recommended for Traefik / `make rustfs-*-up`): gitignored `rustfs/docker-compose.override.yml` or `stack-compose.override.yml`. Make merges it automatically (`bin/resolve-project-compose.sh`).
 
 ```yaml
+# rustfs/docker-compose.override.yml (example)
 volumes:
   rustfs0:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=nfs.example.com,rw,nfsvers=4
-      device: ":/exports/rustfs0"
+    # external: true          # pre-created volume
+    # or NFS driver_opts / bind via service volumes below
   rustfs1:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=nfs.example.com,rw,nfsvers=4
-      device: ":/exports/rustfs1"
   rustfs2:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=nfs.example.com,rw,nfsvers=4
-      device: ":/exports/rustfs2"
   rustfs3:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=nfs.example.com,rw,nfsvers=4
-      device: ":/exports/rustfs3"
 
 services:
   rustfs:
-    command:
-      - /data/rustfs0
-      - /data/rustfs1
-      - /data/rustfs2
-      - /data/rustfs3
     environment:
       - RUSTFS_VOLUMES=/data/rustfs{0...3}
-    volumes:
+    volumes: !override       # Compose v2.24+ — replace base mounts (drop unused /data)
       - rustfs0:/data/rustfs0
       - rustfs1:/data/rustfs1
       - rustfs2:/data/rustfs2
       - rustfs3:/data/rustfs3
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.platform.os==linux
-          # - node.hostname==storage-1
+      - rustfs-logs:/var/log/rustfs
+      # or binds: /mnt/disk0:/data/rustfs0
 ```
 
-Host NFS already mounted: use binds instead of `driver_opts`, e.g. `/mnt/nfs/export0:/data/rustfs0`. Then `make rustfs-compose-up` or `make rustfs-stack-up`.
+Without `!override`, Compose **appends** volumes and the base `rustfs-data:/data` remains (usually harmless if unused). Also set `RUSTFS_VOLUMES=/data/rustfs{0...3}` in `rustfs/.env` (and root `.env` for Swarm).
+
+**3. External volumes only:** create volumes ahead of time, mark them `external: true` in the override / example file, keep `RUSTFS_VOLUMES` in sync with mount targets.
+
+Do **not** commit override files (`**/*.override.*` is gitignored).
 
 ## Makefile
 
@@ -154,5 +161,8 @@ make rustfs-compose-logs
 | `RUSTFS_S3_URL` / `RUSTFS_CONSOLE_URL` | Public URLs (Homepage href = console URL) |
 | `RUSTFS_ACCESS_KEY` / `RUSTFS_SECRET_KEY` | Generated by setup if empty |
 | `RUSTFS_ENV_FILE` | Compose dotenv (default `.env.example`) |
+| `RUSTFS_VOLUMES` | Default `/data` (SNSD). SNMD: `/data/rustfs{0...3}` + mounts — see README |
+| `RUSTFS_S3_HOST_PORT` / `RUSTFS_CONSOLE_HOST_PORT` | Host publish in `compose.yml` / example `multi-disk.compose.yml` only |
+| Server env (full list) | [docs.rustfs.com — environment variables](https://docs.rustfs.com/en/reference/environment-variables) |
 
 Do not commit `rustfs/.env` or real secrets.
