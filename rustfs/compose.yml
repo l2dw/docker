@@ -1,7 +1,7 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-rustfs-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   rustfs-data:
@@ -24,8 +24,6 @@ services:
       - TZ=${TZ:-America/Toronto}
       - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-}
       - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-}
-      - RUSTFS_ADDRESS=${RUSTFS_ADDRESS:-:9000}
-      - RUSTFS_CONSOLE_ADDRESS=${RUSTFS_CONSOLE_ADDRESS:-:9001}
       - RUSTFS_CONSOLE_ENABLE=${RUSTFS_CONSOLE_ENABLE:-true}
       - RUSTFS_OBS_LOGGER_LEVEL=${RUSTFS_OBS_LOGGER_LEVEL:-error}
       - RUSTFS_OBS_LOG_DIRECTORY=${RUSTFS_OBS_LOG_DIRECTORY:-/var/log/rustfs/}

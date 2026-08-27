@@ -74,15 +74,14 @@ rustfs-setup: ## Ensure rustfs/.env, generate access keys, warn on example.com d
 		esac; \
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='dokploy-network'; \
+	[ -n "$$net" ] || net='rustfs-network'; \
 	case "$$net" in \
 		dokploy-network) ext=true ;; \
 		*) ext=false ;; \
 	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
-	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext (project .env only)"; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "RustFS env OK ($$envf)."
 .rustfs-setup: rustfs-setup
