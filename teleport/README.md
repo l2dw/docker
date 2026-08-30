@@ -10,10 +10,20 @@ Default network: `teleport-network` (`EXTERNAL=false`). Pour Traefik Dokploy: `D
 
 ## Quick start
 
+**Local (Make)**
+
 ```sh
 make teleport-setup TELEPORT_DOMAIN=teleport.example.com TELEPORT_APP_URL=https://teleport.example.com
 make teleport-compose-up   # or: make teleport-stack-up
 ```
+
+**Dokploy** — le repo inclut `config/teleport.yaml` (template). Pour appliquer votre domaine, ajouter une **commande pre-deploy** :
+
+```sh
+sh teleport/generate-config.sh
+```
+
+Dokploy injecte `TELEPORT_DOMAIN`, `TELEPORT_CLUSTER_NAME`, `TELEPORT_PUBLIC_ADDR` dans l’env ; le script réécrit `config/teleport.yaml` avant `docker compose up`. Puis définir `TELEPORT_CONFIG_FILE=./config/teleport.yaml` dans l’env Dokploy (sinon le compose utilise `./config/teleport.yaml.example` par défaut).
 
 Premier admin (image distroless — pas de shell ; `tctl` comme commande du conteneur):
 
@@ -62,7 +72,7 @@ Agents et clients utilisent **`TELEPORT_PUBLIC_ADDR`** (HTTPS), pas un port hôt
 
 ## Config
 
-`teleport-setup` écrit `teleport/config/teleport.yaml` depuis `config/teleport.yaml.example` (`cluster_name` / `public_addr` depuis `TELEPORT_DOMAIN`). Fichier gitignored. Compose `configs:` → `/etc/teleport/teleport.yaml`. Après setup: `TELEPORT_CONFIG_FILE=./config/teleport.yaml`.
+`config/teleport.yaml` est versionné (copie du template). `teleport-setup` ou `generate-config.sh` remplace `cluster_name` / `public_addr` depuis `TELEPORT_DOMAIN`. Compose `configs:` → `/etc/teleport/teleport.yaml` via `TELEPORT_CONFIG_FILE`.
 
 `TELEPORT_DOMAIN` → Traefik `Host()`. `public_addr` défaut `<domain>:443`. `trust_x_forwarded_for: true`.
 
@@ -99,8 +109,8 @@ make teleport-compose-logs
 |----------|--------|
 | `APP_NAME` | Traefik scope (default `teleport`) |
 | `TELEPORT_DOMAIN` / `TELEPORT_APP_URL` | Host public + Homepage |
-| `TELEPORT_CLUSTER_NAME` / `TELEPORT_PUBLIC_ADDR` | Rendu dans `teleport.yaml` |
-| `TELEPORT_CONFIG_FILE` | `./config/teleport.yaml` after setup |
+| `TELEPORT_CLUSTER_NAME` / `TELEPORT_PUBLIC_ADDR` | Rendu dans `teleport.yaml` (via setup) |
+| `TELEPORT_CONFIG_FILE` | Optionnel — `./config/teleport.yaml` after setup/generate-config ; défaut compose : `./config/teleport.yaml.example` |
 | `TELEPORT_ENV_FILE` | Compose dotenv |
 
-Do not commit `teleport/.env` or `teleport/config/teleport.yaml`.
+Do not commit `teleport/.env`.

@@ -12,4 +12,3 @@ backups/
 appdata/
 certs/
 plan
-teleport/config/teleport.yaml

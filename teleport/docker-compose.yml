@@ -25,7 +25,6 @@ services:
     configs:
       - source: teleport.yaml
         target: /etc/teleport/teleport.yaml
-        mode: 0444
     volumes:
       - ${TELEPORT_DATA_DIR:-teleport-data}:/var/lib/teleport
     deploy:
