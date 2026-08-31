@@ -21,7 +21,7 @@ services:
       - HERMES_HOME=/home/hermes/.hermes
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
-      - GATEWAY_HEALTH_URL=http://agent:8642
+      - GATEWAY_HEALTH_URL=${HERMES_GATEWAY_URL:-http://agent:8642}
     volumes:
       - ${HERMES_HOME_DIR:-hermes-home}:/home/hermes/.hermes
     deploy:

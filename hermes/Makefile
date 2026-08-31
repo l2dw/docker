@@ -54,13 +54,13 @@ hermes-setup: ## Ensure hermes/.env, API key, network sync
 		esac; \
 	done; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
-	key=$$(file_get "$$envf" API_SERVER_KEY); \
-	[ -n "$$key" ] || key=$$(file_get "$$root" API_SERVER_KEY); \
+	key=$$(file_get "$$envf" HERMES_API_SERVER_KEY); \
+	[ -n "$$key" ] || key=$$(file_get "$$root" HERMES_API_SERVER_KEY); \
 	if [ -z "$$key" ] || [ $${#key} -lt 16 ]; then \
 		key=$$(openssl rand -hex 16); \
-		upsert "$$envf" API_SERVER_KEY "$$key"; \
-		if [ -n "$$root" ]; then upsert "$$root" API_SERVER_KEY "$$key"; fi; \
-		echo "Generated API_SERVER_KEY (gateway API on agent:8642)."; \
+		upsert "$$envf" HERMES_API_SERVER_KEY "$$key"; \
+		if [ -n "$$root" ]; then upsert "$$root" HERMES_API_SERVER_KEY "$$key"; fi; \
+		echo "Generated HERMES_API_SERVER_KEY (gateway API on agent:8642)."; \
 	fi; \
 	pw=$$(file_get "$$envf" HERMES_WEBUI_PASSWORD); \
 	[ -n "$$pw" ] || pw=$$(file_get "$$root" HERMES_WEBUI_PASSWORD); \

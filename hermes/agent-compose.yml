@@ -26,7 +26,7 @@ services:
       - HERMES_GID=${HERMES_GID:-1000}
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
-      - API_SERVER_KEY=${API_SERVER_KEY:-}
+      - API_SERVER_KEY=${HERMES_API_SERVER_KEY:-}
     volumes:
       - ${HERMES_HOME_DIR:-hermes-home}:/home/hermes/.hermes
       - ${HERMES_AGENT_SRC_DIR:-hermes-agent-src}:/opt/hermes

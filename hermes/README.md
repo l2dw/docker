@@ -24,7 +24,7 @@ make hermes-setup \
 make hermes-compose-up   # or: make hermes-stack-up
 ```
 
-- `hermes-setup` génère `API_SERVER_KEY` (≥16 caractères) si absent — requis pour l’API gateway et les sondes WebUI.
+- `hermes-setup` génère `HERMES_API_SERVER_KEY` (≥16 caractères) si absent — requis pour l’API gateway et les sondes WebUI.
 - Définir **`HERMES_WEBUI_PASSWORD`** avant d’exposer l’UI via Traefik.
 - Swarm : `docker stack deploy` ne lit pas `.env` seul — utiliser Make.
 
@@ -34,7 +34,7 @@ make hermes-compose-up   # or: make hermes-stack-up
 |---------|----------|--------|
 | Web UI | `HERMES_DOMAIN` | `https://hermes.example.com` |
 | Dashboard | `HERMES_DASHBOARD_DOMAIN` | `https://hermes-dashboard.example.com` |
-| Gateway API | interne | `http://agent:8642` |
+| Gateway API | interne | `HERMES_GATEWAY_URL` (défaut `http://agent:8642`) |
 
 ### Fichiers compose
 
@@ -63,7 +63,7 @@ Une fois le gateway configuré (`hermes gateway setup`), les surfaces utiles :
 | **Cron / watchdogs** | `hermes cron` / outil `cronjob` | Alertes script sans LLM (`--no-agent`) |
 | **Modèles** | `hermes model` | Provider LLM |
 | **Outils** | `hermes tools` | Terminal, browser, messaging, etc. |
-| **API OpenAI-compatible** | gateway `:8642` | Intégrations (`API_SERVER_KEY`) |
+| **API OpenAI-compatible** | gateway `:8642` | Intégrations (`HERMES_API_SERVER_KEY`) |
 | **tsh / doctor** | `hermes doctor`, `hermes update` | Diagnostic et mise à jour |
 
 Doc : [Installation](https://hermes-agent.nousresearch.com/docs/getting-started/installation) · [Messaging](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/) · [Cron](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron).
@@ -202,7 +202,7 @@ journalctl -u hermes-gateway -n 100
 | `hermes: command not found` | Install incomplet ; `export PATH="$HOME/.hermes/bin:$HOME/.local/bin:$PATH"` puis relancer `install.sh` |
 | Gateway ne démarre pas | `hermes doctor` ; clés API / `config.yaml` |
 | Cron silencieux | Jobs dans `~/.hermes/cron/jobs.json` ; `hermes cron list` |
-| WebUI « gateway not reachable » | `API_SERVER_KEY` ≥16 chars ; port 8642 ouvert localement |
+| WebUI « gateway not reachable » | `HERMES_API_SERVER_KEY` ≥16 chars ; port 8642 ouvert localement |
 
 ## Base path
 
@@ -213,7 +213,7 @@ journalctl -u hermes-gateway -n 100
 - `HERMES_ENV_FILE` (default `.env.example` ; prod → `.env`)
 - Compose : `env_file` + `environment:` — **`environment:` gagne**
 - Swarm : Make export root `.env` + interpolation compose (pas `env_file` fiable)
-- `API_SERVER_KEY` : secret gateway — généré par `hermes-setup`, ne pas committer
+- `HERMES_API_SERVER_KEY` : secret gateway — généré par `hermes-setup`, ne pas committer
 
 ## Makefile
 
@@ -236,7 +236,8 @@ make hermes-compose-logs
 |----------|--------|
 | `HERMES_DOMAIN` / `HERMES_APP_URL` | Web UI (Traefik + Homepage) |
 | `HERMES_DASHBOARD_DOMAIN` / `HERMES_DASHBOARD_APP_URL` | Dashboard |
-| `API_SERVER_KEY` | Gateway API (auto-généré par setup) |
+| `HERMES_API_SERVER_KEY` | Gateway API (auto-généré par setup) |
+| `HERMES_GATEWAY_URL` | Gateway pour dashboard (`GATEWAY_HEALTH_URL`) et webui (`HERMES_API_URL`) |
 | `HERMES_WEBUI_PASSWORD` | Auth Web UI (obligatoire en prod) |
 | `HERMES_UID` / `HERMES_GID` | Permissions volumes partagés |
 | `HERMES_ENV_FILE` | Compose dotenv |
