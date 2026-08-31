@@ -1,0 +1,112 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-hermes-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  hermes-home:
+    name: ${HERMES_HOME_VOLUME_NAME:-hermes-home}
+    external: ${HERMES_HOME_VOLUME_EXTERNAL:-false}
+  hermes-agent-src:
+    name: ${HERMES_AGENT_SRC_VOLUME_NAME:-hermes-agent-src}
+    external: ${HERMES_AGENT_SRC_VOLUME_EXTERNAL:-false}
+  hermes-workspace:
+    name: ${HERMES_WORKSPACE_VOLUME_NAME:-hermes-workspace}
+    external: ${HERMES_WORKSPACE_VOLUME_EXTERNAL:-false}
+
+services:
+  agent:
+    image: ${HERMES_AGENT_IMAGE:-nousresearch/hermes-agent:latest}
+    restart: ${HERMES_AGENT_RESTART:-unless-stopped}
+    privileged: ${HERMES_AGENT_PRIVILEGED:-false}
+    command: gateway run
+    env_file:
+      - ${HERMES_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HERMES_HOME=/home/hermes/.hermes
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_KEY=${API_SERVER_KEY:-}
+    volumes:
+      - ${HERMES_HOME_DIR:-hermes-home}:/home/hermes/.hermes
+      - ${HERMES_AGENT_SRC_DIR:-hermes-agent-src}:/opt/hermes
+    deploy:
+      mode: ${HERMES_AGENT_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${HERMES_AGENT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HERMES_AGENT_MEMORY_LIMIT:-2G}
+
+  dashboard:
+    image: ${HERMES_DASHBOARD_IMAGE:-nousresearch/hermes-agent:latest}
+    restart: ${HERMES_DASHBOARD_RESTART:-unless-stopped}
+    privileged: ${HERMES_DASHBOARD_PRIVILEGED:-false}
+    command: dashboard --host 0.0.0.0 --insecure
+    env_file:
+      - ${HERMES_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HERMES_HOME=/home/hermes/.hermes
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+      - GATEWAY_HEALTH_URL=http://agent:8642
+    volumes:
+      - ${HERMES_HOME_DIR:-hermes-home}:/home/hermes/.hermes
+    depends_on:
+      - agent
+    deploy:
+      mode: ${HERMES_DASHBOARD_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${HERMES_DASHBOARD_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HERMES_DASHBOARD_MEMORY_LIMIT:-512M}
+
+  webui:
+    image: ${HERMES_WEBUI_IMAGE:-ghcr.io/nesquena/hermes-webui:latest}
+    restart: ${HERMES_WEBUI_RESTART:-unless-stopped}
+    privileged: ${HERMES_WEBUI_PRIVILEGED:-false}
+    env_file:
+      - ${HERMES_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HERMES_WEBUI_HOST=0.0.0.0
+      - HERMES_WEBUI_PORT=8787
+      - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
+      - HERMES_API_URL=http://agent:8642
+      - HERMES_WEBUI_GATEWAY_API_KEY=${API_SERVER_KEY:-}
+      - HERMES_WEBUI_PASSWORD=${HERMES_WEBUI_PASSWORD:-}
+      - WANTED_UID=${HERMES_UID:-1000}
+      - WANTED_GID=${HERMES_GID:-1000}
+    volumes:
+      - ${HERMES_HOME_DIR:-hermes-home}:/home/hermeswebui/.hermes
+      - ${HERMES_AGENT_SRC_DIR:-hermes-agent-src}:/home/hermeswebui/.hermes/hermes-agent:ro
+      - ${HERMES_WORKSPACE_DIR:-hermes-workspace}:/workspace
+    depends_on:
+      - agent
+    deploy:
+      mode: ${HERMES_WEBUI_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${HERMES_WEBUI_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HERMES_WEBUI_MEMORY_LIMIT:-1G}

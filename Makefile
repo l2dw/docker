@@ -309,6 +309,8 @@ add-swap-file: ## Add swap file memory: SWAP_SIZE=4G and SWAP_FILE=/var/0.swap a
 	@echo "Adding swap file memory: SWAP_SIZE=$(SWAP_SIZE) and SWAP_FILE=$(SWAP_FILE)..."
 	@$(BIN_DIR)/add-swap-file.sh
 
+-include hermes/Makefile
+
 ## —— 🐝 git commands ———————————————————————————————————
 commit-changes: ## Commit changes to the infrastructure
 	@echo "Committing changes to the infrastructure..."

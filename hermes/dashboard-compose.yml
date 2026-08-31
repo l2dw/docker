@@ -1,0 +1,38 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-hermes-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  hermes-home:
+    name: ${HERMES_HOME_VOLUME_NAME:-hermes-home}
+    external: ${HERMES_HOME_VOLUME_EXTERNAL:-false}
+
+services:
+  dashboard:
+    image: ${HERMES_DASHBOARD_IMAGE:-nousresearch/hermes-agent:latest}
+    restart: ${HERMES_DASHBOARD_RESTART:-unless-stopped}
+    privileged: ${HERMES_DASHBOARD_PRIVILEGED:-false}
+    command: dashboard --host 0.0.0.0 --insecure
+    env_file:
+      - ${HERMES_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HERMES_HOME=/home/hermes/.hermes
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+      - GATEWAY_HEALTH_URL=http://agent:8642
+    volumes:
+      - ${HERMES_HOME_DIR:-hermes-home}:/home/hermes/.hermes
+    deploy:
+      mode: ${HERMES_DASHBOARD_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${HERMES_DASHBOARD_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HERMES_DASHBOARD_MEMORY_LIMIT:-512M}

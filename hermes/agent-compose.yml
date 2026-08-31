@@ -1,0 +1,44 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-hermes-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  hermes-home:
+    name: ${HERMES_HOME_VOLUME_NAME:-hermes-home}
+    external: ${HERMES_HOME_VOLUME_EXTERNAL:-false}
+  hermes-agent-src:
+    name: ${HERMES_AGENT_SRC_VOLUME_NAME:-hermes-agent-src}
+    external: ${HERMES_AGENT_SRC_VOLUME_EXTERNAL:-false}
+
+services:
+  agent:
+    image: ${HERMES_AGENT_IMAGE:-nousresearch/hermes-agent:latest}
+    restart: ${HERMES_AGENT_RESTART:-unless-stopped}
+    privileged: ${HERMES_AGENT_PRIVILEGED:-false}
+    command: gateway run
+    env_file:
+      - ${HERMES_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HERMES_HOME=/home/hermes/.hermes
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_KEY=${API_SERVER_KEY:-}
+    volumes:
+      - ${HERMES_HOME_DIR:-hermes-home}:/home/hermes/.hermes
+      - ${HERMES_AGENT_SRC_DIR:-hermes-agent-src}:/opt/hermes
+    deploy:
+      mode: ${HERMES_AGENT_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${HERMES_AGENT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HERMES_AGENT_MEMORY_LIMIT:-2G}
