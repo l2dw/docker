@@ -1,0 +1,48 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-hermes-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  hermes-home:
+    name: ${HERMES_HOME_VOLUME_NAME:-hermes-home}
+    external: ${HERMES_HOME_VOLUME_EXTERNAL:-false}
+  hermes-workspace:
+    name: ${HERMES_WORKSPACE_VOLUME_NAME:-hermes-workspace}
+    external: ${HERMES_WORKSPACE_VOLUME_EXTERNAL:-false}
+
+services:
+  workspace:
+    image: ${HERMES_WORKSPACE_IMAGE:-ghcr.io/outsourc-e/hermes-workspace:latest}
+    restart: ${HERMES_WORKSPACE_RESTART:-unless-stopped}
+    privileged: ${HERMES_WORKSPACE_PRIVILEGED:-false}
+    user: "${HERMES_UID:-1000}:${HERMES_GID:-1000}"
+    env_file:
+      - ${HERMES_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HERMES_HOME=/home/workspace/.hermes
+      - HERMES_WORKSPACE_DIR=/workspace
+      - HERMES_API_URL=${HERMES_GATEWAY_URL:-http://agent:8642}
+      - HERMES_DASHBOARD_URL=${HERMES_DASHBOARD_INTERNAL_URL:-http://dashboard:9119}
+      - HERMES_API_TOKEN=${HERMES_API_SERVER_KEY:-}
+      - HERMES_PASSWORD=${HERMES_WORKSPACE_PASSWORD:-}
+      - COOKIE_SECURE=${HERMES_WORKSPACE_COOKIE_SECURE:-true}
+      - TRUST_PROXY=${HERMES_WORKSPACE_TRUST_PROXY:-true}
+      - PORT=3000
+      - HOST=0.0.0.0
+    volumes:
+      - ${HERMES_HOME_DIR:-hermes-home}:/home/workspace/.hermes
+      - ${HERMES_WORKSPACE_DIR:-hermes-workspace}:/workspace
+    deploy:
+      mode: ${HERMES_WORKSPACE_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${HERMES_WORKSPACE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HERMES_WORKSPACE_MEMORY_LIMIT:-1G}

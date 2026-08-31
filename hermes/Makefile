@@ -1,9 +1,9 @@
 ## —— 🐝 Hermes commands ———————————————————————————————————
 HERMES_STACK_NAME := hermes
-HERMES_SERVICES_SHORT := agent dashboard webui
+HERMES_SERVICES_SHORT := agent dashboard webui workspace
 HERMES_ENV := $(HERMES_STACK_NAME)/.env
 HERMES_ENV_EXAMPLE := $(HERMES_STACK_NAME)/.env.example
-HERMES_NOTIFY_VARS := HERMES_APP_URL HERMES_DOMAIN HERMES_DASHBOARD_APP_URL HERMES_DASHBOARD_DOMAIN
+HERMES_NOTIFY_VARS := HERMES_APP_URL HERMES_DOMAIN HERMES_DASHBOARD_APP_URL HERMES_DASHBOARD_DOMAIN HERMES_WORKSPACE_APP_URL HERMES_WORKSPACE_DOMAIN
 
 hermes-pull-images: ## Pull images for the hermes stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(HERMES_STACK_NAME)
@@ -31,6 +31,8 @@ hermes-setup: ## Ensure hermes/.env, API key, network sync
 			HERMES_DOMAIN) printf '%s' '$(HERMES_DOMAIN)' ;; \
 			HERMES_DASHBOARD_APP_URL) printf '%s' '$(HERMES_DASHBOARD_APP_URL)' ;; \
 			HERMES_DASHBOARD_DOMAIN) printf '%s' '$(HERMES_DASHBOARD_DOMAIN)' ;; \
+			HERMES_WORKSPACE_APP_URL) printf '%s' '$(HERMES_WORKSPACE_APP_URL)' ;; \
+			HERMES_WORKSPACE_DOMAIN) printf '%s' '$(HERMES_WORKSPACE_DOMAIN)' ;; \
 		esac; \
 	}; \
 	missing=0; \
@@ -66,6 +68,11 @@ hermes-setup: ## Ensure hermes/.env, API key, network sync
 	[ -n "$$pw" ] || pw=$$(file_get "$$root" HERMES_WEBUI_PASSWORD); \
 	case "$$pw" in \
 		''|ChangeMe) echo "Warning: set HERMES_WEBUI_PASSWORD before exposing the Web UI via Traefik." >&2 ;; \
+	esac; \
+	ws_pw=$$(file_get "$$envf" HERMES_WORKSPACE_PASSWORD); \
+	[ -n "$$ws_pw" ] || ws_pw=$$(file_get "$$root" HERMES_WORKSPACE_PASSWORD); \
+	case "$$ws_pw" in \
+		''|ChangeMe) echo "Warning: set HERMES_WORKSPACE_PASSWORD before exposing the workspace via Traefik." >&2 ;; \
 	esac; \
 	dash_pw=$$(file_get "$$envf" HERMES_DASHBOARD_BASIC_AUTH_PASSWORD); \
 	[ -n "$$dash_pw" ] || dash_pw=$$(file_get "$$root" HERMES_DASHBOARD_BASIC_AUTH_PASSWORD); \

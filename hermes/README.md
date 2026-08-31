@@ -1,14 +1,15 @@
 # Hermes
 
-[Hermes Agent](https://hermes-agent.nousresearch.com/) (Nous Research) — assistant IA avec gateway (Telegram, Discord, Slack, cron, outils). Ce stack déploie la configuration **trois conteneurs** recommandée par [hermes-webui](https://github.com/nesquena/hermes-webui) :
+[Hermes Agent](https://hermes-agent.nousresearch.com/) (Nous Research) — assistant IA avec gateway (Telegram, Discord, Slack, cron, outils). Ce stack déploie **quatre conteneurs** : la triade [hermes-webui](https://github.com/nesquena/hermes-webui) plus [Hermes Workspace](https://github.com/outsourc-e/hermes-workspace) (IDE web : chat, terminal, fichiers).
 
 | Service | Image | Rôle |
 |---------|-------|------|
 | `agent` | `nousresearch/hermes-agent` | Gateway (messaging, cron, API `:8642`) |
 | `dashboard` | `nousresearch/hermes-agent` | Monitoring sessions / ressources (`:9119`) |
 | `webui` | `ghcr.io/nesquena/hermes-webui` | Chat Web (`:8787`) |
+| `workspace` | `ghcr.io/outsourc-e/hermes-workspace` | Workspace IDE (`:3000`) |
 
-Ingress via **Traefik** (pas de ports hôte publiés). `APP_NAME` scope les routers (`${APP_NAME:-hermes}`, `${APP_NAME:-hermes}-dashboard`) — fourni par Dokploy, absent de `.env.example`.
+Ingress via **Traefik** (pas de ports hôte publiés). `APP_NAME` scope les routers (`${APP_NAME:-hermes}`, `${APP_NAME:-hermes}-dashboard`, `${APP_NAME:-hermes}-workspace`) — fourni par Dokploy, absent de `.env.example`.
 
 Default network: `hermes-network` (`EXTERNAL=false`). Pour Dokploy + Traefik partagé : `DEFAULT_NETWORK_NAME=dokploy-network` + `DEFAULT_NETWORK_EXTERNAL=true` (ou `make hermes-setup`).
 
@@ -20,13 +21,16 @@ make hermes-setup \
   HERMES_APP_URL=https://hermes.example.com \
   HERMES_DASHBOARD_DOMAIN=hermes-dashboard.example.com \
   HERMES_DASHBOARD_APP_URL=https://hermes-dashboard.example.com \
+  HERMES_WORKSPACE_DOMAIN=hermes-workspace.example.com \
+  HERMES_WORKSPACE_APP_URL=https://hermes-workspace.example.com \
   HERMES_WEBUI_PASSWORD='your-secure-password' \
-  HERMES_DASHBOARD_BASIC_AUTH_PASSWORD='your-dashboard-password'
+  HERMES_DASHBOARD_BASIC_AUTH_PASSWORD='your-dashboard-password' \
+  HERMES_WORKSPACE_PASSWORD='your-workspace-password'
 make hermes-compose-up   # or: make hermes-stack-up
 ```
 
-- `hermes-setup` génère `HERMES_API_SERVER_KEY` (≥16 caractères) si absent — requis pour l’API gateway et les sondes WebUI.
-- Définir **`HERMES_WEBUI_PASSWORD`** et **`HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`** avant d’exposer via Traefik (le dashboard refuse `0.0.0.0` sans auth provider depuis la hardening Hermes 2026 ; `--insecure` est ignoré).
+- `hermes-setup` génère `HERMES_API_SERVER_KEY` (≥16 caractères) si absent — requis pour l’API gateway et les sondes WebUI/Workspace.
+- Définir **`HERMES_WEBUI_PASSWORD`**, **`HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`** et **`HERMES_WORKSPACE_PASSWORD`** avant d’exposer via Traefik.
 - `hermes-setup` génère aussi `HERMES_DASHBOARD_BASIC_AUTH_SECRET` si absent (sessions stables après redémarrage).
 - Swarm : `docker stack deploy` ne lit pas `.env` seul — utiliser Make.
 
@@ -36,6 +40,7 @@ make hermes-compose-up   # or: make hermes-stack-up
 |---------|----------|--------|
 | Web UI | `HERMES_DOMAIN` | `https://hermes.example.com` |
 | Dashboard | `HERMES_DASHBOARD_DOMAIN` | `https://hermes-dashboard.example.com` |
+| Workspace | `HERMES_WORKSPACE_DOMAIN` | `https://hermes-workspace.example.com` |
 | Gateway API | interne | `HERMES_GATEWAY_URL` (défaut `http://agent:8642`) |
 
 ### Fichiers compose
@@ -47,8 +52,9 @@ make hermes-compose-up   # or: make hermes-stack-up
 | `agent-compose.yml` | `agent` seul |
 | `dashboard-compose.yml` | `dashboard` seul (sans labels) |
 | `webui-compose.yml` | `webui` seul (sans labels) |
+| `workspace-compose.yml` | `workspace` seul (sans labels) |
 
-Volumes nommés partagés : `hermes-home` (état `~/.hermes`), `hermes-agent-src` (code agent pour `uv pip install` au démarrage WebUI), `hermes-workspace` (`/workspace` dans l’UI).
+Volumes nommés partagés : `hermes-home` (état `~/.hermes`), `hermes-agent-src` (code agent pour `uv pip install` au démarrage WebUI), `hermes-workspace` (fichiers projet — monté dans `webui` et `workspace` sur `/workspace`).
 
 **Upgrade image agent** : après `docker pull`, supprimer le volume `hermes-agent-src` pour forcer la ré-init depuis la nouvelle image (voir [docs/docker.md](https://github.com/nesquena/hermes-webui/blob/master/docs/docker.md)).
 
@@ -62,6 +68,7 @@ Une fois le gateway configuré (`hermes gateway setup`), les surfaces utiles :
 | **Gateway** | `hermes gateway run` | Bots + cron (service systemd) |
 | **Dashboard** | `hermes dashboard` ou conteneur | Monitoring |
 | **Web UI** | conteneur ou `hermes-webui` | Chat navigateur |
+| **Workspace** | conteneur `workspace` | IDE web (terminal, fichiers, sessions) |
 | **Cron / watchdogs** | `hermes cron` / outil `cronjob` | Alertes script sans LLM (`--no-agent`) |
 | **Modèles** | `hermes model` | Provider LLM |
 | **Outils** | `hermes tools` | Terminal, browser, messaging, etc. |
@@ -215,6 +222,7 @@ journalctl -u hermes-gateway -n 100
 | Cron silencieux | Jobs dans `~/.hermes/cron/jobs.json` ; `hermes cron list` |
 | WebUI « gateway not reachable » | `HERMES_API_SERVER_KEY` ≥16 chars ; port 8642 ouvert localement |
 | Dashboard « Refusing to bind … no auth providers » | Définir `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` + `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` (+ `HERMES_DASHBOARD_BASIC_AUTH_SECRET` pour sessions stables) ; retirer `--insecure` (ignoré) |
+| Workspace « HERMES_PASSWORD is unset » / health: starting | Définir `HERMES_WORKSPACE_PASSWORD` ; vérifier que `agent` répond sur `:8642` et que `HERMES_API_SERVER_KEY` est propagé comme `HERMES_API_TOKEN` |
 
 ## Base path
 
@@ -248,9 +256,12 @@ make hermes-compose-logs
 |----------|--------|
 | `HERMES_DOMAIN` / `HERMES_APP_URL` | Web UI (Traefik + Homepage) |
 | `HERMES_DASHBOARD_DOMAIN` / `HERMES_DASHBOARD_APP_URL` | Dashboard |
+| `HERMES_WORKSPACE_DOMAIN` / `HERMES_WORKSPACE_APP_URL` | Workspace IDE |
 | `HERMES_API_SERVER_KEY` | Gateway API (auto-généré par setup) |
-| `HERMES_GATEWAY_URL` | Gateway pour dashboard (`GATEWAY_HEALTH_URL`) et webui (`HERMES_API_URL`) |
+| `HERMES_GATEWAY_URL` | Gateway pour dashboard (`GATEWAY_HEALTH_URL`), webui et workspace (`HERMES_API_URL`) |
+| `HERMES_DASHBOARD_INTERNAL_URL` | Dashboard interne pour workspace (défaut `http://dashboard:9119`) |
 | `HERMES_WEBUI_PASSWORD` | Auth Web UI (obligatoire en prod) |
+| `HERMES_WORKSPACE_PASSWORD` | Auth Workspace (obligatoire — bind `0.0.0.0`) |
 | `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` / `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` | Auth dashboard (`0.0.0.0` derrière Traefik) |
 | `HERMES_DASHBOARD_BASIC_AUTH_SECRET` | Clé de signature session (auto-généré par setup) |
 | `HERMES_UID` / `HERMES_GID` | Permissions volumes partagés |

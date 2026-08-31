@@ -178,3 +178,73 @@ services:
       - "traefik.http.routers.${APP_NAME:-hermes}-http.rule=Host(`${HERMES_DOMAIN:-hermes.example.com}`) && PathPrefix(`${HERMES_BASE_PATH:-/}`)"
       - "traefik.http.routers.${APP_NAME:-hermes}-http.middlewares=${HERMES_HTTP_MIDDLEWARES:-redirect-to-https@swarm}"
       - "traefik.http.routers.${APP_NAME:-hermes}-http.service=${APP_NAME:-hermes}"
+
+  workspace:
+    image: ${HERMES_WORKSPACE_IMAGE:-ghcr.io/outsourc-e/hermes-workspace:latest}
+    restart: ${HERMES_WORKSPACE_RESTART:-unless-stopped}
+    privileged: ${HERMES_WORKSPACE_PRIVILEGED:-false}
+    user: "${HERMES_UID:-1000}:${HERMES_GID:-1000}"
+    env_file:
+      - ${HERMES_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HERMES_HOME=/home/workspace/.hermes
+      - HERMES_WORKSPACE_DIR=/workspace
+      - HERMES_API_URL=${HERMES_GATEWAY_URL:-http://agent:8642}
+      - HERMES_DASHBOARD_URL=${HERMES_DASHBOARD_INTERNAL_URL:-http://dashboard:9119}
+      - HERMES_API_TOKEN=${HERMES_API_SERVER_KEY:-}
+      - HERMES_PASSWORD=${HERMES_WORKSPACE_PASSWORD:-}
+      - COOKIE_SECURE=${HERMES_WORKSPACE_COOKIE_SECURE:-true}
+      - TRUST_PROXY=${HERMES_WORKSPACE_TRUST_PROXY:-true}
+      - PORT=3000
+      - HOST=0.0.0.0
+    volumes:
+      - ${HERMES_HOME_DIR:-hermes-home}:/home/workspace/.hermes
+      - ${HERMES_WORKSPACE_DIR:-hermes-workspace}:/workspace
+    depends_on:
+      - agent
+      - dashboard
+    deploy:
+      mode: ${HERMES_WORKSPACE_DEPLOY_MODE:-replicated}
+      replicas: 1
+      placement:
+        constraints:
+          - ${HERMES_WORKSPACE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HERMES_WORKSPACE_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${HERMES_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-hermes}-workspace.loadbalancer.server.port=3000"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace.entrypoints=${HERMES_WORKSPACE_ENTRYPOINTS:-websecure}"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace.rule=Host(`${HERMES_WORKSPACE_DOMAIN:-hermes-workspace.example.com}`) && PathPrefix(`${HERMES_WORKSPACE_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace.service=${APP_NAME:-hermes}-workspace"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace.middlewares=${HERMES_WORKSPACE_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace.tls=${HERMES_WORKSPACE_TLS_ENABLED:-true}"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace.tls.certresolver=${HERMES_WORKSPACE_TLS_CERTRESOLVER:-}"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.entrypoints=web"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.rule=Host(`${HERMES_WORKSPACE_DOMAIN:-hermes-workspace.example.com}`) && PathPrefix(`${HERMES_WORKSPACE_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.middlewares=${HERMES_WORKSPACE_HTTP_MIDDLEWARES:-redirect-to-https@swarm}"
+        - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.service=${APP_NAME:-hermes}-workspace"
+        - "homepage.group=${HERMES_HOMEPAGE_GROUP:-Apps}"
+        - "homepage.name=${HERMES_WORKSPACE_HOMEPAGE_NAME:-Hermes Workspace}"
+        - "homepage.icon=${HERMES_WORKSPACE_HOMEPAGE_ICON:-hermes.png}"
+        - "homepage.href=${HERMES_WORKSPACE_APP_URL:-https://hermes-workspace.example.com}"
+        - "homepage.description=${HERMES_WORKSPACE_HOMEPAGE_DESCRIPTION:-Hermes IDE-style workspace}"
+        - "homepage.siteMonitor=${HERMES_WORKSPACE_HOMEPAGE_SITEMONITOR:-http://workspace:3000}"
+    labels:
+      - "traefik.enable=${HERMES_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-hermes}-workspace.loadbalancer.server.port=3000"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace.entrypoints=${HERMES_WORKSPACE_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace.rule=Host(`${HERMES_WORKSPACE_DOMAIN:-hermes-workspace.example.com}`) && PathPrefix(`${HERMES_WORKSPACE_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace.service=${APP_NAME:-hermes}-workspace"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace.middlewares=${HERMES_WORKSPACE_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace.tls=${HERMES_WORKSPACE_TLS_ENABLED:-true}"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace.tls.certresolver=${HERMES_WORKSPACE_TLS_CERTRESOLVER:-}"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.entrypoints=web"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.rule=Host(`${HERMES_WORKSPACE_DOMAIN:-hermes-workspace.example.com}`) && PathPrefix(`${HERMES_WORKSPACE_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.middlewares=${HERMES_WORKSPACE_HTTP_MIDDLEWARES:-redirect-to-https@swarm}"
+      - "traefik.http.routers.${APP_NAME:-hermes}-workspace-http.service=${APP_NAME:-hermes}-workspace"
