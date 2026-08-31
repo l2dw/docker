@@ -50,7 +50,7 @@ services:
     image: ${HERMES_DASHBOARD_IMAGE:-nousresearch/hermes-agent:latest}
     restart: ${HERMES_DASHBOARD_RESTART:-unless-stopped}
     privileged: ${HERMES_DASHBOARD_PRIVILEGED:-false}
-    command: dashboard --host 0.0.0.0 --insecure
+    command: dashboard --host 0.0.0.0 --no-open
     env_file:
       - ${HERMES_ENV_FILE:-.env.example}
     environment:
@@ -59,6 +59,10 @@ services:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - GATEWAY_HEALTH_URL=${HERMES_GATEWAY_URL:-http://agent:8642}
+      - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=${HERMES_DASHBOARD_BASIC_AUTH_USERNAME:-admin}
+      - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD:-}
+      - HERMES_DASHBOARD_BASIC_AUTH_SECRET=${HERMES_DASHBOARD_BASIC_AUTH_SECRET:-}
+      - HERMES_DASHBOARD_PUBLIC_URL=${HERMES_DASHBOARD_APP_URL:-}
     volumes:
       - ${HERMES_HOME_DIR:-hermes-home}:/home/hermes/.hermes
     depends_on:

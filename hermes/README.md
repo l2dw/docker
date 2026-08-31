@@ -20,12 +20,14 @@ make hermes-setup \
   HERMES_APP_URL=https://hermes.example.com \
   HERMES_DASHBOARD_DOMAIN=hermes-dashboard.example.com \
   HERMES_DASHBOARD_APP_URL=https://hermes-dashboard.example.com \
-  HERMES_WEBUI_PASSWORD='your-secure-password'
+  HERMES_WEBUI_PASSWORD='your-secure-password' \
+  HERMES_DASHBOARD_BASIC_AUTH_PASSWORD='your-dashboard-password'
 make hermes-compose-up   # or: make hermes-stack-up
 ```
 
 - `hermes-setup` génère `HERMES_API_SERVER_KEY` (≥16 caractères) si absent — requis pour l’API gateway et les sondes WebUI.
-- Définir **`HERMES_WEBUI_PASSWORD`** avant d’exposer l’UI via Traefik.
+- Définir **`HERMES_WEBUI_PASSWORD`** et **`HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`** avant d’exposer via Traefik (le dashboard refuse `0.0.0.0` sans auth provider depuis la hardening Hermes 2026 ; `--insecure` est ignoré).
+- `hermes-setup` génère aussi `HERMES_DASHBOARD_BASIC_AUTH_SECRET` si absent (sessions stables après redémarrage).
 - Swarm : `docker stack deploy` ne lit pas `.env` seul — utiliser Make.
 
 ### URLs (après Traefik)
@@ -156,9 +158,18 @@ sudo loginctl enable-linger "$USER"
 ### 4. Dashboard natif (optionnel)
 
 ```sh
+# Local sans login (loopback uniquement)
 hermes dashboard --host 127.0.0.1 --port 9119
-# ou derrière Traefik / reverse proxy avec auth
+
+# Derrière Traefik / reverse proxy — auth obligatoire sur bind non-loopback :
+export HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin
+export HERMES_DASHBOARD_BASIC_AUTH_PASSWORD='choose-a-strong-password'
+export HERMES_DASHBOARD_BASIC_AUTH_SECRET="$(openssl rand -base64 32)"
+export HERMES_DASHBOARD_PUBLIC_URL='https://hermes-dashboard.example.com'
+hermes dashboard --host 0.0.0.0 --port 9119 --no-open
 ```
+
+Doc : [Web Dashboard](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-dashboard).
 
 ### 5. Web UI sans stack Docker
 
@@ -203,6 +214,7 @@ journalctl -u hermes-gateway -n 100
 | Gateway ne démarre pas | `hermes doctor` ; clés API / `config.yaml` |
 | Cron silencieux | Jobs dans `~/.hermes/cron/jobs.json` ; `hermes cron list` |
 | WebUI « gateway not reachable » | `HERMES_API_SERVER_KEY` ≥16 chars ; port 8642 ouvert localement |
+| Dashboard « Refusing to bind … no auth providers » | Définir `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` + `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` (+ `HERMES_DASHBOARD_BASIC_AUTH_SECRET` pour sessions stables) ; retirer `--insecure` (ignoré) |
 
 ## Base path
 
@@ -239,6 +251,8 @@ make hermes-compose-logs
 | `HERMES_API_SERVER_KEY` | Gateway API (auto-généré par setup) |
 | `HERMES_GATEWAY_URL` | Gateway pour dashboard (`GATEWAY_HEALTH_URL`) et webui (`HERMES_API_URL`) |
 | `HERMES_WEBUI_PASSWORD` | Auth Web UI (obligatoire en prod) |
+| `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` / `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` | Auth dashboard (`0.0.0.0` derrière Traefik) |
+| `HERMES_DASHBOARD_BASIC_AUTH_SECRET` | Clé de signature session (auto-généré par setup) |
 | `HERMES_UID` / `HERMES_GID` | Permissions volumes partagés |
 | `HERMES_ENV_FILE` | Compose dotenv |
 

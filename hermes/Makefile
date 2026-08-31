@@ -67,6 +67,19 @@ hermes-setup: ## Ensure hermes/.env, API key, network sync
 	case "$$pw" in \
 		''|ChangeMe) echo "Warning: set HERMES_WEBUI_PASSWORD before exposing the Web UI via Traefik." >&2 ;; \
 	esac; \
+	dash_pw=$$(file_get "$$envf" HERMES_DASHBOARD_BASIC_AUTH_PASSWORD); \
+	[ -n "$$dash_pw" ] || dash_pw=$$(file_get "$$root" HERMES_DASHBOARD_BASIC_AUTH_PASSWORD); \
+	case "$$dash_pw" in \
+		''|ChangeMe) echo "Warning: set HERMES_DASHBOARD_BASIC_AUTH_PASSWORD before exposing the dashboard via Traefik." >&2 ;; \
+	esac; \
+	dash_secret=$$(file_get "$$envf" HERMES_DASHBOARD_BASIC_AUTH_SECRET); \
+	[ -n "$$dash_secret" ] || dash_secret=$$(file_get "$$root" HERMES_DASHBOARD_BASIC_AUTH_SECRET); \
+	if [ -z "$$dash_secret" ]; then \
+		dash_secret=$$(openssl rand -base64 32); \
+		upsert "$$envf" HERMES_DASHBOARD_BASIC_AUTH_SECRET "$$dash_secret"; \
+		if [ -n "$$root" ]; then upsert "$$root" HERMES_DASHBOARD_BASIC_AUTH_SECRET "$$dash_secret"; fi; \
+		echo "Generated HERMES_DASHBOARD_BASIC_AUTH_SECRET (dashboard session signing)."; \
+	fi; \
 	uid=$$(file_get "$$envf" HERMES_UID); \
 	[ -n "$$uid" ] || uid=$$(id -u 2>/dev/null || echo 1000); \
 	gid=$$(file_get "$$envf" HERMES_GID); \
