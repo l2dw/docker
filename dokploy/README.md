@@ -14,7 +14,7 @@ This is the shared overlay host (`dokploy-network`), not an app stack that joins
 
 Root symlinks (on this branch): `README.md`, `compose.yml`, `docker-compose.yml` → `dokploy/…`.
 
-Routers `dokploy-console` / `dokploy-traefik` and global middlewares (`waf`, `redirect-to-https`, …) use **fixed** infra names (not `${APP_NAME}`).
+Routers `${APP_NAME:-dokploy}-console` / `${APP_NAME:-dokploy}-traefik` scope Traefik ingress per Dokploy app instance. Global middlewares (`waf`, `redirect-to-https`, …) stay fixed on the Traefik service. `APP_NAME` is injected by Dokploy — not listed in `.env.example`.
 
 ## Deploy
 
