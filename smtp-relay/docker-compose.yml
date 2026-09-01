@@ -1,6 +1,6 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    name: ${DEFAULT_NETWORK_NAME:-smtp-relay-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 services:
@@ -35,6 +35,7 @@ services:
           - ${SMTP_RELAY_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
         condition: on-failure
+        delay: 5s
       resources:
         limits:
           memory: ${SMTP_RELAY_MEMORY_LIMIT:-256M}

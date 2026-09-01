@@ -4,6 +4,7 @@ SMTP_RELAY_SERVICES_SHORT := smtp-relay
 SMTP_RELAY_ENV := $(SMTP_RELAY_STACK_NAME)/.env
 SMTP_RELAY_ENV_EXAMPLE := $(SMTP_RELAY_STACK_NAME)/.env.example
 SMTP_RELAY_NOTIFY_VARS := SMTP_RELAY_MAILNAME
+NETWORK_DRIVER ?= overlay
 
 smtp-relay-pull-images: ## Pull images for the smtp-relay stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(SMTP_RELAY_STACK_NAME)
@@ -56,6 +57,28 @@ smtp-relay-setup: ## Ensure smtp-relay/.env, warn on MAILNAME / RELAY_NETWORKS
 		:*) ;; \
 		*) echo "Warning: SMTP_RELAY_NETWORKS must start with ':' (got '$$nets')" >&2 ;; \
 	esac; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='smtp-relay-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "smtp-relay env OK ($$envf)."
 .smtp-relay-setup: smtp-relay-setup
@@ -85,7 +108,8 @@ smtp-relay-debug-logs: ## Tail recent logs for each smtp-relay service
 	done
 smtp-relay-compose-upgrade: ## Upgrade the smtp-relay compose project
 	$(MAKE) docker-project-upgrade PROJECT_NAME=$(SMTP_RELAY_STACK_NAME)
-smtp-relay-compose-up: .smtp-relay-setup ## Deploy smtp-relay (compose)
+smtp-relay-compose-up: ## Deploy smtp-relay (compose)
+	@$(MAKE) smtp-relay-setup NETWORK_DRIVER=bridge
 	$(MAKE) docker-project-up PROJECT_NAME=$(SMTP_RELAY_STACK_NAME)
 smtp-relay-compose-down: ## Remove smtp-relay (compose)
 	$(MAKE) docker-project-down PROJECT_NAME=$(SMTP_RELAY_STACK_NAME)

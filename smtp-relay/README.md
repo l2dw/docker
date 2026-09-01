@@ -1,12 +1,14 @@
 # smtp-relay
 
-[namshi/smtp](https://github.com/namshi/docker-smtp) — Exim SMTP relay on **TCP 25**. Joins `dokploy-network`. **Not an HTTP app**: no Traefik/Homepage labels (`compose.yml` is a symlink of `docker-compose.yml`).
+[namshi/smtp](https://github.com/namshi/docker-smtp) — Exim SMTP relay on **TCP 25**. Default network: `smtp-relay-network` (`DEFAULT_NETWORK_EXTERNAL=false`). On Dokploy, set `DEFAULT_NETWORK_NAME=dokploy-network` + `DEFAULT_NETWORK_EXTERNAL=true` (`make smtp-relay-setup` syncs the pair). **Overlay DNS:** `smtp-relay:25` (Compose service name — no `dokploy-` prefix alias). **Not an HTTP app**: no Traefik/Homepage labels (`compose.yml` → symlink to `docker-compose.yml`).
 
 `.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${SMTP_RELAY_ENV_FILE:-.env.example}`; production: `SMTP_RELAY_ENV_FILE=.env`. `environment:` wins on key conflicts.
 
 ```sh
 make smtp-relay-setup \
   SMTP_RELAY_MAILNAME=smtp.example.com
+# Dokploy overlay (after dokploy-network exists):
+#   DEFAULT_NETWORK_NAME=dokploy-network DEFAULT_NETWORK_EXTERNAL=true
 make smtp-relay-stack-up
 # or
 make smtp-relay-compose-up
@@ -76,7 +78,9 @@ Expect `220` then `250`. **554 synchronization error** means you typed before th
 | Variable | Notes |
 |----------|--------|
 | `SMTP_RELAY_MAILNAME` | HELO / mailname (warns if `example.com`) |
-| `SMTP_RELAY_NETWORKS` | Must start with `:` |
+| `DEFAULT_NETWORK_NAME` / `DEFAULT_NETWORK_EXTERNAL` | Default `smtp-relay-network` / `false`; `dokploy-network` ⇒ `true` (synced by setup) |
+| `smtp-relay:25` | Overlay DNS via Compose service name (no `dokploy-` prefix alias) |
+| `SMTP_RELAY_NETWORKS` | Must start with `:` (client ACL — not Docker DNS) |
 | `SMTP_RELAY_ENV_FILE` | Compose dotenv (default `.env.example`) |
 | `SMTP_RELAY_PORT_PUBLISHED` | Host SMTP port (default `25`) |
 | `SMTP_RELAY_HOST` / `PORT` / `USER` / `PASS` / `ALIASES` | Vendor `SMARTHOST_*` |
@@ -87,4 +91,5 @@ Expect `220` then `250`. **554 synchronization error** means you typed before th
 - **Client rejected** — widen `SMTP_RELAY_NETWORKS` (Docker Desktop Mac often `192.168.65.1`).
 - **Gmail `530 Authentication Required`** — set `SMTP_RELAY_ALIASES=*.gmail.com` plus user/pass; recreate.
 - **Port 25 in use** — `SMTP_RELAY_PORT_PUBLISHED=2525`.
+- **Network not found** — `make smtp-relay-setup` creates `smtp-relay-network` when `EXTERNAL=false`; for Dokploy set `DEFAULT_NETWORK_NAME=dokploy-network` after `make dokploy-setup`.
 - **linux/amd64 on Apple Silicon** — image may emulate; check logs.
