@@ -1,0 +1,78 @@
+
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-app-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  app_data:
+    name: ${APP_DATA_VOLUME_NAME:-app_data}
+    external: ${APP_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${APP_DATA_VOLUME_DRIVER:-local}
+    # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
+    driver_opts:
+      type: ${APP_DATA_VOLUME_DRIVER_TYPE:-}
+      o: ${APP_DATA_VOLUME_DRIVER_O:-}
+      device: ${APP_DATA_VOLUME_DRIVER_DEVICE:-}
+
+services:
+
+  app:
+    image: ${APP_IMAGE:-}
+    networks:
+      default:
+        aliases:
+          - ${APP_NAME:-app}
+    volumes:
+      - ${APP_DATA_HOST_PATH:-app_data}:${APP_DATA_CONTAINER_PATH:-/data}:z
+    env_file:
+      - ${APP_ENV_FILE:-.env.example}
+    labels:
+      - "traefik.enable=${APP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-app}.loadbalancer.server.port=${APP_PORT:-3000}"
+      - "traefik.http.routers.${APP_NAME:-app}.entrypoints=${APP_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-app}.rule=Host(`${APP_DOMAIN:-app.example.com}`) && PathPrefix(`${APP_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-app}.service=${APP_NAME:-app}"
+      - "traefik.http.routers.${APP_NAME:-app}.middlewares=${APP_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-app}.tls=${APP_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-app}.tls.certresolver=${APP_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      ## Homepage configuration
+      - "homepage.enabled=${APP_HOMEPAGE_ENABLED:-true}"
+      - "homepage.group=${APP_HOMEPAGE_GROUP:-APP}"
+      - "homepage.name=${APP_HOMEPAGE_NAME:-APP}"
+      - "homepage.icon=${APP_ICON:-}"
+      - "homepage.href=${APP_URL:-http://app.example.com/}"
+      - "homepage.description=${APP_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${APP_SITEMONITOR_URL:-http://app.example.com/}"
+      - "homepage.ping=${APP_PING_URL:-http://app.example.com}"
+    deploy:
+      mode: ${APP_DEPLOY_MODE:-replicated}
+      replicas: ${APP_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${APP_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${APP_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${APP_RESTART_POLICY_CONDITION:-any}
+        delay: ${APP_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${APP_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${APP_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-app}.loadbalancer.server.port=${APP_PORT:-3000}"
+        - "traefik.http.routers.${APP_NAME:-app}.entrypoints=${APP_TRAEFIK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-app}.rule=Host(`${APP_DOMAIN:-app.example.com}`) && PathPrefix(`${APP_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-app}.service=${APP_NAME:-app}"
+        - "traefik.http.routers.${APP_NAME:-app}.middlewares=${APP_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-app}.tls=${APP_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-app}.tls.certresolver=${APP_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+        ## Homepage configuration
+        - "homepage.enabled=${APP_HOMEPAGE_ENABLED:-true}"
+        - "homepage.group=${APP_HOMEPAGE_GROUP:-APP}"
+        - "homepage.name=${APP_HOMEPAGE_NAME:-APP}"
+        - "homepage.icon=${APP_ICON:-}"
+        - "homepage.href=${APP_URL:-http://app.example.com/}"
+        - "homepage.description=${APP_DESCRIPTION:-}"
+        - "homepage.siteMonitor=${APP_SITEMONITOR_URL:-http://app.example.com/}"
+        - "homepage.ping=${APP_PING_URL:-http://app.example.com}"
