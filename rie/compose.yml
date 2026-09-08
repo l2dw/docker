@@ -1,0 +1,45 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-rie-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  appdata:
+    name: ${APPDATA_VOLUME_NAME:-appdata}
+    external: ${APPDATA_VOLUME_EXTERNAL:-false}
+    driver: ${APPDATA_VOLUME_DRIVER:-local}
+    # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
+    driver_opts:
+      type: ${APPDATA_VOLUME_DRIVER_TYPE:-}
+      o: ${APPDATA_VOLUME_DRIVER_O:-}
+      device: ${APPDATA_VOLUME_DRIVER_DEVICE:-}
+
+services:
+
+  app:
+    image: ${IMAGE:-atelier.cen.umontreal.ca/rie/rie:latest}
+    networks:
+      default:
+        aliases:
+          - ${APP_NAME:-rie}
+    volumes:
+      - ${APPDATA_HOST_PATH:-appdata}:${APPDATA_CONTAINER_PATH:-/appdata}:z
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    ports:
+      - target: ${APP_PORT:-3000}
+        published: ${PUBLISHED_PORT:-30000}
+        protocol: tcp
+    deploy:
+      mode: ${DEPLOY_MODE:-replicated}
+      replicas: ${DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${RESTART_POLICY_CONDITION:-any}
+        delay: ${RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${RESTART_POLICY_MAX_ATTEMPTS:-3}
