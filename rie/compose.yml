@@ -110,9 +110,3 @@ services:
         delay: ${RESTART_POLICY_DELAY:-5s}
         max_attempts: ${RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
-        - traefik.swarm.network=dokploy-network
-        - traefik.http.routers.compose-connect-mobile-monitor-ax7r14-15-web.rule=Host(`workspace.local`) && PathPrefix(`/staging/rie/web`)
-        - traefik.http.routers.compose-connect-mobile-monitor-ax7r14-15-web.entrypoints=web
-        - traefik.http.services.compose-connect-mobile-monitor-ax7r14-15-web.loadbalancer.server.port=3000
-        - traefik.http.routers.compose-connect-mobile-monitor-ax7r14-15-web.service=compose-connect-mobile-monitor-ax7r14-15-web
-        - traefik.enable=true
