@@ -26,6 +26,20 @@ services:
       - ${APPDATA_HOST_PATH:-appdata}:${APPDATA_CONTAINER_PATH:-/appdata}:z
     env_file:
       - ${ENV_FILE:-.env.example}
+    # Critical vars for the app entrypoint (fullstack.entrypoint.sh).
+    # `environment:` overrides `env_file:`. Docker Compose unquotes these on
+    # interpolation, so Dokploy's quoted `env_file` values ("true") cannot
+    # break the strict `[ "$VAR" = "true" ]` checks in the entrypoint.
+    environment:
+      ENABLE_SERVICE_API: ${ENABLE_SERVICE_API:-true}
+      ENABLE_SERVICE_WEB_APP: ${ENABLE_SERVICE_WEB_APP:-true}
+      API_PORT: ${API_PORT:-4000}
+      CLIENT_PORT: ${CLIENT_PORT:-3000}
+      API_BASE_PATH: ${API_BASE_PATH:-/api}
+      NODE_ENV: ${NODE_ENV:-production}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      RIE_AUTH_CLIENT_ID: ${RIE_AUTH_CLIENT_ID:-}
+      RIE_AUTH_CLIENT_SECRET: ${RIE_AUTH_CLIENT_SECRET:-}
     ports:
       - target: ${APP_PORT:-3000}
         published: ${PUBLISHED_PORT:-30000}
