@@ -29,7 +29,8 @@ services:
     # Critical vars for the app entrypoint (fullstack.entrypoint.sh).
     # `environment:` overrides `env_file:`. Docker Compose unquotes these on
     # interpolation, so Dokploy's quoted `env_file` values ("true") cannot
-    # break the strict `[ "$VAR" = "true" ]` checks in the entrypoint.
+    # break the strict `[ "$VAR" = "true" ]` checks in the entrypoint, and
+    # quoted pass/url/host values cannot corrupt PG_DATABASE_URL construction.
     environment:
       ENABLE_SERVICE_API: ${ENABLE_SERVICE_API:-true}
       ENABLE_SERVICE_WEB_APP: ${ENABLE_SERVICE_WEB_APP:-true}
@@ -37,6 +38,13 @@ services:
       CLIENT_PORT: ${CLIENT_PORT:-3000}
       API_BASE_PATH: ${API_BASE_PATH:-/api}
       NODE_ENV: ${NODE_ENV:-production}
+      # Database (unquoted so PG_DATABASE_URL builds correctly)
+      PG_DATABASE_NAME: ${PG_DATABASE_NAME:-}
+      PG_DATABASE_USER: ${PG_DATABASE_USER:-}
+      PG_DATABASE_PASSWORD: ${PG_DATABASE_PASSWORD:-}
+      PG_DATABASE_HOST: ${PG_DATABASE_HOST:-}
+      PG_DATABASE_PORT: ${PG_DATABASE_PORT:-5432}
+      # OpenTelemetry / Auth
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       RIE_AUTH_CLIENT_ID: ${RIE_AUTH_CLIENT_ID:-}
       RIE_AUTH_CLIENT_SECRET: ${RIE_AUTH_CLIENT_SECRET:-}
