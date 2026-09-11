@@ -42,20 +42,37 @@ Ce stack n'embarque **pas** de service `keycloak-db` : Keycloak se connecte à u
 ```sh
 openssl rand -hex 24
 # ex. 5c4f2b9a3e8d1c7f6b0a9e4d2c8f1a6b3e5d7c8a
+DB_PASS=$(openssl rand -hex 24)
 ```
 
-### 2. Créer le rôle (`DB_USER`) et la base (`DB_NAME`)
+### 2. Créer le rôle (`DB_USER`) et la base (`DB_NAME`) via `psql`
 
-Le repo fournit `bin/create-db.sh` (cible le service Swarm `infrastructure_postgresql` par défaut). Il est **idempotent** : il crée le rôle s'il n'existe pas, puis la base si elle n'existe pas, et ne touche à rien sinon.
+Récupérez l'ID du container Postgres du service Swarm, puis exécutez `psql` en tant que super-utilisateur `postgres` :
 
 ```sh
-DB_USER=keycloak \
-DB_PASS='<le mot de passe généré à l'étape 1>' \
-DB_NAME=keycloak \
-./bin/create-db.sh
+cid="$(docker ps -q --filter "label=com.docker.swarm.service.name=infrastructure_postgresql" | head -n 1)"
+docker exec -it "$cid" psql -U postgres -d postgres
 ```
 
-Variables requises : `DB_USER`, `DB_PASS`, `DB_NAME`. `PG_SERVICE` optionnel (défaut `infrastructure_postgresql`).
+Une fois dans le prompt `psql`, créez le rôle et la base (remplacez `<le mot de passe>` par `$DB_PASS`) :
+
+```sql
+CREATE USER keycloak WITH PASSWORD '<le mot de passe>';
+CREATE DATABASE keycloak OWNER keycloak;
+```
+
+En une commande sans entrée interactive (si vous préférez `-c`). Attention : `psql -c` **n'effectue pas** la substitution de variables `:` — passez les mots de passe en littéral :
+
+```sh
+docker exec -i "$cid" psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 \
+  -c "CREATE USER keycloak WITH PASSWORD '<le mot de passe>'"
+docker exec -i "$cid" psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 \
+  -c "CREATE DATABASE keycloak OWNER keycloak"
+```
+
+`<le mot de passe>` n'a **pas** de quote imbriquée : une valeur contenant un simple guillemet ne peut pas être passée ainsi.
 
 ### 3. Renseigner le Stack
 
