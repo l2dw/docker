@@ -7,6 +7,12 @@ volumes:
   siyuan_data:
     name: ${SIYUAN_DATA_VOLUME_NAME:-siyuan_data}
     external: ${SIYUAN_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${SIYUAN_DATA_VOLUME_DRIVER:-local}
+    # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
+    driver_opts:
+      type: ${SIYUAN_DATA_VOLUME_DRIVER_TYPE:-}
+      o: ${SIYUAN_DATA_VOLUME_DRIVER_O:-}
+      device: ${SIYUAN_DATA_VOLUME_DRIVER_DEVICE:-}
 
 services:
   siyuan:
@@ -16,6 +22,12 @@ services:
       - --workspace=${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}
     restart: ${SIYUAN_RESTART:-unless-stopped}
     privileged: ${SIYUAN_PRIVILEGED:-false}
+    networks:
+      default:
+        aliases:
+          - ${APP_NAME:-siyuan}
+    volumes:
+      - ${SIYUAN_DATA_HOST_PATH:-siyuan_data}:${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}:z
     env_file:
       - ${SIYUAN_ENV_FILE:-.env.example}
     environment:
@@ -24,8 +36,6 @@ services:
       - PGID=${SIYUAN_PGID:-1000}
       - SIYUAN_LANG=${SIYUAN_LANG:-en}
       - SIYUAN_ACCESS_AUTH_CODE=${SIYUAN_ACCESS_AUTH_CODE:-ChangeMe}
-    volumes:
-      - ${SIYUAN_DATA_DIR:-siyuan_data}:${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}
     deploy:
       mode: ${SIYUAN_DEPLOY_MODE:-replicated}
       replicas: ${SIYUAN_DEPLOY_REPLICAS:-1}

@@ -28,7 +28,7 @@ Modifier `siyuan/.env`, puis `make siyuan-stack-recreate`.
 ## Docker / Swarm notes
 
 - Image `b3log/siyuan` (port interne **6806**). Depuis v3.7.0, `command: serve --workspace=...` est requis.
-- Volume nommé `siyuan_data` monté sur `/siyuan/workspace` (via `SIYUAN_DATA_DIR`/`SIYUAN_WORKSPACE_CONTAINER_PATH`).
+- Volume nommé `siyuan_data` monté sur `/siyuan/workspace` (via `SIYUAN_DATA_HOST_PATH`/`SIYUAN_WORKSPACE_CONTAINER_PATH`).
 - `env_file` (variable `SIYUAN_ENV_FILE`, défaut `.env.example`) **+** `environment:` (l'`environment:` écrase le fichier).
 - **`docker stack deploy` ne lit pas `.env` seul** — utilise Make (exporte le `.env` racine + interpolation `environment:`).
 - Traefik : noms router/service scoped par `APP_NAME` (Dokploy), **non listé** dans `.env.example`.
