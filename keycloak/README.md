@@ -31,6 +31,44 @@ Single replica uses `KC_CACHE=local`. HTTP 8080 is not published on the host. Me
 
 Named volumes persist `/opt/keycloak/data`, `themes`, `providers`, `conf`, and `logs`. Empty `KEYCLOAK_*_DIR` uses the named volume; set a host path to bind-mount instead.
 
+## Base de données (PostgreSQL externe)
+
+Ce stack n'embarque **pas** de service `keycloak-db` : Keycloak se connecte à une **PostgreSQL existante** sur l'overlay. Créez le rôle et la base **avant le premier démarrage**, sinon Keycloak ne peut pas initialiser son schéma.
+
+### 1. Générer un mot de passe fort (`DB_PWD`)
+
+`make keycloak-setup` génère automatiquement `KEYCLOAK_DB_PASSWORD` s'il est vide (`openssl rand -hex 32`). Pour le générer à la main sans le stocker nulle part :
+
+```sh
+openssl rand -hex 24
+# ex. 5c4f2b9a3e8d1c7f6b0a9e4d2c8f1a6b3e5d7c8a
+```
+
+### 2. Créer le rôle (`DB_USER`) et la base (`DB_NAME`)
+
+Le repo fournit `bin/create-db.sh` (cible le service Swarm `infrastructure_postgresql` par défaut). Il est **idempotent** : il crée le rôle s'il n'existe pas, puis la base si elle n'existe pas, et ne touche à rien sinon.
+
+```sh
+DB_USER=keycloak \
+DB_PASS='<le mot de passe généré à l'étape 1>' \
+DB_NAME=keycloak \
+./bin/create-db.sh
+```
+
+Variables requises : `DB_USER`, `DB_PASS`, `DB_NAME`. `PG_SERVICE` optionnel (défaut `infrastructure_postgresql`).
+
+### 3. Renseigner le Stack
+
+Dans `keycloak/.env` (ou via `make keycloak-setup KEYCLOAK_DB_PASSWORD='<mdp>'`), mettez à jour :
+
+```env
+KEYCLOAK_DB_USERNAME=keycloak
+KEYCLOAK_DB_PASSWORD=<le mot de passe généré>
+KEYCLOAK_DB_URL=jdbc:postgresql://dokploy-postgresql:5432/keycloak
+```
+
+Le nom d'hôte `dokploy-postgresql` est le nom overlay de la PostgreSQL partagée ; adaptez-le si votre base est ailleurs. `make keycloak-setup` avertit si `KEYCLOAK_DB_URL` pointe toujours vers un ancien service `keycloak-db`.
+
 ## Makefile
 
 ```sh
