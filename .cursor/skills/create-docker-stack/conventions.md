@@ -87,7 +87,7 @@ Rules:
 - Stateful services: `replicas: 1`. `mode: global` ignores replicas.
 - Do **not** emit Compose `x-*` keys (`x-pull-policy`, etc.).
 - Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` — never `"${…}"`.
-- Overlay pairing (two keys; **no nested** `${A:-${B}}`): **compose defaults** `DEFAULT_NETWORK_NAME` → `<projet>-network` (e.g. `myapp-network`) and `DEFAULT_NETWORK_EXTERNAL` → `false` (stack-local network Swarm/Compose can create). If NAME is **`dokploy-network`**, EXTERNAL must be `true` (join the existing shared overlay + Traefik). Any other NAME → EXTERNAL `false`. `<projet>-setup` upserts EXTERNAL to match NAME; when NAME is empty in env, fallback to `<projet>-network` then EXTERNAL `false`. To share Redis/DB/Traefik on Dokploy: set `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true` in `.env`.
+- Overlay: **always stack-local** — `DEFAULT_NETWORK_NAME` → `<projet>-network` (e.g. `myapp-network`) and `DEFAULT_NETWORK_EXTERNAL` → `false` (network Swarm/Compose can create). Do **not** join/name an external shared overlay (e.g. `dokploy-network`) in a new stack. `<projet>-setup` sets NAME to `<projet>-network` and EXTERNAL to `false`.
 - **Memory limit:** every service must set `deploy.resources.limits.memory` to `${<PREFIX>_MEMORY_LIMIT:-1G}` or a per-role `${<PREFIX>_<ROLE>_MEMORY_LIMIT:-1G}`. Default is always **1G** unless the user requests otherwise. Mirror the key(s) in `.env.example`.
 - Pull images via Make (`<projet>-pull-images` / `*-stack-upgrade`), not `pull_policy` / `x-pull-policy` (Swarm rejects `pull_policy`).
 - Do **not** add `networks.default.aliases` by default. The Compose service name is already the DNS name. Add aliases **only** when the user asks, or when a stable alternate hostname is required (Dokploy-style: e.g. `dokploy-postgresql`, `dokploy-redis` for other services to resolve).
@@ -225,7 +225,7 @@ MYAPP_STACK_NAME := myapp
 MYAPP_SERVICES_SHORT := myapp
 myapp-pull-images: ## Pull images for the myapp stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(MYAPP_STACK_NAME)
-myapp-setup: ## Ensure <projet>/.env, generate missing secrets, sync DEFAULT_NETWORK_EXTERNAL (true only for dokploy-network)
+myapp-setup: ## Ensure <projet>/.env, generate missing secrets, set DEFAULT_NETWORK_NAME=<projet>-network and DEFAULT_NETWORK_EXTERNAL=false
 	@echo "Setting up the myapp stack..."
 .myapp-setup: myapp-setup
 myapp-stack-up: .myapp-setup ## Deploy the myapp stack
@@ -302,7 +302,7 @@ Duplicate the block on `deploy.labels` (Swarm provider) and service `labels` (Do
 
 - **`APP_NAME`:** Traefik router/service (and app-owned middleware) names use `${APP_NAME:-<projet>}`. Compose service YAML key stays `<projet>` for DNS; `homepage.siteMonitor` uses that DNS name. Do **not** list `APP_NAME` in `.env.example`.
 - Port = container listen port, not the published host port.
-- Do not add a second Traefik service. Default stack network is `<projet>-network` (local). For Traefik on the shared overlay, set `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true`.
+- Do not add a second Traefik service. Stack network is always `<projet>-network` (stack-local). Do **not** name/join a shared external overlay (`dokploy-network`) in a new stack.
 - Leave `MYAPP_MIDDLEWARES` empty unless the user wants extra middlewares; global WAF is on Traefik entrypoints.
 - `MYAPP_BASE_PATH` drives `PathPrefix` and `homepage.href`. Use `PathPrefix(\`${MYAPP_BASE_PATH:-/}\`)` so empty/`/` is Host-compatible (never `${…:-/<projet>}` which re-fills intentional empty). Wire the app’s own base-path env only when step **1b** confirmed support (see § Base path).
 - Labels belong **only** in `docker-compose.yml`, never in a separate unlabeled `compose.yml`. If the stack has **no** labels, do not invent empty Traefik/Homepage blocks — symlink `compose.yml` → `docker-compose.yml` instead.
