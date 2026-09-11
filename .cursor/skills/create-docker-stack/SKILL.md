@@ -5,7 +5,11 @@ description: Scaffolds a new application Docker stack in this docker-templates r
 
 # Create Docker stack
 
-Scaffold a new **application** stack in this repo. Do **not** recreate Traefik/WAF (apps join the existing overlay). Do **not** commit `.env`, overrides, or secrets. Do **not** push unless asked.
+Scaffold a new **application** stack in this repo. A stack is one or more services represented by a dedicated **git branch**.
+
+**Mission Scope:** Focus ONLY on creating models (docker-compose, Makefile, env). Do **not** deploy, manage, or debug the actual Docker/Swarm services.
+
+Do **not** recreate Traefik/WAF (apps join the existing overlay). Do **not** commit `.env`, overrides, or secrets. Do **not** push unless asked.
 
 Read [conventions.md](conventions.md) before writing compose, env, Makefile, or Traefik/Homepage labels.
 
