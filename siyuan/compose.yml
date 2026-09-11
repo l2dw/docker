@@ -1,0 +1,40 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-siyuan-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  siyuan_data:
+    name: ${SIYUAN_DATA_VOLUME_NAME:-siyuan_data}
+    external: ${SIYUAN_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  siyuan:
+    image: ${SIYUAN_IMAGE:-docker.io/b3log/siyuan:latest}
+    command:
+      - serve
+      - --workspace=${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}
+    restart: ${SIYUAN_RESTART:-unless-stopped}
+    privileged: ${SIYUAN_PRIVILEGED:-false}
+    env_file:
+      - ${SIYUAN_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - PUID=${SIYUAN_PUID:-1000}
+      - PGID=${SIYUAN_PGID:-1000}
+      - SIYUAN_LANG=${SIYUAN_LANG:-en}
+      - SIYUAN_ACCESS_AUTH_CODE=${SIYUAN_ACCESS_AUTH_CODE:-ChangeMe}
+    volumes:
+      - ${SIYUAN_DATA_DIR:-siyuan_data}:${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}
+    deploy:
+      mode: ${SIYUAN_DEPLOY_MODE:-replicated}
+      replicas: ${SIYUAN_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${SIYUAN_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${SIYUAN_MEMORY_LIMIT:-1G}

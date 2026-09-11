@@ -1,0 +1,72 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-siyuan-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  siyuan_data:
+    name: ${SIYUAN_DATA_VOLUME_NAME:-siyuan_data}
+    external: ${SIYUAN_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  siyuan:
+    image: ${SIYUAN_IMAGE:-docker.io/b3log/siyuan:latest}
+    command:
+      - serve
+      - --workspace=${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}
+    restart: ${SIYUAN_RESTART:-unless-stopped}
+    privileged: ${SIYUAN_PRIVILEGED:-false}
+    env_file:
+      - ${SIYUAN_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - PUID=${SIYUAN_PUID:-1000}
+      - PGID=${SIYUAN_PGID:-1000}
+      - SIYUAN_LANG=${SIYUAN_LANG:-en}
+      - SIYUAN_ACCESS_AUTH_CODE=${SIYUAN_ACCESS_AUTH_CODE:-ChangeMe}
+    volumes:
+      - ${SIYUAN_DATA_DIR:-siyuan_data}:${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}
+    deploy:
+      mode: ${SIYUAN_DEPLOY_MODE:-replicated}
+      replicas: ${SIYUAN_DEPLOY_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${SIYUAN_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${SIYUAN_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${SIYUAN_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.routers.${APP_NAME:-siyuan}.entrypoints=${SIYUAN_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-siyuan}.rule=Host(`${SIYUAN_DOMAIN:-siyuan.example.com}`) && PathPrefix(`${SIYUAN_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-siyuan}.service=${APP_NAME:-siyuan}"
+        - "traefik.http.routers.${APP_NAME:-siyuan}.middlewares=${SIYUAN_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-siyuan}.tls=${SIYUAN_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-siyuan}.tls.certresolver=${SIYUAN_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.${APP_NAME:-siyuan}.loadbalancer.server.port=6806"
+        - "traefik.http.services.${APP_NAME:-siyuan}.loadbalancer.passhostheader=true"
+        - "homepage.group=${SIYUAN_HOMEPAGE_GROUP:-Notes}"
+        - "homepage.name=${SIYUAN_HOMEPAGE_NAME:-SiYuan}"
+        - "homepage.icon=${SIYUAN_HOMEPAGE_ICON:-siyuan.png}"
+        - "homepage.href=${SIYUAN_HOMEPAGE_HREF:-http://siyuan.example.com/}"
+        - "homepage.description=${SIYUAN_HOMEPAGE_DESCRIPTION:-Local-first knowledge base}"
+        - "homepage.siteMonitor=${SIYUAN_HOMEPAGE_SITEMONITOR:-http://siyuan:6806}"
+    labels:
+      - "traefik.enable=${SIYUAN_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.routers.${APP_NAME:-siyuan}.entrypoints=${SIYUAN_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-siyuan}.rule=Host(`${SIYUAN_DOMAIN:-siyuan.example.com}`) && PathPrefix(`${SIYUAN_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-siyuan}.service=${APP_NAME:-siyuan}"
+      - "traefik.http.routers.${APP_NAME:-siyuan}.middlewares=${SIYUAN_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-siyuan}.tls=${SIYUAN_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-siyuan}.tls.certresolver=${SIYUAN_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.${APP_NAME:-siyuan}.loadbalancer.server.port=6806"
+      - "traefik.http.services.${APP_NAME:-siyuan}.loadbalancer.passhostheader=true"
+      - "homepage.group=${SIYUAN_HOMEPAGE_GROUP:-Notes}"
+      - "homepage.name=${SIYUAN_HOMEPAGE_NAME:-SiYuan}"
+      - "homepage.icon=${SIYUAN_HOMEPAGE_ICON:-siyuan.png}"
+      - "homepage.href=${SIYUAN_HOMEPAGE_HREF:-http://siyuan.example.com/}"
+      - "homepage.description=${SIYUAN_HOMEPAGE_DESCRIPTION:-Local-first knowledge base}"
+      - "homepage.siteMonitor=${SIYUAN_HOMEPAGE_SITEMONITOR:-http://siyuan:6806}"
