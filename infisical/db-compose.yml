@@ -1,0 +1,50 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-infisical-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  infisical_pg_data:
+    name: ${INFISICAL_PG_DATA_VOLUME_NAME:-infisical_pg_data}
+    external: ${INFISICAL_PG_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${INFISICAL_PG_DATA_VOLUME_DRIVER:-local}
+    # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
+    driver_opts:
+      type: ${INFISICAL_PG_DATA_VOLUME_DRIVER_TYPE:-}
+      o: ${INFISICAL_PG_DATA_VOLUME_DRIVER_O:-}
+      device: ${INFISICAL_PG_DATA_VOLUME_DRIVER_DEVICE:-}
+
+services:
+  infisical-db:
+    image: ${INFISICAL_DB_IMAGE:-docker.io/library/postgres:16-alpine}
+    restart: ${INFISICAL_DB_RESTART:-unless-stopped}
+    privileged: ${INFISICAL_DB_PRIVILEGED:-false}
+    env_file:
+      - ${INFISICAL_DB_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - POSTGRES_USER=${INFISICAL_DB_USER:-infisical}
+      - POSTGRES_PASSWORD=${INFISICAL_DB_PASSWORD:-ChangeMe}
+      - POSTGRES_DB=${INFISICAL_DB_NAME:-infisical}
+    volumes:
+      - ${INFISICAL_PG_DATA_HOST_PATH:-infisical_pg_data}:${INFISICAL_PG_DATA_CONTAINER_PATH:-/var/lib/postgresql/data}:z
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${INFISICAL_DB_USER:-infisical} -d ${INFISICAL_DB_NAME:-infisical}
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      mode: ${INFISICAL_DEPLOY_MODE:-replicated}
+      replicas: ${INFISICAL_DB_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${INFISICAL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${INFISICAL_DB_MEMORY_LIMIT:-1G}

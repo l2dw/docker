@@ -1,0 +1,76 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-infisical-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  infisical-backend:
+    image: ${INFISICAL_IMAGE:-docker.io/infisical/infisical:v0.165.10}
+    restart: ${INFISICAL_RESTART:-unless-stopped}
+    privileged: ${INFISICAL_PRIVILEGED:-false}
+    env_file:
+      - ${INFISICAL_BACKEND_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HOST=${INFISICAL_HOST:-0.0.0.0}
+      - PORT=${INFISICAL_PORT:-8080}
+      - SITE_URL=${INFISICAL_SITE_URL:-http://infisical.example.com}
+      - ENCRYPTION_KEY=${INFISICAL_ENCRYPTION_KEY:-}
+      - AUTH_SECRET=${INFISICAL_AUTH_SECRET:-}
+      - DB_CONNECTION_URI=${INFISICAL_DB_CONNECTION_URI:-postgresql://infisical:ChangeMe@infisical-db:5432/infisical}
+      - REDIS_URL=${INFISICAL_REDIS_URL:-redis://infisical-redis:6379}
+      - TELEMETRY_ENABLED=${INFISICAL_TELEMETRY_ENABLED:-true}
+      - DISABLE_UPDATE_CHECK=${INFISICAL_DISABLE_UPDATE_CHECK:-false}
+      - NODE_OPTIONS=${INFISICAL_NODE_OPTIONS:---max-old-space-size=768}
+    deploy:
+      mode: ${INFISICAL_DEPLOY_MODE:-replicated}
+      replicas: ${INFISICAL_BACKEND_REPLICAS:-1}
+      placement:
+        constraints:
+          - ${INFISICAL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${INFISICAL_BACKEND_MEMORY_LIMIT:-1G}
+      labels:
+        # Traefik configuration
+        - "traefik.enable=${INFISICAL_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        # Service configuration
+        - "traefik.http.services.${APP_NAME:-infisical}.loadbalancer.server.port=8080"
+        - "traefik.http.services.${APP_NAME:-infisical}.loadbalancer.passhostheader=true"
+        # Router configuration
+        - "traefik.http.routers.${APP_NAME:-infisical}.entrypoints=${INFISICAL_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-infisical}.rule=Host(`${INFISICAL_DOMAIN:-infisical.example.com}`) && PathPrefix(`${INFISICAL_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-infisical}.service=${APP_NAME:-infisical}"
+        - "traefik.http.routers.${APP_NAME:-infisical}.middlewares=${INFISICAL_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-infisical}.tls=${INFISICAL_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-infisical}.tls.certresolver=${INFISICAL_TLS_CERTRESOLVER:-letsencrypt}"
+        ## Homepage configuration
+        - "homepage.group=${INFISICAL_HOMEPAGE_GROUP:-Security}"
+        - "homepage.name=${INFISICAL_HOMEPAGE_NAME:-Infisical}"
+        - "homepage.icon=${INFISICAL_HOMEPAGE_ICON:-infisical.png}"
+        - "homepage.href=${INFISICAL_HOMEPAGE_HREF:-http://infisical.example.com}"
+        - "homepage.description=${INFISICAL_HOMEPAGE_DESCRIPTION:-Secrets management platform}"
+        - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://infisical-backend:8080}"
+    labels:
+      # Traefik configuration
+      - "traefik.enable=${INFISICAL_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      # Service configuration
+      - "traefik.http.services.${APP_NAME:-infisical}.loadbalancer.server.port=8080"
+      - "traefik.http.services.${APP_NAME:-infisical}.loadbalancer.passhostheader=true"
+      # Router configuration
+      - "traefik.http.routers.${APP_NAME:-infisical}.entrypoints=${INFISICAL_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-infisical}.rule=Host(`${INFISICAL_DOMAIN:-infisical.example.com}`) && PathPrefix(`${INFISICAL_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-infisical}.service=${APP_NAME:-infisical}"
+      - "traefik.http.routers.${APP_NAME:-infisical}.middlewares=${INFISICAL_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-infisical}.tls=${INFISICAL_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-infisical}.tls.certresolver=${INFISICAL_TLS_CERTRESOLVER:-letsencrypt}"
+      ## Homepage configuration
+      - "homepage.group=${INFISICAL_HOMEPAGE_GROUP:-Security}"
+      - "homepage.name=${INFISICAL_HOMEPAGE_NAME:-Infisical}"
+      - "homepage.icon=${INFISICAL_HOMEPAGE_ICON:-infisical.png}"
+      - "homepage.href=${INFISICAL_HOMEPAGE_HREF:-http://infisical.example.com}"
+      - "homepage.description=${INFISICAL_HOMEPAGE_DESCRIPTION:-Secrets management platform}"
+      - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://infisical-backend:8080}"
