@@ -1,17 +1,18 @@
 ## —— 🐝 Infisical commands ———————————————————————————————————
 INFISICAL_STACK_NAME := infisical
-INFISICAL_SERVICES_SHORT := infisical-backend infisical-db infisical-redis
+INFISICAL_SERVICES_SHORT := backend
 INFISICAL_ENV := $(INFISICAL_STACK_NAME)/.env
 INFISICAL_ENV_EXAMPLE := $(INFISICAL_STACK_NAME)/.env.example
 # Generated with openssl when empty (never invented here).
-INFISICAL_SECRET_VARS := INFISICAL_ENCRYPTION_KEY INFISICAL_AUTH_SECRET INFISICAL_DB_PASSWORD
+INFISICAL_SECRET_VARS := INFISICAL_ENCRYPTION_KEY INFISICAL_AUTH_SECRET
 # Required but site-specific — warn only (do not invent).
-INFISICAL_NOTIFY_VARS := INFISICAL_DOMAIN INFISICAL_SITE_URL
+INFISICAL_NOTIFY_VARS := INFISICAL_DOMAIN INFISICAL_SITE_URL INFISICAL_DB_CONNECTION_URI INFISICAL_REDIS_URL
+INFISICAL_NETWORK_NAME := infisical-network
 
 infisical-pull-images: ## Pull images for the infisical stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(INFISICAL_STACK_NAME)
 
-infisical-setup: ## Ensure infisical/.env, generate secrets, derive DB_CONNECTION_URI, stack-local network, warn on example.com
+infisical-setup: ## Ensure infisical/.env, generate secrets, warn on example.com / unreplaced <DB_HOST>/<REDIS_HOST>
 	@set -e; \
 	envf='$(INFISICAL_ENV)'; \
 	exf='$(INFISICAL_ENV_EXAMPLE)'; \
@@ -33,9 +34,10 @@ infisical-setup: ## Ensure infisical/.env, generate secrets, derive DB_CONNECTIO
 		case $$1 in \
 			INFISICAL_ENCRYPTION_KEY) printf '%s' '$(INFISICAL_ENCRYPTION_KEY)' ;; \
 			INFISICAL_AUTH_SECRET) printf '%s' '$(INFISICAL_AUTH_SECRET)' ;; \
-			INFISICAL_DB_PASSWORD) printf '%s' '$(INFISICAL_DB_PASSWORD)' ;; \
 			INFISICAL_DOMAIN) printf '%s' '$(INFISICAL_DOMAIN)' ;; \
 			INFISICAL_SITE_URL) printf '%s' '$(INFISICAL_SITE_URL)' ;; \
+			INFISICAL_DB_CONNECTION_URI) printf '%s' '$(INFISICAL_DB_CONNECTION_URI)' ;; \
+			INFISICAL_REDIS_URL) printf '%s' '$(INFISICAL_REDIS_URL)' ;; \
 		esac; \
 	}; \
 	for k in $(INFISICAL_SECRET_VARS); do \
@@ -43,7 +45,7 @@ infisical-setup: ## Ensure infisical/.env, generate secrets, derive DB_CONNECTIO
 		v=$$from_make; \
 		[ -n "$$v" ] || v=$$(file_get "$$envf" "$$k"); \
 		[ -n "$$v" ] || v=$$(file_get "$$root" "$$k"); \
-		if [ -z "$$v" ] || [ "$$v" = ChangeMe ]; then \
+		if [ -z "$$v" ]; then \
 			if ! command -v openssl >/dev/null 2>&1; then \
 				echo "Error: $$k is empty and openssl is not available to generate it." >&2; \
 				echo "Set $$k in $$envf manually (INFISICAL_ENCRYPTION_KEY: openssl rand -hex 16; INFISICAL_AUTH_SECRET: openssl rand -base64 32)." >&2; \
@@ -51,8 +53,7 @@ infisical-setup: ## Ensure infisical/.env, generate secrets, derive DB_CONNECTIO
 			fi; \
 			case "$$k" in \
 				INFISICAL_ENCRYPTION_KEY) v=$$(openssl rand -hex 16) ;; \
-				INFISICAL_AUTH_SECRET) v=$$(openssl rand -base64 32) ;; \
-				*) v=$$(openssl rand -hex 16) ;; \
+				*) v=$$(openssl rand -base64 32) ;; \
 			esac; \
 			upsert "$$envf" "$$k" "$$v"; \
 			if [ -n "$$root" ]; then upsert "$$root" "$$k" "$$v"; fi; \
@@ -63,19 +64,6 @@ infisical-setup: ## Ensure infisical/.env, generate secrets, derive DB_CONNECTIO
 			echo "Saved $$k → $$envf (and $$root)."; \
 		fi; \
 	done; \
-	pw=$$(file_get "$$envf" INFISICAL_DB_PASSWORD); \
-	uri=$$(file_get "$$envf" INFISICAL_DB_CONNECTION_URI); \
-	user=$$(file_get "$$envf" INFISICAL_DB_USER); \
-	[ -n "$$user" ] || user='infisical'; \
-	db=$$(file_get "$$envf" INFISICAL_DB_NAME); \
-	[ -n "$$db" ] || db='infisical'; \
-	case "$$uri" in \
-		*ChangeMe*) \
-			uri="postgresql://$$user:$$pw@infisical-db:5432/$$db"; \
-			upsert "$$envf" INFISICAL_DB_CONNECTION_URI "$$uri"; \
-			if [ -n "$$root" ]; then upsert "$$root" INFISICAL_DB_CONNECTION_URI "$$uri"; fi; \
-			echo "Derived INFISICAL_DB_CONNECTION_URI from USER/PASSWORD/NAME → $$envf (and $$root)." ;; \
-	esac; \
 	missing=0; \
 	for k in $(INFISICAL_NOTIFY_VARS); do \
 		from_make=$$(make_get "$$k"); \
@@ -92,17 +80,23 @@ infisical-setup: ## Ensure infisical/.env, generate secrets, derive DB_CONNECTIO
 			if [ -n "$$root" ]; then upsert "$$root" "$$k" "$$from_make"; fi; \
 			echo "Saved $$k → $$envf (and $$root)."; \
 		fi; \
-		case "$$v" in \
+		case "$$k:$$v" in \
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
+			INFISICAL_DB_CONNECTION_URI:*'<DB_HOST>'*) echo "Warning: $$k still contains <DB_HOST> — point it at the external PostgreSQL server." >&2 ;; \
+			INFISICAL_DB_CONNECTION_URI:*ChangeMe*) echo "Warning: $$k still contains ChangeMe — set the real DB password." >&2 ;; \
+			INFISICAL_REDIS_URL:*'<REDIS_HOST>'*) echo "Warning: $$k still contains <REDIS_HOST> — point it at the external Redis server." >&2 ;; \
 		esac; \
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='infisical-network'; \
+	[ -n "$$net" ] || net='$(INFISICAL_NETWORK_NAME)'; \
+	case "$$net" in ''|'$(INFISICAL_NETWORK_NAME)') ext=false ;; \
+		*) ext=true ;; \
+	esac; \
 	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
 	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; fi; \
-	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "false"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "false"; fi; \
-	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=false (stack-local)"; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Infisical env OK ($$envf)."
 .infisical-setup: infisical-setup

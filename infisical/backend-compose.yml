@@ -4,12 +4,12 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 services:
-  infisical-backend:
+  backend:
     image: ${INFISICAL_IMAGE:-docker.io/infisical/infisical:v0.165.10}
     restart: ${INFISICAL_RESTART:-unless-stopped}
     privileged: ${INFISICAL_PRIVILEGED:-false}
     env_file:
-      - ${INFISICAL_BACKEND_ENV_FILE:-.env.example}
+      - ${INFISICAL_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Toronto}
       - HOST=${INFISICAL_HOST:-0.0.0.0}
@@ -17,14 +17,14 @@ services:
       - SITE_URL=${INFISICAL_SITE_URL:-http://infisical.example.com}
       - ENCRYPTION_KEY=${INFISICAL_ENCRYPTION_KEY:-}
       - AUTH_SECRET=${INFISICAL_AUTH_SECRET:-}
-      - DB_CONNECTION_URI=${INFISICAL_DB_CONNECTION_URI:-postgresql://infisical:ChangeMe@infisical-db:5432/infisical}
-      - REDIS_URL=${INFISICAL_REDIS_URL:-redis://infisical-redis:6379}
+      - DB_CONNECTION_URI=${INFISICAL_DB_CONNECTION_URI:-postgresql://infisical:ChangeMe@<DB_HOST>:5432/infisical}
+      - REDIS_URL=${INFISICAL_REDIS_URL:-redis://<REDIS_HOST>:6379}
       - TELEMETRY_ENABLED=${INFISICAL_TELEMETRY_ENABLED:-true}
       - DISABLE_UPDATE_CHECK=${INFISICAL_DISABLE_UPDATE_CHECK:-false}
       - NODE_OPTIONS=${INFISICAL_NODE_OPTIONS:---max-old-space-size=768}
     deploy:
       mode: ${INFISICAL_DEPLOY_MODE:-replicated}
-      replicas: ${INFISICAL_BACKEND_REPLICAS:-1}
+      replicas: ${INFISICAL_DEPLOY_REPLICAS:-1}
       placement:
         constraints:
           - ${INFISICAL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
@@ -33,7 +33,7 @@ services:
         delay: 5s
       resources:
         limits:
-          memory: ${INFISICAL_BACKEND_MEMORY_LIMIT:-1G}
+          memory: ${INFISICAL_MEMORY_LIMIT:-1G}
       labels:
         # Traefik configuration
         - "traefik.enable=${INFISICAL_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
@@ -53,7 +53,7 @@ services:
         - "homepage.icon=${INFISICAL_HOMEPAGE_ICON:-infisical.png}"
         - "homepage.href=${INFISICAL_HOMEPAGE_HREF:-http://infisical.example.com}"
         - "homepage.description=${INFISICAL_HOMEPAGE_DESCRIPTION:-Secrets management platform}"
-        - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://infisical-backend:8080}"
+        - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://backend:8080}"
     labels:
       # Traefik configuration
       - "traefik.enable=${INFISICAL_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
@@ -73,4 +73,4 @@ services:
       - "homepage.icon=${INFISICAL_HOMEPAGE_ICON:-infisical.png}"
       - "homepage.href=${INFISICAL_HOMEPAGE_HREF:-http://infisical.example.com}"
       - "homepage.description=${INFISICAL_HOMEPAGE_DESCRIPTION:-Secrets management platform}"
-      - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://infisical-backend:8080}"
+      - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://backend:8080}"
