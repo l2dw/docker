@@ -1,6 +1,6 @@
 # keycloak
 
-Official [Keycloak](https://www.keycloak.org/server/containers) (`quay.io/keycloak/keycloak`) on **HTTP 8080**. Joins `dokploy-network`. Traefik/Homepage labels live only in `docker-compose.yml`.
+Official [Keycloak](https://www.keycloak.org/server/containers) (`quay.io/keycloak/keycloak:26.7.3`) on **HTTP 8080**. Joins `dokploy-network`. Traefik/Homepage labels live only in `docker-compose.yml`.
 
 Postgres is **external** — this stack has no `keycloak-db` service. Point `KEYCLOAK_DB_URL` at a database that already exists on the overlay (default hostname `dokploy-postgresql`). Create the `keycloak` role/database before the first start.
 
@@ -27,7 +27,7 @@ On the `keycloak` branch, root `README.md` / `compose.yml` / `docker-compose.yml
 
 Traefik terminates TLS. Keycloak listens on HTTP (`KC_HTTP_ENABLED=true`) and trusts `X-Forwarded-*` (`KC_PROXY_HEADERS=xforwarded`). First admin user: `KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME` / `KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD` (`make keycloak-setup` generates the password).
 
-Single replica uses `KC_CACHE=local`. HTTP 8080 is not published on the host. Memory limit default is **1G**.
+Single replica uses `KC_CACHE=local`. HTTP 8080 is not published on the host. Memory limit default is **1G**. Traefik router/service names are scoped by `${APP_NAME:-keycloak}` (Dokploy injects `APP_NAME`; not listed in `.env.example`).
 
 Named volumes persist `/opt/keycloak/data`, `themes`, `providers`, `conf`, and `logs`. Empty `KEYCLOAK_*_DIR` uses the named volume; set a host path to bind-mount instead.
 

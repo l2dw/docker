@@ -22,7 +22,7 @@ volumes:
 
 services:
   keycloak:
-    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:latest}
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.7.3}
     command: start
     restart: ${KEYCLOAK_RESTART:-unless-stopped}
     privileged: ${KEYCLOAK_PRIVILEGED:-false}
@@ -67,13 +67,13 @@ services:
           memory: ${KEYCLOAK_MEMORY_LIMIT:-1G}
       labels:
         - "traefik.enable=${KEYCLOAK_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
-        - "traefik.http.routers.keycloak.entrypoints=${KEYCLOAK_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_DOMAIN:-example.com}`) && PathPrefix(`${KEYCLOAK_BASE_PATH:-/auth}`)"
-        - "traefik.http.routers.keycloak.service=keycloak"
-        - "traefik.http.routers.keycloak.middlewares=${KEYCLOAK_MIDDLEWARES:-}"
-        - "traefik.http.routers.keycloak.tls=${KEYCLOAK_TLS_ENABLED:-false}"
-        - "traefik.http.routers.keycloak.tls.certresolver=${KEYCLOAK_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.services.${APP_NAME:-keycloak}.loadbalancer.server.port=8080"
+        - "traefik.http.routers.${APP_NAME:-keycloak}.entrypoints=${KEYCLOAK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-keycloak}.rule=Host(`${KEYCLOAK_DOMAIN:-example.com}`) && PathPrefix(`${KEYCLOAK_BASE_PATH:-/auth}`)"
+        - "traefik.http.routers.${APP_NAME:-keycloak}.service=${APP_NAME:-keycloak}"
+        - "traefik.http.routers.${APP_NAME:-keycloak}.middlewares=${KEYCLOAK_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-keycloak}.tls=${KEYCLOAK_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-keycloak}.tls.certresolver=${KEYCLOAK_TLS_CERTRESOLVER:-letsencrypt}"
         - "homepage.group=${KEYCLOAK_HOMEPAGE_GROUP:-Identity}"
         - "homepage.name=${KEYCLOAK_HOMEPAGE_NAME:-Keycloak}"
         - "homepage.icon=${KEYCLOAK_HOMEPAGE_ICON:-keycloak.png}"
@@ -82,13 +82,13 @@ services:
         - "homepage.siteMonitor=${KEYCLOAK_HOMEPAGE_SITEMONITOR:-http://keycloak:8080/auth}"
     labels:
       - "traefik.enable=${KEYCLOAK_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
-      - "traefik.http.routers.keycloak.entrypoints=${KEYCLOAK_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_DOMAIN:-example.com}`) && PathPrefix(`${KEYCLOAK_BASE_PATH:-/auth}`)"
-      - "traefik.http.routers.keycloak.service=keycloak"
-      - "traefik.http.routers.keycloak.middlewares=${KEYCLOAK_MIDDLEWARES:-}"
-      - "traefik.http.routers.keycloak.tls=${KEYCLOAK_TLS_ENABLED:-false}"
-      - "traefik.http.routers.keycloak.tls.certresolver=${KEYCLOAK_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.${APP_NAME:-keycloak}.loadbalancer.server.port=8080"
+      - "traefik.http.routers.${APP_NAME:-keycloak}.entrypoints=${KEYCLOAK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-keycloak}.rule=Host(`${KEYCLOAK_DOMAIN:-example.com}`) && PathPrefix(`${KEYCLOAK_BASE_PATH:-/auth}`)"
+      - "traefik.http.routers.${APP_NAME:-keycloak}.service=${APP_NAME:-keycloak}"
+      - "traefik.http.routers.${APP_NAME:-keycloak}.middlewares=${KEYCLOAK_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-keycloak}.tls=${KEYCLOAK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-keycloak}.tls.certresolver=${KEYCLOAK_TLS_CERTRESOLVER:-letsencrypt}"
       - "homepage.group=${KEYCLOAK_HOMEPAGE_GROUP:-Identity}"
       - "homepage.name=${KEYCLOAK_HOMEPAGE_NAME:-Keycloak}"
       - "homepage.icon=${KEYCLOAK_HOMEPAGE_ICON:-keycloak.png}"

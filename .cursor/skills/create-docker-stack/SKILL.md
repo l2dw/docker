@@ -11,7 +11,7 @@ Read [conventions.md](conventions.md) before writing compose, env, Makefile, or 
 
 ## Sources of truth (read before generating)
 
-Copy patterns from the **local ignored scaffold** `_trash/template/` (see `.gitignore`: `_trash/`). **Create the new branch from `master`.** Do not commit `_trash/`. Do not check out git branch `template` to copy files.
+Copy patterns from the **local ignored scaffold** `_trash/template/` (see `.gitignore`: `_trash/`). **Create the new branch from up-to-date `master`** (fetch + `pull --ff-only` — step **3**). Do not commit `_trash/`. Do not check out git branch `template` to copy files.
 
 | Source | What to copy |
 |--------|----------------|
@@ -35,7 +35,7 @@ Copy this checklist and complete in order:
 - [ ] 1. Collecter le brief
 - [ ] 1b. Vérifier base_path (docs app)
 - [ ] 2. Nommer projet et préfixe
-- [ ] 3. Branche dédiée depuis master
+- [ ] 3. Mettre `master` à jour, puis branche dédiée depuis `master`
 - [ ] 4. Copier template tpl
 - [ ] 5. Écrire compose.yml + docker-compose.yml
 - [ ] 5b. Per-service compose (si plusieurs services)
@@ -45,6 +45,7 @@ Copy this checklist and complete in order:
 - [ ] 8. README projet
 - [ ] 8b. Symlinks racine (README + compose)
 - [ ] 9. Valider compose
+- [ ] 10. Si push : skill sur `master` aussi (si `.cursor/skills/` a changé)
 ```
 
 ### 0. Working tree propre — STOP si non commit
@@ -80,7 +81,7 @@ Look for names such as: `base path`, `basePath`, `BASE_PATH`, `ROOT_PATH`, `CONT
 
 | Result | What to do |
 |--------|------------|
-| **Supported** | Default `<PREFIX>_BASE_PATH=/<projet>` (e.g. `/woodpecker`). Align public URL vars with that path (e.g. `WOODPECKER_HOST=http://example.com/woodpecker`, `APP_URL=…/myapp`). Wire the **app** vendor env when documented. Keep Traefik `PathPrefix(\`${<PREFIX>_BASE_PATH:-/<projet>}\`)` and `homepage.href` with the path. Document in README. User may override to `/` for a dedicated subdomain. |
+| **Supported** | Default `<PREFIX>_BASE_PATH=/<projet>` in `.env.example`. Traefik: `PathPrefix(\`${<PREFIX>_BASE_PATH:-/}\`)` so empty/`/` stays Host-only (do **not** use `${…:-/<projet>}` — that overrides intentional empty). Align public URL vars. Wire vendor env; for optional vendor path use `${VAR:-}` (empty default), never `${VAR-}` (invalid / ambiguous in Compose). Document that empty/`/` is always allowed. |
 | **Not supported / unclear** | Default `<PREFIX>_BASE_PATH=/`. Prefer **Host-only** routing (subdomain). Do **not** invent a fake app base-path env. Do **not** rely on Traefik `stripPrefix` alone unless the user explicitly asks — many SPAs break. State in the README that subpath deploy is unsupported. |
 
 If the user asked for a subpath but the app cannot do it: warn and keep `/` (or Host-only), do not silently configure a broken PathPrefix.
@@ -93,25 +94,41 @@ Details and label examples: [conventions.md](conventions.md) (§ Base path).
 |-------|------|---------|
 | Directory / branch / stack | kebab-case, `[a-z0-9-]+` | `myapp` |
 | Env prefix | `SCREAMING_SNAKE` + `_` | `MYAPP_` |
-| Compose services | `<projet>` or `<projet>-<role>` | `myapp`, `myapp-db` |
-| Router/service Traefik | same as compose service | `myapp` |
+| Compose services | YAML key `<projet>` or `<projet>-<role>` (overlay DNS). Do **not** rename the Compose key to `${APP_NAME}` | `myapp`, `myapp-db` |
+| Router/service Traefik | `${APP_NAME:-<projet>}` (and `${APP_NAME:-<projet>}-<role>` for extra HTTP listeners). Dokploy often injects `APP_NAME` | `traefik.http.routers.${APP_NAME:-myapp}` |
 
-Do not reuse `tpl` / `TPL` in generated files.
+Do not reuse `tpl` / `TPL` in generated files. Do **not** put `APP_NAME` in `.env.example` (Dokploy / the host env supplies it; Compose default is `<projet>`).
 
-### 3. Branche dédiée depuis `master`
+### 3. Mettre `master` à jour, puis branche dédiée
 
 **Une branche ≈ un stack.** Do not add a second project onto `dokploy`, `arcane`, or another app branch.
 
-Create the branch **from `master`** (not `template`, not `main` unless `master` is missing):
+**Before** `git checkout -b <projet>`, sync local `master` with the remote (after step **0** — tree still clean):
 
 ```sh
+git fetch origin master
 git checkout master
+git pull --ff-only origin master
+```
+
+| Result | What to do |
+|--------|------------|
+| **Fast-forward OK** | Continue — create the stack branch from this `master`. |
+| **`master` missing locally** | `git checkout -b master origin/master` (or `main` only if `master` is absent on remotes). |
+| **FF-only fails** (local `master` has unpushed commits or diverged) | **STOP.** Report `git status -sb` and `git log --oneline master..origin/master` / `origin/master..master`. Ask the user to reconcile (`push`, `reset`, or merge) before scaffolding. Do not branch from stale or diverged `master`. |
+| **`origin` unreachable** | Try `git fetch l2dw master` + `git pull --ff-only l2dw master` (mirror). If both fail, **STOP** — do not invent stack files offline. |
+
+Primary remote for pulls: **`origin`** (GitLab). **`l2dw`** (GitHub) is the fallback mirror — same rule as push.
+
+Then create the stack branch **from updated `master`** (not `template`, not another app branch):
+
+```sh
 git checkout -b <projet>
 ```
 
-Equivalent: `git checkout -b <projet> master`.
+Equivalent: `git checkout -b <projet> master` immediately after the pull above.
 
-If already **on** `<projet>` and it was created from `master` **and** step 0 passed, keep it. Never mix unrelated stacks in one working tree commit.
+If already **on** `<projet>`, it was created from up-to-date `master`, **and** step **0** passed — keep it. Never mix unrelated stacks in one working tree commit.
 
 ### 4. Copier template tpl depuis `_trash/`
 
@@ -136,9 +153,13 @@ Then rewrite files to match [conventions.md](conventions.md) (step 5–7): label
 
 Make targets use `docker-compose.yml`. Use `compose.yml` when Traefik/Homepage must not see the service (unlabeled copy, or the symlink when unlabeled). Apply step **5c** (`env_file` + `environment:`) on every app service in these files.
 
-Network: `name: ${DEFAULT_NETWORK_NAME:-dokploy-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` (unquoted). Pairing: **`dokploy-network` (or empty name → that default) ⇒ `DEFAULT_NETWORK_EXTERNAL=true`**; any other name ⇒ `false`. Do not nest interpolation to derive one from the other. `<projet>-setup` must upsert `DEFAULT_NETWORK_EXTERNAL` to match `DEFAULT_NETWORK_NAME`. No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
+Network: `name: ${DEFAULT_NETWORK_NAME:-<projet>-network}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` (unquoted). **Default is a stack-local overlay** (e.g. `immich-network`, `myapp-network`) with `external=false` so Swarm/Compose can create it. Pairing (two keys; **no nested** `${A:-${B}}`): **`dokploy-network` ⇒ `DEFAULT_NETWORK_EXTERNAL=true`** (join the shared Dokploy overlay + Traefik); any other name (including the stack default) ⇒ `false`. `<projet>-setup` must upsert `DEFAULT_NETWORK_EXTERNAL` to match `DEFAULT_NETWORK_NAME` (fallback NAME when empty = `<projet>-network`). To reach shared Redis/DB/Traefik on Dokploy, set `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true`. No `x-*` keys. No quotes around `${…}` booleans (`privileged`, `external`). Do **not** add network `aliases` unless the user asks or a Dokploy-style stable hostname is required. Do **not** inject `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` into the service unless the user asks. Details in [conventions.md](conventions.md).
+
+**Memory:** on **every** service, under `deploy.resources.limits`, set `memory: ${<PREFIX>_MEMORY_LIMIT:-1G}` (single service) or `${<PREFIX>_<ROLE>_MEMORY_LIMIT:-1G}` (multi-role). Default is always **1G** unless the user asks for another value. Put the same key(s) in `.env.example`.
 
 If step **1b** found a supported base path **and** labels are used: include the vendor env in `environment:` and use `<PREFIX>_BASE_PATH` in Traefik/Homepage labels (labeled file only).
+
+Traefik **router and Traefik service** names (not the Compose YAML service key) must be `${APP_NAME:-<projet>}` so two Dokploy apps of the same template do not collide on the shared Traefik. Extra listeners suffix the same prefix (`${APP_NAME:-logto}-admin`). Middleware names that belong to the app (e.g. stripPrefix) should follow the same prefix (`${APP_NAME:-myapp}-strip`). `homepage.siteMonitor` still uses the Compose DNS name (`http://myapp:8080`). See [conventions.md](conventions.md) (§ Traefik).
 
 ### 5b. Per-service compose (plusieurs services)
 
@@ -197,8 +218,11 @@ Rules:
 
 - `<projet>/.env.example` — all `<PREFIX>_*` keys
 - Root `.env.example` — same project keys (Make exports root `.env` for `stack deploy`)
-- Include `DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true` (because the default name is `dokploy-network`; if NAME is not `dokploy-network`, set EXTERNAL=`false`), `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
+- Include `DEFAULT_NETWORK_NAME=<projet>-network`, `DEFAULT_NETWORK_EXTERNAL=false` (stack-local default). If the user wants the shared overlay: `DEFAULT_NETWORK_NAME=dokploy-network` and `DEFAULT_NETWORK_EXTERNAL=true`. Pairing: only `dokploy-network` ⇒ `EXTERNAL=true`; any other NAME ⇒ `false`.
+- Include `<PREFIX>_MEMORY_LIMIT=1G` (or per-role `*_SERVER_MEMORY_LIMIT=1G`, etc.)
+- Include `<PREFIX>_BASE_PATH`, `<PREFIX>_TRAEFIK_LABELS_SWARM_ENABLE`, `<PREFIX>_TRAEFIK_LABELS_DOCKER_ENABLE`
 - Include `<PREFIX>_ENV_FILE=.env.example` (or per-role `*_SERVER_ENV_FILE` / `*_AGENT_ENV_FILE`, etc.)
+- **Do not** add `APP_NAME` to root or project `.env.example`. Traefik labels default it in compose (`${APP_NAME:-<projet>}`). Dokploy creates this variable.
 - Placeholders only (`ChangeMe`, empty secrets). Never copy real passwords.
 
 ### 7. Cibles Makefile
@@ -213,7 +237,7 @@ Required targets:
 
 | Target | Role |
 |--------|------|
-| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing secrets, warn on placeholder domains / incomplete OAuth, **sync `DEFAULT_NETWORK_EXTERNAL`** (`true` iff network name is `dokploy-network` or empty). **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
+| `<projet>-setup` | Ensure `<projet>/.env` (from `.env.example`), generate missing secrets, warn on placeholder domains / incomplete OAuth, **sync `DEFAULT_NETWORK_EXTERNAL`** (`true` **only** if network name is `dokploy-network`; otherwise `false`, including empty → fallback `<projet>-network`). **Name is `<projet>-setup`, not `<projet>-stack-setup`.** |
 | `.<projet>-setup` | Thin target that depends on `<projet>-setup` (used as prerequisite) |
 | `<projet>-stack-up\|down\|recreate\|upgrade\|logs` | Swarm |
 | `<projet>-compose-up\|down\|restart\|logs` | Compose |
@@ -230,6 +254,8 @@ Short `<projet>/README.md`: what the stack is, `make <projet>-setup`, `make <pro
 Include a short **Base path** note: supported or not, vendor env name if any. If supported, default is `<PREFIX>_BASE_PATH=/<projet>` (aligned public URL); if not, `/`.
 
 Document `env_file` vars (`*_ENV_FILE`), that `environment:` overrides the file, and that Swarm uses Make export + `environment:` (not Compose `env_file`).
+
+When Traefik labels are used, note that `APP_NAME` (Dokploy) scopes router/service names; it is **not** listed in `.env.example`.
 
 ### 8b. Symlinks racine (README + compose)
 
@@ -266,9 +292,41 @@ test -f README.md && test -f compose.yml && test -f docker-compose.yml
 
 Confirm: if labels are used, project `compose.yml` has **no** `traefik.` / `homepage.` labels; if unlabeled, `compose.yml` is a symlink to `docker-compose.yml`. Fix errors before finishing. Do not create `.env` or `*.override.yml` unless asked.
 
+### 10. Push — skill also on `master`
+
+`.cursor/skills/create-docker-stack/` is **shared** (not stack-specific). Step **3** pulls skill from `master`; if skill commits exist only on `<projet>`, the next stack will miss them.
+
+**When the user asks to push** (or you push after scaffolding), after pushing `<projet>` to **`origin`** and **`l2dw`**:
+
+1. List skill commits not yet on `master`:
+
+```sh
+git fetch origin master
+git log --oneline master..<projet> -- .cursor/skills/create-docker-stack/
+```
+
+2. If the list is **non-empty**, cherry-pick **only** those commits onto `master` (never cherry-pick stack commits — `<projet>/`, root symlinks, root `.env.example` / `Makefile` for that stack):
+
+```sh
+git checkout master
+git pull --ff-only origin master
+git cherry-pick <sha>   # repeat per skill commit, oldest first
+git push origin master && git push l2dw master
+git checkout <projet>
+```
+
+3. If cherry-pick conflicts, **STOP** and ask the user — do not push a half-merged `master`.
+
+| Touch | Push on `<projet>` | Also on `master` |
+|-------|-------------------|------------------|
+| `<projet>/`, stack symlinks, stack Make/env | yes | no |
+| `.cursor/skills/create-docker-stack/**` | yes (with stack branch) | **yes — cherry-pick** |
+
+If skill was edited but not yet committed, commit skill changes (alone or with stack) on `<projet>`, then run step **10** before finishing.
+
 ## Out of scope
 
 - Traefik, WAF, certs-dumper as part of the app stack
 - Committing `.env`, `*.override.*`, `_trash/`, or secrets
 - Push / `make commit-changes` unless the user asks
-- When the user asks to push: prefer remotes **`l2dw`** and **`origin`** only (unless they name another remote)
+- When the user asks to push: prefer remotes **`l2dw`** and **`origin`** only (unless they name another remote). **Skill path changes must also reach `master`** — see step **10** (cherry-pick, do not merge whole stack branches into `master`).
