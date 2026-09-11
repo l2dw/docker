@@ -4,15 +4,15 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  siyuan_data:
-    name: ${SIYUAN_DATA_VOLUME_NAME:-siyuan_data}
-    external: ${SIYUAN_DATA_VOLUME_EXTERNAL:-false}
-    driver: ${SIYUAN_DATA_VOLUME_DRIVER:-local}
+  siyuan_workspace:
+    name: ${SIYUAN_WORKSPACE_VOLUME_NAME:-siyuan_workspace}
+    external: ${SIYUAN_WORKSPACE_VOLUME_EXTERNAL:-false}
+    driver: ${SIYUAN_WORKSPACE_VOLUME_DRIVER:-local}
     # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
     driver_opts:
-      type: ${SIYUAN_DATA_VOLUME_DRIVER_TYPE:-}
-      o: ${SIYUAN_DATA_VOLUME_DRIVER_O:-}
-      device: ${SIYUAN_DATA_VOLUME_DRIVER_DEVICE:-}
+      type: ${SIYUAN_WORKSPACE_VOLUME_DRIVER_TYPE:-}
+      o: ${SIYUAN_WORKSPACE_VOLUME_DRIVER_O:-}
+      device: ${SIYUAN_WORKSPACE_VOLUME_DRIVER_DEVICE:-}
 
 services:
   siyuan:
@@ -27,7 +27,7 @@ services:
         aliases:
           - ${APP_NAME:-siyuan}
     volumes:
-      - ${SIYUAN_DATA_HOST_PATH:-siyuan_data}:${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}:z
+      - ${SIYUAN_WORKSPACE_HOST_PATH:-siyuan_workspace}:${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}:z
     env_file:
       - ${SIYUAN_ENV_FILE:-.env.example}
     environment:
