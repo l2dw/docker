@@ -17,7 +17,7 @@ services:
   app:
     image: ${IMAGE:-atelier.cen.umontreal.ca/rie/rie:latest}
     extra_hosts:
-      - "workspace.local:10.0.1.241"
+      - workspace.local:10.0.1.241
     networks:
       default:
         aliases:
@@ -109,4 +109,4 @@ services:
         condition: ${RESTART_POLICY_CONDITION:-any}
         delay: ${RESTART_POLICY_DELAY:-5s}
         max_attempts: ${RESTART_POLICY_MAX_ATTEMPTS:-3}
-      labels:
+      labels: {}
