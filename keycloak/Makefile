@@ -73,13 +73,12 @@ keycloak-setup: ## Ensure keycloak/.env, generate admin/DB passwords, warn on AP
 		esac; \
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='$(KEYCLOAK_NETWORK_NAME)'; \
 	case "$$net" in ''|'$(KEYCLOAK_NETWORK_NAME)') ext=false ;; \
 		*) ext=true ;; \
 	esac; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
-	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext (stack-scoped in $$envf)"; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Keycloak env OK ($$envf)."
 .keycloak-setup: keycloak-setup
