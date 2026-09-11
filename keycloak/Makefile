@@ -5,6 +5,8 @@ KEYCLOAK_ENV := $(KEYCLOAK_STACK_NAME)/.env
 KEYCLOAK_ENV_EXAMPLE := $(KEYCLOAK_STACK_NAME)/.env.example
 KEYCLOAK_SECRET_VARS := KEYCLOAK_DB_PASSWORD KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD
 KEYCLOAK_NOTIFY_VARS := KEYCLOAK_APP_URL KEYCLOAK_DOMAIN KEYCLOAK_DB_URL
+# Stack-local overlay network. DEFAULT_NETWORK_EXTERNAL is false; set an external overlay NAME at runtime to join a shared one.
+KEYCLOAK_NETWORK_NAME := keycloak-network
 
 keycloak-pull-images: ## Pull images for the keycloak stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(KEYCLOAK_STACK_NAME)
@@ -72,10 +74,8 @@ keycloak-setup: ## Ensure keycloak/.env, generate admin/DB passwords, warn on AP
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
 	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='dokploy-network'; \
-	case "$$net" in \
-		dokploy-network) ext=true ;; \
-		*) ext=false ;; \
+	case "$$net" in ''|'$(KEYCLOAK_NETWORK_NAME)') ext=false ;; \
+		*) ext=true ;; \
 	esac; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
 	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \

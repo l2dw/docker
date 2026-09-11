@@ -1,10 +1,10 @@
 # keycloak
 
-Official [Keycloak](https://www.keycloak.org/server/containers) (`quay.io/keycloak/keycloak:26.7.3`) on **HTTP 8080**. Joins `dokploy-network`. Traefik/Homepage labels live only in `docker-compose.yml`.
+Official [Keycloak](https://www.keycloak.org/server/containers) (`quay.io/keycloak/keycloak:26.7.3`) on **HTTP 8080**. Defaults to a stack-local overlay `keycloak-network`. Traefik/Homepage labels live only in `docker-compose.yml`.
 
 Postgres is **external** — this stack has no `keycloak-db` service. Point `KEYCLOAK_DB_URL` at a PostgreSQL VM/native DB that already exists (default placeholder `jdbc:postgresql://<DB_HOST>:5432/keycloak`). Create the `keycloak` role/database before the first start.
 
-`dokploy-network` is **external** (`DEFAULT_NETWORK_EXTERNAL=true`). Any other `DEFAULT_NETWORK_NAME` → `false`. `make keycloak-setup` keeps those two keys in sync.
+`keycloak-network` is **stack-local** (`DEFAULT_NETWORK_EXTERNAL=false`). To join a shared external overlay at runtime, set `DEFAULT_NETWORK_NAME=<shared-overlay-name>` and `DEFAULT_NETWORK_EXTERNAL=true` in `.env`. `make keycloak-setup` keeps those two keys consistent (`false` for `keycloak-network`).
 
 `.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${KEYCLOAK_ENV_FILE:-.env.example}`; production: `KEYCLOAK_ENV_FILE=.env`. `environment:` wins on key conflicts.
 

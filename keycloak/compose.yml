@@ -1,7 +1,7 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-keycloak-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   keycloak-data:
