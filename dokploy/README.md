@@ -42,6 +42,48 @@ Copy [`dokploy/.env.example`](.env.example) keys into root `.env` and set secret
 
 Stateful services (postgres/redis) should stay at `replicas=1`. Network: `DEFAULT_NETWORK_NAME=dokploy-network` ⇒ `DEFAULT_NETWORK_EXTERNAL=true` (`make dokploy-setup` upserts the pair).
 
+### Swarm `endpoint_mode` (postgres / redis)
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `DOKPLOY_POSTGRES_ENDPOINT_MODE` | `vip` | Stable DNS: `dokploy-postgresql` (alias) and `dokploy_postgresql` |
+| `DOKPLOY_REDIS_ENDPOINT_MODE` | `vip` | Same pattern for `dokploy-redis` |
+
+Use `dnsrr` only if you need per-task DNS. Then clients must use `tasks.dokploy_postgresql` (the compose alias often does **not** resolve under dnsrr). Prefer `vip` with `update_config.order: stop-first` (already set) when PGDATA is bind-mounted.
+
+### Shared Bitnami PGDATA
+
+To reuse `/infra/postgresql-16` data under Swarm:
+
+```env
+DOKPLOY_POSTGRES_IMAGE=bitnami/postgresql:16
+DOKPLOY_POSTGRES_DATA_DIR=/appdata/postgresql-16/data
+DOKPLOY_POSTGRES_PGDATA_PATH=/bitnami/postgresql/data
+DOKPLOY_POSTGRES_USER=root          # match Bitnami POSTGRESQL_USERNAME
+DOKPLOY_POSTGRES_DB=root
+DOKPLOY_POSTGRES_PASSWORD=…         # POSTGRESQL_PASSWORD
+DOKPLOY_POSTGRES_SUPERUSER_PASSWORD=…  # POSTGRESQL_POSTGRES_PASSWORD
+```
+
+**Do not** run the Compose container `postgresql` (`/infra/postgresql-16`) while `dokploy_postgresql` is up — same PGDATA → corruption. Stop one before starting the other (`docker update --restart=no postgresql` if leaving the old container stopped).
+
+Official `postgres:16` cannot mount Bitnami data as-is (UID **1001** vs **999**).
+
+### HTTPS / Traefik labels
+
+Console router uses **`DOKPLOY_ENTRYPOINTS` / `DOKPLOY_TLS_*`** (not `DOKPLOY_TRAEFIK_*`):
+
+```env
+DOKPLOY_ENTRYPOINTS=websecure
+DOKPLOY_TLS_ENABLED=true
+DOKPLOY_TLS_CERTRESOLVER=default
+DOKPLOY_DOMAIN=ops-dev.example.edu
+```
+
+Dashboard router uses `DOKPLOY_TRAEFIK_ENTRYPOINTS`, `DOKPLOY_TRAEFIK_TLS_*`, and needs `DOKPLOY_TRAEFIK_LABELS_SWARM_ENABLE=true`. Dashboard URL: `https://$DOKPLOY_DOMAIN/traefik/dashboard/` (not bare `/traefik/`).
+
+Passwords in `DOKPLOY_DATABASE_URL` that contain `@` must be URL-encoded (`@` → `%40`).
+
 ## Makefile
 
 ```sh
@@ -111,3 +153,7 @@ Dokploy console: `DOKPLOY_BASE_PATH=/` (Host-only by default). Traefik dashboard
 
 1. Swarm service `0/1`: `make dokploy-debug` / `dokploy-debug-logs`.
 2. Image tag unchanged but digest moved: `make dokploy-stack-upgrade`.
+3. HTTPS `404 page not found` but HTTP works: console stuck on `entrypoints=web` — set `DOKPLOY_ENTRYPOINTS=websecure` + `DOKPLOY_TLS_ENABLED=true` (not only `DOKPLOY_TRAEFIK_*`).
+4. `wait-for-postgres` timeout: check `DOKPLOY_DATABASE_URL` host (`dokploy-postgresql` with vip; `tasks.dokploy_postgresql` with dnsrr) and URL-encoding of passwords with `@`.
+5. certs-dumper exit 1 / `apk … jq`: set `DOKPLOY_CERTS_DUMPER_ENV_FILE=.env` and campus proxy **IP** in `HTTP_PROXY` / `http_proxy` (see commented block in `.env.example`, e.g. `10.139.33.12:80`).
+6. Never start `/infra/postgresql-16` and `dokploy_postgresql` together on the same `DOKPLOY_POSTGRES_DATA_DIR`.

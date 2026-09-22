@@ -58,13 +58,21 @@ services:
     env_file:
       - ${DOKPLOY_POSTGRES_ENV_FILE:-.env.example}
     environment:
+      # Official postgres:* image
       - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
       - POSTGRES_USER=${DOKPLOY_POSTGRES_USER:-dokploy}
       - POSTGRES_DB=${DOKPLOY_POSTGRES_DB:-dokploy}
+      # bitnami/postgresql (same keys when reusing /appdata/postgresql-16/data)
+      - POSTGRESQL_USERNAME=${DOKPLOY_POSTGRES_USER:-dokploy}
+      - POSTGRESQL_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
+      - POSTGRESQL_DATABASE=${DOKPLOY_POSTGRES_DB:-dokploy}
+      - POSTGRESQL_POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_SUPERUSER_PASSWORD:-ChangeMe}
+      - POSTGRESQL_TIMEZONE=${TZ:-America/Toronto}
       - TZ=${TZ:-America/Toronto}
     volumes:
-      - ${DOKPLOY_POSTGRES_DATA_DIR:-dokploy-postgresql_data}:/var/lib/postgresql/data
-      - ${DOKPLOY_POSTGRES_LOGS_DIR:-dokploy-postgresql_logs}:/var/log/postgresql
+      # Official: /var/lib/postgresql/data · Bitnami: /bitnami/postgresql/data
+      - ${DOKPLOY_POSTGRES_DATA_DIR:-dokploy-postgresql_data}:${DOKPLOY_POSTGRES_PGDATA_PATH:-/var/lib/postgresql/data}
+      - ${DOKPLOY_POSTGRES_LOGS_DIR:-dokploy-postgresql_logs}:${DOKPLOY_POSTGRES_LOGS_PATH:-/var/log/postgresql}
     networks:
       default:
         aliases:
@@ -72,7 +80,8 @@ services:
     deploy:
       mode: ${DOKPLOY_POSTGRES_DEPLOY_MODE:-replicated}
       replicas: ${DOKPLOY_POSTGRES_DEPLOY_REPLICAS:-1}
-      endpoint_mode: dnsrr
+      # vip (default): stable DNS alias dokploy-postgresql. dnsrr: use tasks.dokploy_postgresql.
+      endpoint_mode: ${DOKPLOY_POSTGRES_ENDPOINT_MODE:-vip}
       placement:
         constraints:
           - ${DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS:-node.role==manager}
@@ -106,8 +115,8 @@ services:
       retries: 10
       start_period: 10s
     volumes:
-      - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:/data
-      - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:/var/log/redis
+      - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:${DOKPLOY_REDIS_DATA_PATH:-/data}
+      - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:${DOKPLOY_REDIS_LOGS_PATH:-/var/log/redis}
     networks:
       default:
         aliases:
@@ -115,7 +124,7 @@ services:
     deploy:
       mode: ${DOKPLOY_REDIS_DEPLOY_MODE:-replicated}
       replicas: ${DOKPLOY_REDIS_DEPLOY_REPLICAS:-1}
-      endpoint_mode: dnsrr
+      endpoint_mode: ${DOKPLOY_REDIS_ENDPOINT_MODE:-vip}
       placement:
         constraints:
           - ${DOKPLOY_REDIS_PLACEMENT_CONSTRAINTS:-node.role==manager}
@@ -398,6 +407,7 @@ services:
       - sh
       - -ec
       - |
+        # Needs HTTP(S)_PROXY from DOKPLOY_CERTS_DUMPER_ENV_FILE=.env (Alpine CDN).
         apk add --no-cache jq
         dest="/etc/certificates"
         started=""
