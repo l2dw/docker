@@ -1,35 +1,47 @@
-
 networks:
   default:
-    name: ${HOMEPAGE_NETWORK:-dokploy-network}
-    external: ${HOMEPAGE_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-homepage-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   homepage_data:
     name: ${HOMEPAGE_DATA_VOLUME_NAME:-homepage_data}
-    external: ${HOMEPAGE_DATA_VOLUME_EXTERNAL:-false}
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOMEPAGE_DATA_HOST_PATH:-/appdata/homepage/config}
 
 services:
   homepage:
     image: ${HOMEPAGE_IMAGE:-ghcr.io/gethomepage/homepage:latest}
-    pull_policy: ${HOMEPAGE_PULL_POLICY:-always}
     restart: ${HOMEPAGE_RESTART:-unless-stopped}
-    privileged: ${HOMEPAGE_PRIVILEGED:-true}
+    privileged: ${HOMEPAGE_PRIVILEGED:-false}
+    env_file:
+      - ${HOMEPAGE_ENV_FILE:-.env.example}
     environment:
-      - TZ
-      - http_proxy
-      - https_proxy
-      - no_proxy
-      - HOMEPAGE_ALLOWED_HOSTS
+      - TZ=${TZ:-America/Montreal}
+      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS:-homepage.example.com}
     volumes:
-      - ${HOMEPAGE_DATA_DIR:-homepage_data}:/app/config
+      - homepage_data:${HOMEPAGE_DATA_CONTAINER_PATH:-/app/config}:z
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     labels:
-      traefik.enable: "true"
-      traefik.http.services.homepage.loadbalancer.server.port: 3000
-      traefik.http.routers.homepage.entrypoints: ${HOMEPAGE_TRAEFIK_ENTRYPOINTS:-web}
-      traefik.http.routers.homepage.rule: Host(`${HOMEPAGE_DOMAIN:-homepage.home}`) && PathPrefix(`${HOMEPAGE_TRAEFIK_PATH_PREFIX:-/}`)
-      traefik.http.routers.homepage.service: homepage
-      traefik.http.routers.homepage.middlewares: "${HOMEPAGE_TRAEFIK_MIDDLEWARES:-}"
-      traefik.http.routers.homepage.tls: "${HOMEPAGE_TRAEFIK_TLS_ENABLED:-false}"
-      traefik.http.routers.homepage.tls.certresolver: ${HOMEPAGE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+      - "traefik.enable=true"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homepage.entrypoints=${HOMEPAGE_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.homepage.rule=Host(`${HOMEPAGE_HOST_DOMAIN:-homepage.example.com}`) && PathPrefix(`${HOMEPAGE_HOST_URI:-/}`)"
+      - "traefik.http.routers.homepage.service=homepage"
+      - "traefik.http.routers.homepage.middlewares=${HOMEPAGE_TRAEFIK_MIDDLEWARES:-}"
+      - "traefik.http.routers.homepage.tls=${HOMEPAGE_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.http.routers.homepage.tls.certresolver=${HOMEPAGE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - ${HOMEPAGE_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: ${HOMEPAGE_MEMORY_LIMIT:-1G}
