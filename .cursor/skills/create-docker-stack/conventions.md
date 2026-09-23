@@ -26,13 +26,18 @@ Do not maintain a duplicate unlabeled file. Root symlinks still point at `<proje
 ```yaml
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-myapp-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  myapp_data:
-    name: ${MYAPP_DATA_VOLUME_NAME:-myapp_data}
+  myapp-data:
+    name: ${MYAPP_DATA_VOLUME_NAME:-myapp-data}
     external: ${MYAPP_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${MYAPP_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${MYAPP_DATA_VOLUME_DRIVER_TYPE:-}
+      o: ${MYAPP_DATA_VOLUME_DRIVER_O:-}
+      device: ${MYAPP_DATA_VOLUME_DRIVER_DEVICE:-}
 
 services:
   myapp:
@@ -44,7 +49,11 @@ services:
     environment:
       - TZ=${TZ:-America/Toronto}
     volumes:
-      - ${MYAPP_DATA_DIR:-myapp_data}:/var/lib/myapp
+      - ${MYAPP_DATA_HOST_PATH:-myapp-data}:${MYAPP_DATA_CONTAINER_PATH:-/var/lib/myapp}
+    networks:
+      default:
+        aliases:
+          - ${MYAPP_NETWORK_ALIAS:-myapp-server}
     deploy:
       mode: ${MYAPP_DEPLOY_MODE:-replicated}
       replicas: ${MYAPP_DEPLOY_REPLICAS:-1}
@@ -83,10 +92,10 @@ Rules:
 - Do not mount the Docker socket unless the app needs it.
 - Stateful services: `replicas: 1`. `mode: global` ignores replicas.
 - Do **not** emit Compose `x-*` keys (`x-pull-policy`, etc.).
-- Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-true}` — never `"${…}"`.
-- Overlay pairing (two keys; **no nested** `${A:-${B}}`): compose defaults `DEFAULT_NETWORK_NAME` → `dokploy-network` and `DEFAULT_NETWORK_EXTERNAL` → `true`. If NAME is `dokploy-network` or empty, EXTERNAL must be `true` (join the existing overlay). Any other NAME → EXTERNAL `false`. `<projet>-setup` upserts EXTERNAL to match NAME.
+- Do **not** quote interpolations for booleans: `privileged: ${MYAPP_PRIVILEGED:-false}` and `external: ${DEFAULT_NETWORK_EXTERNAL:-false}` — never `"${…}"`.
+- Overlay pairing (two keys; **no nested** `${A:-${B}}`): compose defaults `DEFAULT_NETWORK_NAME` → `<projet>-network` and `DEFAULT_NETWORK_EXTERNAL` → `false`. A stack-local network is the default. If NAME is `dokploy-network`, EXTERNAL must be `true` to join the existing shared overlay; any other NAME → EXTERNAL `false`. `<projet>-setup` upserts EXTERNAL to match NAME.
 - Pull images via Make (`<projet>-pull-images` / `*-stack-upgrade`), not `pull_policy` / `x-pull-policy` (Swarm rejects `pull_policy`).
-- Do **not** add `networks.default.aliases` by default. The Compose service name is already the DNS name. Add aliases **only** when the user asks, or when a stable alternate hostname is required (Dokploy-style: e.g. `dokploy-postgresql`, `dokploy-redis` for other services to resolve).
+- **Network alias:** when a stable hostname is needed between services or across stacks, parameterize the service alias as `${<PREFIX>_NETWORK_ALIAS:-<projet>-server}` under `networks.default.aliases`. It is recommended for that use case; otherwise omit it because the Compose service name is already the default DNS name. The alias is attached to the service's `default` network, not to the top-level network declaration.
 - Do **not** add `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` to service `environment:` unless the user explicitly wants proxy passthrough (root `.env` may still define them for other tools).
 - Prefer Compose **`env_file` + `environment:`** together (see § Env file). Do not use Swarm `configs:` as a substitute for dotenv injection.
 
@@ -130,8 +139,8 @@ Prefix every project key with `<PREFIX>_`. Root Make `-include`s `.env` and **ex
 Typical keys:
 
 ```
-DEFAULT_NETWORK_NAME=dokploy-network
-DEFAULT_NETWORK_EXTERNAL=true
+DEFAULT_NETWORK_NAME=myapp-network
+DEFAULT_NETWORK_EXTERNAL=false
 MYAPP_IMAGE=
 MYAPP_RESTART=unless-stopped
 MYAPP_PRIVILEGED=false
@@ -147,9 +156,15 @@ MYAPP_TLS_CERTRESOLVER=letsencrypt
 MYAPP_DEPLOY_MODE=replicated
 MYAPP_DEPLOY_REPLICAS=1
 MYAPP_PLACEMENT_CONSTRAINTS=node.role==manager
-MYAPP_DATA_DIR=
-MYAPP_DATA_VOLUME_NAME=myapp_data
+MYAPP_DATA_HOST_PATH=myapp-data
+MYAPP_DATA_CONTAINER_PATH=/var/lib/myapp
+MYAPP_DATA_VOLUME_NAME=myapp-data
 MYAPP_DATA_VOLUME_EXTERNAL=false
+MYAPP_DATA_VOLUME_DRIVER=local
+MYAPP_DATA_VOLUME_DRIVER_TYPE=
+MYAPP_DATA_VOLUME_DRIVER_O=
+MYAPP_DATA_VOLUME_DRIVER_DEVICE=
+MYAPP_NETWORK_ALIAS=myapp-server
 MYAPP_HOMEPAGE_GROUP=
 MYAPP_HOMEPAGE_NAME=Myapp
 MYAPP_HOMEPAGE_ICON=myapp.png
@@ -159,7 +174,7 @@ MYAPP_ENV_FILE=.env.example
 ```
 
 - Always define `<PREFIX>_BASE_PATH`. If the app **supports** subpath (step 1b), default to `/<projet>` and align public URL vars; if not, default `/`. See § Base path.
-- Bind vs named volume: empty `MYAPP_DATA_DIR` → named volume default in compose.
+- Stateful volume defaults use the named-volume key `<projet>-data` with configurable `name`, `external`, `driver`, and `driver_opts` (`type`, `o`, `device`). `*_DATA_HOST_PATH` is the Docker host/source path (default `<projet>-data`); `*_DATA_CONTAINER_PATH` is the container mount point. Keep these distinct; do not reintroduce the ambiguous `*_DATA_DIR` key.
 - Sync the same keys into **root** `.env.example` and `<projet>/.env.example`.
 - GNU Make treats `$` in `.env` as Make syntax; prefer plain values. Compose hashes need `$$`.
 - Never commit `.env` (gitignored via `**/.*` except `*.example`).
