@@ -7,7 +7,7 @@ MARIADB_SECRET_VARS := MARIADB_ROOT_PASSWORD MARIADB_PASSWORD
 
 mariadb-pull-images: ## Pull images for the mariadb stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(MARIADB_STACK_NAME)
-mariadb-setup: ## Ensure mariadb/.env, generate DB passwords if empty, sync DEFAULT_NETWORK_EXTERNAL
+mariadb-setup: ## Ensure mariadb/.env, generate DB passwords if empty, sync stack-local network settings
 	@set -e; \
 	envf='$(MARIADB_ENV)'; \
 	exf='$(MARIADB_ENV_EXAMPLE)'; \
@@ -46,15 +46,10 @@ mariadb-setup: ## Ensure mariadb/.env, generate DB passwords if empty, sync DEFA
 		fi; \
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='dokploy-network'; \
-	case "$$net" in \
-		''|dokploy-network) ext=true ;; \
-		*) ext=false ;; \
-	esac; \
-	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
-	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	[ -n "$$net" ] || net='mariadb-network'; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL false; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=false"; \
 	echo "mariadb env OK ($$envf)."
 .mariadb-setup: mariadb-setup
 mariadb-stack-up: .mariadb-setup ## Deploy the mariadb stack

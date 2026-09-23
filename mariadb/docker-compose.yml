@@ -1,13 +1,17 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-mariadb-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   mariadb-data:
     name: ${MARIADB_DATA_VOLUME_NAME:-mariadb-data}
     external: ${MARIADB_DATA_VOLUME_EXTERNAL:-false}
-
+    driver: ${MARIADB_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${MARIADB_DATA_VOLUME_DRIVER_TYPE:-}
+      o: ${MARIADB_DATA_VOLUME_DRIVER_O:-}
+      device: ${MARIADB_DATA_VOLUME_DRIVER_DEVICE:-}
 services:
   mariadb:
     image: ${MARIADB_IMAGE:-docker.io/library/mariadb:11}
@@ -22,11 +26,11 @@ services:
       - MARIADB_USER=${MARIADB_USER:-mariadb}
       - MARIADB_PASSWORD=${MARIADB_PASSWORD:-}
     volumes:
-      - ${MARIADB_DATA_DIR:-mariadb-data}:/var/lib/mysql
+      - ${MARIADB_DATA_HOST_PATH:-mariadb-data}:${MARIADB_DATA_CONTAINER_PATH:-/var/lib/mysql}
     networks:
       default:
         aliases:
-          - ${MARIADB_NETWORK_ALIAS:-dokploy-mariadb}
+          - ${MARIADB_NETWORK_ALIAS:-mariadb-server}
     deploy:
       mode: ${MARIADB_DEPLOY_MODE:-replicated}
       replicas: ${MARIADB_DEPLOY_REPLICAS:-1}
