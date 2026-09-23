@@ -1,3 +1,5 @@
+# TCP Traefik stack (Dokploy compose path: app/tcp.docker-compose.yml).
+# Requires a Traefik static TCP entrypoint (e.g. mysql:":3306"). Rule is HostSNI(`*`).
 
 networks:
   default:
@@ -22,6 +24,16 @@ services:
       - ${APP_DATA_HOST_PATH:-data}:${APP_DATA_CONTAINER_PATH:-/data}:z
     env_file:
       - ${APP_ENV_FILE:-.env.example}
+    networks:
+      default:
+        aliases:
+          - ${APP_NAME:-app}
+          - ${APP_ALIAS:-app}
+    ports:
+      - published: ${APP_PUBLISHED_PORT:-30000}
+        target: ${APP_PORT:-3000}
+        mode: ${APP_PORT_MODE:-ingress}
+        protocol: ${APP_PORT_PROTOCOL:-tcp}
     deploy:
       mode: ${APP_DEPLOY_MODE:-replicated}
       replicas: ${APP_DEPLOY_REPLICAS:-1}
@@ -36,6 +48,13 @@ services:
         delay: ${APP_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${APP_RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
+        - "traefik.enable=${APP_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.tcp.services.${APP_NAME:-app}.loadbalancer.server.port=${APP_PORT:-3000}"
+        - "traefik.tcp.routers.${APP_NAME:-app}.entrypoints=${APP_TRAEFIK_ENTRYPOINTS:-mysql}"
+        - "traefik.tcp.routers.${APP_NAME:-app}.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.${APP_NAME:-app}.service=${APP_TRAEFIK_SERVICE:-app}"
+        - "traefik.tcp.routers.${APP_NAME:-app}.tls=${APP_TRAEFIK_TLS_ENABLED:-false}"
+        - "traefik.tcp.routers.${APP_NAME:-app}.tls.certresolver=${APP_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
         ## Homepage configuration
         - "homepage.enabled=${APP_HOMEPAGE_ENABLED:-true}"
         - "homepage.group=${APP_HOMEPAGE_GROUP:-APP}"
@@ -46,6 +65,13 @@ services:
         - "homepage.siteMonitor=${APP_HOMEPAGE_SITEMONITOR_URL:-}"
         - "homepage.ping=${APP_HOMEPAGE_PING:-}"
     labels:
+      - "traefik.enable=${APP_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.tcp.services.${APP_NAME:-app}.loadbalancer.server.port=${APP_PORT:-3000}"
+      - "traefik.tcp.routers.${APP_NAME:-app}.entrypoints=${APP_TRAEFIK_ENTRYPOINTS:-mysql}"
+      - "traefik.tcp.routers.${APP_NAME:-app}.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.${APP_NAME:-app}.service=${APP_TRAEFIK_SERVICE:-app}"
+      - "traefik.tcp.routers.${APP_NAME:-app}.tls=${APP_TRAEFIK_TLS_ENABLED:-false}"
+      - "traefik.tcp.routers.${APP_NAME:-app}.tls.certresolver=${APP_TRAEFIK_TLS_CERTRESOLVER:-none}"
       ## Homepage configuration
       - "homepage.enabled=${APP_HOMEPAGE_ENABLED:-true}"
       - "homepage.group=${APP_HOMEPAGE_GROUP:-APP}"
@@ -55,5 +81,3 @@ services:
       - "homepage.description=${APP_HOMEPAGE_DESCRIPTION:-}"
       - "homepage.siteMonitor=${APP_HOMEPAGE_SITEMONITOR_URL:-}"
       - "homepage.ping=${APP_HOMEPAGE_PING:-}"
-
-

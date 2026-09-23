@@ -1,92 +1,77 @@
 # App (generic stack template)
 
-Générique wrapper pour déployer **n'importe quelle image** en Swarm/Compose derrière Traefik, sans réécrire un stack par app.
+Generic wrapper to deploy **any image** on Swarm/Compose. Pick a compose file for Homepage-only, HTTP Traefik, or TCP Traefik.
 
-## Fichiers
+## Files
 
-- `docker-compose.yml` — canonique (Make / Swarm), avec labels Traefik + Homepage.
-- `compose.yml` — même stack sans labels (ingress via port publié, pas de Traefik). Contient la publication de port en forme longue (`ports: - target/published/protocol/mode`).
-- `.env.example` — toutes les clés `APP_*`.
-- `Makefile` — cibles `app-*`.
+| File | Role |
+|------|------|
+| `docker-compose.yml` | Homepage only (no Traefik). `compose.yml` → symlink |
+| `web.docker-compose.yml` | HTTP Traefik + host publish + Homepage |
+| `tcp.docker-compose.yml` | TCP Traefik + host publish + Homepage |
+| `.env.example` | All `APP_*` / network keys |
+| `Makefile` | `app-*`; selects compose file from `APP_TRAEFIK_MODE` |
 
 ## Usage
 
 ```sh
 cp app/.env.example app/.env
-# éditer APP_IMAGE, APP_DOMAIN, APP_PORT, ...
+# edit APP_IMAGE, APP_DOMAIN, APP_BASE_PATH, …
 make app-setup
-make app-stack-up       # Swarm
-# ou
-make app-compose-up     # Compose local
+make app-stack-up
 ```
 
-## Réseau
+Dokploy: set the compose path to `web.docker-compose.yml` or `tcp.docker-compose.yml` (not the Homepage-only file) when you need Traefik.
 
-Par défaut réseau local `app-network` (`DEFAULT_NETWORK_EXTERNAL=false`). Pour rejoindre l'overlay partagé Dokploy/Traefik : `DEFAULT_NETWORK_NAME=dokploy-network` + `DEFAULT_NETWORK_EXTERNAL=true`. `make app-setup` synchronise `DEFAULT_NETWORK_EXTERNAL` selon le nom choisi.
+## Traefik
 
-## Volume NFS
+| Mode (`APP_TRAEFIK_MODE`) | Compose file | Rule |
+|---------------------------|--------------|------|
+| `http` (default) | `web.docker-compose.yml` | `Host(\`$APP_DOMAIN\`) && PathPrefix(\`$APP_BASE_PATH\`)` |
+| `tcp` | `tcp.docker-compose.yml` | `HostSNI(\`*\`)` (hardcoded) |
+| other / unset for Make homepage | `docker-compose.yml` | none |
 
-Le volume `app_data` (Docker named volume) peut être repointé vers un export **NFS** directement, sans bind mount côté hôte et sans modifier `compose.yml` / `docker-compose.yml` — uniquement via les variables d'env :
+No `APP_TRAEFIK_RULE` — set domain/path (or TCP entrypoint) only.
 
-| Variable | Rôle | Défaut |
-|----------|------|--------|
-| `APP_DATA_VOLUME_DRIVER` | Driver du volume | `local` |
-| `APP_DATA_VOLUME_DRIVER_TYPE` | Type de montage (`nfs` pour NFS) | vide (volume local normal) |
-| `APP_DATA_VOLUME_DRIVER_O` | Options `-o` passées au montage (adresse serveur NFS, options `rw`/`nfsvers`, etc.) | vide |
-| `APP_DATA_VOLUME_DRIVER_DEVICE` | Export distant (`:/chemin/export`) | vide |
-
-Ces trois clés alimentent `driver_opts` du volume dans `compose.yml`/`docker-compose.yml` :
-
-```yaml
-volumes:
-  app_data:
-    name: ${APP_DATA_VOLUME_NAME:-app_data}
-    external: ${APP_DATA_VOLUME_EXTERNAL:-false}
-    driver: ${APP_DATA_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${APP_DATA_VOLUME_DRIVER_TYPE:-}
-      o: ${APP_DATA_VOLUME_DRIVER_O:-}
-      device: ${APP_DATA_VOLUME_DRIVER_DEVICE:-}
-```
-
-Vide (défaut) = volume Docker local classique, géré par Docker. Pour monter un export NFS, dans `app/.env` :
+### Example: `https://example.com/app`
 
 ```env
-APP_DATA_VOLUME_DRIVER_TYPE=nfs
-APP_DATA_VOLUME_DRIVER_O=addr=nfs-server.example.com,rw,nfsvers=4
-APP_DATA_VOLUME_DRIVER_DEVICE=:/exports/app-data
+APP_TRAEFIK_MODE=http
+APP_DOMAIN=example.com
+APP_BASE_PATH=/app
+APP_TRAEFIK_ENTRYPOINTS=web
 ```
 
-Docker (et Swarm — chaque nœud doit avoir accès réseau au serveur NFS) montera alors directement l'export comme volume nommé, sans passer par un bind mount local ni un montage NFS manuel sur l'hôte. Fonctionne identiquement en Compose et en Swarm (`docker stack deploy`).
+Dokploy compose file: `app/web.docker-compose.yml`.
 
-Pour un **bind mount** classique plutôt qu'un named volume : utiliser `APP_DATA_HOST_PATH` (chemin hôte) au lieu de toucher au driver — cf. la ligne `volumes:` du service.
+If the app does not strip `/app`, add a strip-prefix middleware and set `APP_TRAEFIK_MIDDLEWARES`.
 
-## Port
+### Example: MySQL via Traefik TCP
 
-`APP_PORT` = port d'écoute du conteneur (utilisé par le label Traefik `loadbalancer.server.port` dans `docker-compose.yml`).
-`APP_PUBLISHED_PORT` / `APP_PORT_MODE` = uniquement dans `compose.yml` (pas de Traefik) — publication en forme longue :
+Prefer the dedicated `mysql/` stack when possible. Generic wrapper:
 
-```yaml
-ports:
-  - target: ${APP_PORT:-3000}
-    published: ${APP_PUBLISHED_PORT:-30000}
-    protocol: tcp
-    mode: ${APP_PORT_MODE:-ingress}
+```env
+APP_TRAEFIK_MODE=tcp
+APP_IMAGE=docker.io/library/mysql:8.0
+APP_NAME=mysql
+APP_TRAEFIK_SERVICE=mysql
+APP_PORT=3306
+APP_TRAEFIK_ENTRYPOINTS=mysql
+DEFAULT_NETWORK_NAME=dokploy-network
+DEFAULT_NETWORK_EXTERNAL=true
 ```
 
-Ne pas publier de port dans `docker-compose.yml` si Traefik gère l'ingress (labels uniquement).
+Dokploy compose file: `app/tcp.docker-compose.yml`. Traefik static config must define the TCP entrypoint, e.g. `mysql: ":3306"`.
 
-## Base path
+## Network / volume / Homepage
 
-Stack générique : impossible de vérifier le support de sous-chemin app par app. Défaut `APP_BASE_PATH=/` (Host-only). Si l'app cible supporte un `base_path`, ajuster `APP_BASE_PATH` et le mapper vers la variable d'env spécifique au vendor.
-
-## Env file
-
-`APP_ENV_FILE` (défaut `.env.example`) est chargé via `env_file` sur le service ; `environment:` (s'il est ajouté) prévaudrait sur le fichier. `docker stack deploy` ne lit pas `env_file` de façon fiable — Swarm utilise l'export Make de `.env` racine + interpolation `environment:`.
-
-## Debug
+- Default network `app-network`; for Dokploy use `dokploy-network` + `EXTERNAL=true`.
+- NFS via `APP_DATA_VOLUME_DRIVER*`; bind via `APP_DATA_HOST_PATH`.
+- Homepage: `APP_HOMEPAGE_URL` / `SITEMONITOR` / `PING` (ICMP host, not a URL).
 
 ```sh
 make app-debug
 make app-debug-logs
 ```
+
+Do not commit `app/.env` with real secrets or production domains.
