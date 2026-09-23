@@ -1,6 +1,6 @@
 ## —— 🐝 mysql commands ———————————————————————————————————
 MYSQL_STACK_NAME := mysql
-MYSQL_SERVICES_SHORT := mysql
+MYSQL_SERVICES_SHORT := server
 MYSQL_ENV := $(MYSQL_STACK_NAME)/.env
 MYSQL_ENV_EXAMPLE := $(MYSQL_STACK_NAME)/.env.example
 MYSQL_SECRET_VARS := MYSQL_ROOT_PASSWORD MYSQL_PASSWORD
