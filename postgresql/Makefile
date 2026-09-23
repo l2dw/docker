@@ -7,7 +7,7 @@ POSTGRESQL_SECRET_VARS := POSTGRESQL_PASSWORD
 
 postgresql-pull-images: ## Pull images for the postgresql stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
-postgresql-stack-setup: ## Ensure postgresql/.env and require POSTGRESQL_PASSWORD
+postgresql-setup: ## Ensure postgresql/.env and require POSTGRESQL_PASSWORD
 	@set -e; \
 	envf='$(POSTGRESQL_ENV)'; \
 	exf='$(POSTGRESQL_ENV_EXAMPLE)'; \
@@ -52,8 +52,8 @@ postgresql-stack-setup: ## Ensure postgresql/.env and require POSTGRESQL_PASSWOR
 	done; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "PostgreSQL env OK ($$envf)."
-.postgresql-stack-setup: postgresql-stack-setup
-postgresql-stack-up: .postgresql-stack-setup ## Deploy the postgresql stack
+.postgresql-setup: postgresql-setup
+postgresql-stack-up: .postgresql-setup ## Deploy the postgresql stack
 	$(MAKE) stack-deploy STACK_NAME=$(POSTGRESQL_STACK_NAME)
 postgresql-stack-down: ## Remove the postgresql stack
 	$(MAKE) stack-rm STACK_NAME=$(POSTGRESQL_STACK_NAME)
@@ -87,7 +87,7 @@ postgresql-debug-logs: ## Tail recent logs for each postgresql service
 	done
 postgresql-compose-upgrade: ## Upgrade the postgresql compose project
 	$(MAKE) docker-project-upgrade PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
-postgresql-compose-up: .postgresql-stack-setup ## Deploy the postgresql stack (compose)
+postgresql-compose-up: .postgresql-setup ## Deploy the postgresql stack (compose)
 	$(MAKE) docker-project-up PROJECT_NAME=$(POSTGRESQL_STACK_NAME)
 postgresql-compose-down: ## Remove the postgresql stack (compose)
 	$(MAKE) docker-project-down PROJECT_NAME=$(POSTGRESQL_STACK_NAME)

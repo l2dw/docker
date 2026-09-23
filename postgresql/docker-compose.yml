@@ -1,32 +1,54 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    name: ${DEFAULT_NETWORK_NAME:-postgresql-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  postgresql_data:
+  data:
     name: ${POSTGRESQL_DATA_VOLUME_NAME:-postgresql_data}
     external: ${POSTGRESQL_DATA_VOLUME_EXTERNAL:-false}
-  postgresql_logs:
+    driver: ${POSTGRESQL_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${POSTGRESQL_DATA_VOLUME_DRIVER_TYPE:-}
+      o: ${POSTGRESQL_DATA_VOLUME_DRIVER_O:-}
+      device: ${POSTGRESQL_DATA_VOLUME_DRIVER_DEVICE:-}
+  logs:
     name: ${POSTGRESQL_LOGS_VOLUME_NAME:-postgresql_logs}
     external: ${POSTGRESQL_LOGS_VOLUME_EXTERNAL:-false}
+    driver: ${POSTGRESQL_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${POSTGRESQL_LOGS_VOLUME_DRIVER_TYPE:-}
+      o: ${POSTGRESQL_LOGS_VOLUME_DRIVER_O:-}
+      device: ${POSTGRESQL_LOGS_VOLUME_DRIVER_DEVICE:-}
+  scripts:
+    name: ${POSTGRESQL_SCRIPTS_VOLUME_NAME:-postgresql_scripts}
+    external: ${POSTGRESQL_SCRIPTS_VOLUME_EXTERNAL:-false}
+    driver: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER_TYPE:-}
+      o: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER_O:-}
+      device: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER_DEVICE:-}
 
 services:
   postgresql:
     image: ${POSTGRESQL_IMAGE:-docker.io/library/postgres:16}
     restart: ${POSTGRESQL_RESTART:-unless-stopped}
     privileged: ${POSTGRESQL_PRIVILEGED:-false}
+    env_file:
+      - ${POSTGRESQL_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Toronto}
       - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD:-}
       - POSTGRES_USER=${POSTGRESQL_USER:-postgres}
       - POSTGRES_DB=${POSTGRESQL_DB:-postgres}
     volumes:
-      - ${POSTGRESQL_DATA_DIR:-postgresql_data}:/var/lib/postgresql/data
-      - ${POSTGRESQL_LOGS_DIR:-postgresql_logs}:/var/log/postgresql
+      - ${POSTGRESQL_DATA_HOST_PATH:-data}:${POSTGRESQL_DATA_CONTAINER_PATH:-/var/lib/postgresql/data}
+      - ${POSTGRESQL_LOGS_HOST_PATH:-logs}:${POSTGRESQL_LOGS_CONTAINER_PATH:-/var/log/postgresql}
+      - ${POSTGRESQL_SCRIPTS_HOST_PATH:-scripts}:${POSTGRESQL_SCRIPTS_CONTAINER_PATH:-/docker-entrypoint-initdb.d}
     networks:
       default:
         aliases:
+          - ${APP_NAME:-postgresql}
           - ${POSTGRESQL_NETWORK_ALIAS:-postgresql-server}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
@@ -37,16 +59,33 @@ services:
     deploy:
       mode: ${POSTGRESQL_DEPLOY_MODE:-replicated}
       replicas: ${POSTGRESQL_DEPLOY_REPLICAS:-1}
-      endpoint_mode: ${POSTGRESQL_ENDPOINT_MODE:-dnsrr}
       placement:
         constraints:
           - ${POSTGRESQL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
-        condition: on-failure
-        delay: 5s
-      update_config:
-        order: stop-first
-        failure_action: rollback
+        condition: ${POSTGRESQL_RESTART_POLICY_CONDITION:-any}
+        delay: ${POSTGRESQL_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${POSTGRESQL_RESTART_POLICY_MAX_ATTEMPTS:-3}
       resources:
         limits:
           memory: ${POSTGRESQL_MEMORY_LIMIT:-512M}
+      labels:
+        ## Homepage configuration
+        - "homepage.enabled=${POSTGRESQL_HOMEPAGE_ENABLED:-true}"
+        - "homepage.group=${POSTGRESQL_HOMEPAGE_GROUP:-Database}"
+        - "homepage.name=${APP_NAME:-postgresql}"
+        - "homepage.icon=${POSTGRESQL_HOMEPAGE_ICON:-postgresql.png}"
+        - "homepage.href=${POSTGRESQL_HOMEPAGE_URL:-}"
+        - "homepage.description=${POSTGRESQL_HOMEPAGE_DESCRIPTION:-}"
+        - "homepage.siteMonitor=${POSTGRESQL_HOMEPAGE_SITEMONITOR_URL:-}"
+        - "homepage.ping=${POSTGRESQL_HOMEPAGE_PING:-}"
+    labels:
+      ## Homepage configuration
+      - "homepage.enabled=${POSTGRESQL_HOMEPAGE_ENABLED:-true}"
+      - "homepage.group=${POSTGRESQL_HOMEPAGE_GROUP:-Database}"
+      - "homepage.name=${APP_NAME:-postgresql}"
+      - "homepage.icon=${POSTGRESQL_HOMEPAGE_ICON:-postgresql.png}"
+      - "homepage.href=${POSTGRESQL_HOMEPAGE_URL:-}"
+      - "homepage.description=${POSTGRESQL_HOMEPAGE_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${POSTGRESQL_HOMEPAGE_SITEMONITOR_URL:-}"
+      - "homepage.ping=${POSTGRESQL_HOMEPAGE_PING:-}"
