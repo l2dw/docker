@@ -1,12 +1,18 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-mysql-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
   mysql-data:
     name: ${MYSQL_DATA_VOLUME_NAME:-mysql-data}
     external: ${MYSQL_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${MYSQL_DATA_VOLUME_DRIVER:-local}
+    # Empty type/o/device keeps the default Docker named-volume behavior.
+    driver_opts:
+      type: ${MYSQL_DATA_VOLUME_DRIVER_TYPE:-}
+      o: ${MYSQL_DATA_VOLUME_DRIVER_O:-}
+      device: ${MYSQL_DATA_VOLUME_DRIVER_DEVICE:-}
 
 services:
   mysql:
@@ -22,11 +28,11 @@ services:
       - MYSQL_USER=${MYSQL_USER:-mysql}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-}
     volumes:
-      - ${MYSQL_DATA_DIR:-mysql-data}:/var/lib/mysql
+      - ${MYSQL_DATA_HOST_PATH:-mysql-data}:${MYSQL_DATA_CONTAINER_PATH:-/var/lib/mysql}
     networks:
       default:
         aliases:
-          - ${MYSQL_NETWORK_ALIAS:-dokploy-mysql}
+          - ${MYSQL_NETWORK_ALIAS:-mysql-server}
     deploy:
       mode: ${MYSQL_DEPLOY_MODE:-replicated}
       replicas: ${MYSQL_DEPLOY_REPLICAS:-1}

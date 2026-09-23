@@ -47,9 +47,9 @@ mysql-setup: ## Ensure mysql/.env, generate DB passwords if empty, sync DEFAULT_
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
 	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='dokploy-network'; \
+	[ -n "$$net" ] || net='mysql-network'; \
 	case "$$net" in \
-		''|dokploy-network) ext=true ;; \
+		dokploy-network) ext=true ;; \
 		*) ext=false ;; \
 	esac; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
