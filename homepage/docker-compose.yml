@@ -1,7 +1,7 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-homepage-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
 
 volumes:
   homepage_data:
@@ -25,15 +25,6 @@ services:
     volumes:
       - homepage_data:${HOMEPAGE_DATA_CONTAINER_PATH:-/app/config}:z
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
-      - "traefik.http.routers.homepage.entrypoints=${HOMEPAGE_TRAEFIK_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.homepage.rule=Host(`${HOMEPAGE_HOST_DOMAIN:-homepage.example.com}`) && PathPrefix(`${HOMEPAGE_HOST_URI:-/}`)"
-      - "traefik.http.routers.homepage.service=homepage"
-      - "traefik.http.routers.homepage.middlewares=${HOMEPAGE_TRAEFIK_MIDDLEWARES:-}"
-      - "traefik.http.routers.homepage.tls=${HOMEPAGE_TRAEFIK_TLS_ENABLED:-false}"
-      - "traefik.http.routers.homepage.tls.certresolver=${HOMEPAGE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
     deploy:
       replicas: 1
       placement:
