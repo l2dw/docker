@@ -29,6 +29,16 @@ Compose also loads `env_file` (`DOKPLOY_*_ENV_FILE`, default `.env.example` unde
 
 Copy [`dokploy/.env.example`](.env.example) keys into root `.env` and set secrets before deploy.
 
+Required runtime variables include `DOKPLOY_DATABASE_URL`,
+`DOKPLOY_POSTGRES_PASSWORD`, `DOKPLOY_POSTGRES_SUPERUSER_PASSWORD`,
+`DOKPLOY_BETTER_AUTH_SECRET`, and `DOKPLOY_ADVERTISE_ADDR`. The setup target
+rejects empty or placeholder values for the secrets and database URL.
+
+The Docker client configuration is persisted through `DOKPLOY_DOCKER_DIR`,
+`DOKPLOY_DOCKER_VOLUME_NAME`, and `DOKPLOY_DOCKER_VOLUME_EXTERNAL`. PostgreSQL
+and Redis container mount paths are configurable with the respective
+`*_PGDATA_PATH`, `*_LOGS_PATH`, and `*_DATA_PATH` variables.
+
 `docker stack deploy` does **not** support nested interpolation (`${A:-${B:-x}}`). Each key uses a single-level default.
 
 | Service | Mode | Replicas | Placement | Memory |

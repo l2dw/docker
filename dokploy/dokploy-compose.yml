@@ -10,6 +10,9 @@ volumes:
   dokploy-logs:
     name: ${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}
     external: ${DOKPLOY_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-docker:
+    name: ${DOKPLOY_DOCKER_VOLUME_NAME:-dokploy-docker}
+    external: ${DOKPLOY_DOCKER_VOLUME_EXTERNAL:-false}
   dokploy-traefik_certificates:
     name: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME:-dokploy-traefik_certificates}
     external: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_EXTERNAL:-false}
@@ -38,7 +41,8 @@ services:
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
-      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
+      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/var/log/dokploy
+      - ${DOKPLOY_DOCKER_DIR:-dokploy-docker}:/root/.docker
       - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/dokploy/traefik/dynamic/certificates:z
     deploy:
       mode: ${DOKPLOY_DOKPLOY_DEPLOY_MODE:-replicated}

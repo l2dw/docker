@@ -22,6 +22,9 @@ volumes:
   dokploy-logs:
     name: ${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}
     external: ${DOKPLOY_LOGS_VOLUME_EXTERNAL:-false}
+  dokploy-docker:
+    name: ${DOKPLOY_DOCKER_VOLUME_NAME:-dokploy-docker}
+    external: ${DOKPLOY_DOCKER_VOLUME_EXTERNAL:-false}
   dokploy-traefik_config:
     name: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME:-dokploy-traefik_config}
     external: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL:-false}
@@ -161,8 +164,9 @@ services:
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
-      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/etc/dokploy/logs
+      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/var/log/dokploy
       - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/dokploy/traefik/dynamic/certificates:z
+      - ${DOKPLOY_DOCKER_DIR:-dokploy-docker}:/root/.docker
     depends_on:
       - postgresql
       - redis
