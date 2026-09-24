@@ -2,33 +2,13 @@ networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-postgresql-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
-
 volumes:
   data:
     name: ${POSTGRESQL_DATA_VOLUME_NAME:-postgresql_data}
-    external: ${POSTGRESQL_DATA_VOLUME_EXTERNAL:-false}
-    driver: ${POSTGRESQL_DATA_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${POSTGRESQL_DATA_VOLUME_DRIVER_TYPE:-}
-      o: ${POSTGRESQL_DATA_VOLUME_DRIVER_O:-}
-      device: ${POSTGRESQL_DATA_VOLUME_DRIVER_DEVICE:-}
   logs:
     name: ${POSTGRESQL_LOGS_VOLUME_NAME:-postgresql_logs}
-    external: ${POSTGRESQL_LOGS_VOLUME_EXTERNAL:-false}
-    driver: ${POSTGRESQL_LOGS_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${POSTGRESQL_LOGS_VOLUME_DRIVER_TYPE:-}
-      o: ${POSTGRESQL_LOGS_VOLUME_DRIVER_O:-}
-      device: ${POSTGRESQL_LOGS_VOLUME_DRIVER_DEVICE:-}
   scripts:
     name: ${POSTGRESQL_SCRIPTS_VOLUME_NAME:-postgresql_scripts}
-    external: ${POSTGRESQL_SCRIPTS_VOLUME_EXTERNAL:-false}
-    driver: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER_TYPE:-}
-      o: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER_O:-}
-      device: ${POSTGRESQL_SCRIPTS_VOLUME_DRIVER_DEVICE:-}
-
 services:
   postgresql:
     image: ${POSTGRESQL_IMAGE:-docker.io/library/postgres:16}
@@ -51,41 +31,21 @@ services:
           - ${APP_NAME:-postgresql}
           - ${POSTGRESQL_NETWORK_ALIAS:-postgresql-server}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
       interval: 30s
       timeout: 10s
       retries: 10
       start_period: 20s
-    deploy:
-      mode: ${POSTGRESQL_DEPLOY_MODE:-replicated}
-      replicas: ${POSTGRESQL_DEPLOY_REPLICAS:-1}
-      placement:
-        constraints:
-          - ${POSTGRESQL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
-      restart_policy:
-        condition: ${POSTGRESQL_RESTART_POLICY_CONDITION:-any}
-        delay: ${POSTGRESQL_RESTART_POLICY_DELAY:-5s}
-        max_attempts: ${POSTGRESQL_RESTART_POLICY_MAX_ATTEMPTS:-3}
-      resources:
-        limits:
-          memory: ${POSTGRESQL_MEMORY_LIMIT:-512M}
-      labels:
-        ## Homepage configuration
-        - "homepage.enabled=${POSTGRESQL_HOMEPAGE_ENABLED:-true}"
-        - "homepage.group=${POSTGRESQL_HOMEPAGE_GROUP:-Database}"
-        - "homepage.name=${APP_NAME:-postgresql}"
-        - "homepage.icon=${POSTGRESQL_HOMEPAGE_ICON:-postgresql.png}"
-        - "homepage.href=${POSTGRESQL_HOMEPAGE_URL:-}"
-        - "homepage.description=${POSTGRESQL_HOMEPAGE_DESCRIPTION:-}"
-        - "homepage.siteMonitor=${POSTGRESQL_HOMEPAGE_SITEMONITOR_URL:-}"
-        - "homepage.ping=${POSTGRESQL_HOMEPAGE_PING:-}"
+    # mem_limit instead of deploy.* — Podman maps deploy.restart_policy.condition=any to an invalid restart policy
+    mem_limit: ${POSTGRESQL_MEMORY_LIMIT:-512M}
     labels:
-      ## Homepage configuration
-      - "homepage.enabled=${POSTGRESQL_HOMEPAGE_ENABLED:-true}"
-      - "homepage.group=${POSTGRESQL_HOMEPAGE_GROUP:-Database}"
-      - "homepage.name=${APP_NAME:-postgresql}"
-      - "homepage.icon=${POSTGRESQL_HOMEPAGE_ICON:-postgresql.png}"
-      - "homepage.href=${POSTGRESQL_HOMEPAGE_URL:-}"
-      - "homepage.description=${POSTGRESQL_HOMEPAGE_DESCRIPTION:-}"
-      - "homepage.siteMonitor=${POSTGRESQL_HOMEPAGE_SITEMONITOR_URL:-}"
-      - "homepage.ping=${POSTGRESQL_HOMEPAGE_PING:-}"
+      - homepage.enabled=${POSTGRESQL_HOMEPAGE_ENABLED:-true}
+      - homepage.group=${POSTGRESQL_HOMEPAGE_GROUP:-Database}
+      - homepage.name=${APP_NAME:-postgresql}
+      - homepage.icon=${POSTGRESQL_HOMEPAGE_ICON:-postgresql.png}
+      - homepage.href=${POSTGRESQL_HOMEPAGE_URL:-}
+      - homepage.description=${POSTGRESQL_HOMEPAGE_DESCRIPTION:-}
+      - homepage.siteMonitor=${POSTGRESQL_HOMEPAGE_SITEMONITOR_URL:-}
+      - homepage.ping=${POSTGRESQL_HOMEPAGE_PING:-}
