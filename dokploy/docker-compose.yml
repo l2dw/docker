@@ -59,14 +59,14 @@ services:
       - ${DOKPLOY_POSTGRES_ENV_FILE:-.env.example}
     environment:
       # Official postgres:* image
-      - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
+      - POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD}
       - POSTGRES_USER=${DOKPLOY_POSTGRES_USER:-dokploy}
       - POSTGRES_DB=${DOKPLOY_POSTGRES_DB:-dokploy}
       # bitnami/postgresql (same keys when reusing /appdata/postgresql-16/data)
       - POSTGRESQL_USERNAME=${DOKPLOY_POSTGRES_USER:-dokploy}
-      - POSTGRESQL_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD:-ChangeMe}
-      - POSTGRESQL_DATABASE=${DOKPLOY_POSTGRES_DB:-dokploy}
-      - POSTGRESQL_POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_SUPERUSER_PASSWORD:-ChangeMe}
+      - POSTGRESQL_PASSWORD=${DOKPLOY_POSTGRES_PASSWORD}
+      - POSTGRESQL_DATABASE=${DOKPLOY_POSTGRES_DB}
+      - POSTGRESQL_POSTGRES_PASSWORD=${DOKPLOY_POSTGRES_SUPERUSER_PASSWORD}
       - POSTGRESQL_TIMEZONE=${TZ:-America/Toronto}
       - TZ=${TZ:-America/Toronto}
     volumes:
@@ -149,8 +149,8 @@ services:
     env_file:
       - ${DOKPLOY_ENV_FILE:-.env.example}
     environment:
-      - ADVERTISE_ADDR=${ADVERTISE_ADDR}
-      - DATABASE_URL=${DOKPLOY_DATABASE_URL:-postgres://dokploy:ChangeMe@dokploy-postgresql:5432/dokploy}
+      - ADVERTISE_ADDR=${DOKPLOY_ADVERTISE_ADDR}
+      - DATABASE_URL=${DOKPLOY_DATABASE_URL}
       - REDIS_URL=${DOKPLOY_REDIS_URL:-redis://dokploy-redis:6379}
       - TZ=${TZ:-America/Toronto}
       - BASE_PATH=${DOKPLOY_BASE_PATH:-}

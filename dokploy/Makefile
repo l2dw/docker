@@ -30,10 +30,10 @@ dokploy-setup: ## Ensure dokploy/.env, sync DEFAULT_NETWORK_EXTERNAL, create net
 	if [ "$$net" = "dokploy-network" ]; then ext=true; else ext=false; fi; \
 	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ] && [ -f "$$root" ]; then \
-		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
-		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	fi; \
+	for key in DOKPLOY_DATABASE_URL DOKPLOY_POSTGRES_PASSWORD DOKPLOY_POSTGRES_SUPERUSER_PASSWORD DOKPLOY_BETTER_AUTH_SECRET DOKPLOY_ALLOWED_ORIGINS DOKPLOY_BETTER_AUTH_TRUSTED_ORIGINS; do \
+		value="$$(file_get "$$envf" "$$key")"; \
+		case "$$value" in ""|ChangeMe|*'***'*) echo "Error: set $$key in $$envf" >&2; exit 1;; esac; \
+	done; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"
 	@# Create network if it doesn't exist (name matches compose DEFAULT_NETWORK_NAME)
 	@if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$(DEFAULT_NETWORK_NAME)"; then \
@@ -84,6 +84,9 @@ dokploy-setup: ## Ensure dokploy/.env, sync DEFAULT_NETWORK_EXTERNAL, create net
 	fi
 	@if [ "$(DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL)" = "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}"; then \
 		$(DOCKER) volume create "${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}"; \
+	fi
+	@if [ "$(DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL)" = "true" ] && ! $(DOCKER) volume ls | grep -q "${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}"; then \
+		$(DOCKER) volume create "${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}"; \
 	fi
 	@echo "Dokploy env OK ($(DOKPLOY_ENV))."
 

@@ -46,8 +46,10 @@ note() {
 }
 
 container_name() {
-	# podman-compose / docker-compose classic: <project>_<service>_1
-	printf '%s_%s_1' "${PROJECT}" "$1"
+	# Resolve the current Compose container instead of assuming a v1 suffix.
+	local service="$1"
+	runtime ps -q --filter "label=com.docker.compose.project=${PROJECT}" \
+		--filter "label=com.docker.compose.service=${service}" | head -n 1
 }
 
 container_state() {
