@@ -1,0 +1,53 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-rabbitmq-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${RABBITMQ_DATA_VOLUME_NAME:-rabbitmq_data}
+    external: ${RABBITMQ_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${RABBITMQ_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${RABBITMQ_DATA_VOLUME_TYPE:-}
+      o: ${RABBITMQ_DATA_VOLUME_OPTS:-}
+      device: ${RABBITMQ_DATA_VOLUME_PATH:-}
+
+services:
+  broker:
+    image: ${RABBITMQ_IMAGE:-docker.io/library/rabbitmq:4-management-alpine}
+    hostname: ${RABBITMQ_HOSTNAME:-rabbitmq}
+    restart: ${RABBITMQ_RESTART:-unless-stopped}
+    privileged: ${RABBITMQ_PRIVILEGED:-false}
+    env_file:
+      - ${RABBITMQ_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-rabbit}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-ChangeMe}
+      - RABBITMQ_DEFAULT_VHOST=${RABBITMQ_DEFAULT_VHOST:-/}
+    volumes:
+      - data:${RABBITMQ_DATA_VOLUME_DIR:-/var/lib/rabbitmq}:z
+    ports:
+      - published: ${RABBITMQ_AMQP_PUBLISHED_PORT:-5672}
+        target: ${RABBITMQ_AMQP_PORT:-5672}
+        mode: ${RABBITMQ_AMQP_PORT_MODE:-ingress}
+        protocol: ${RABBITMQ_AMQP_PORT_PROTOCOL:-tcp}
+    networks:
+      default:
+        aliases:
+          - ${APP_NAME:-rabbitmq}_broker
+          - ${RABBITMQ_ALIAS:-rabbitmq.broker}
+    deploy:
+      mode: ${RABBITMQ_DEPLOY_MODE:-replicated}
+      replicas: ${RABBITMQ_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${RABBITMQ_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${RABBITMQ_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${RABBITMQ_RESTART_POLICY_CONDITION:-any}
+        delay: ${RABBITMQ_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${RABBITMQ_RESTART_POLICY_MAX_ATTEMPTS:-3}
