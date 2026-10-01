@@ -1,1 +1,41 @@
-docker-compose.yml
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-homepage-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  config:
+    name: ${HOMEPAGE_CONFIG_VOLUME_NAME:-homepage_config}
+    external: ${HOMEPAGE_CONFIG_VOLUME_EXTERNAL:-false}
+    driver: ${HOMEPAGE_CONFIG_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${HOMEPAGE_CONFIG_VOLUME_TYPE:-}
+      o: ${HOMEPAGE_CONFIG_VOLUME_OPTS:-}
+      device: ${HOMEPAGE_CONFIG_VOLUME_PATH:-}
+
+services:
+  homepage:
+    image: ${HOMEPAGE_IMAGE:-ghcr.io/gethomepage/homepage:latest}
+    restart: ${HOMEPAGE_RESTART:-unless-stopped}
+    privileged: ${HOMEPAGE_PRIVILEGED:-false}
+    env_file:
+      - ${HOMEPAGE_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS:-homepage.example.com}
+    volumes:
+      - config:${HOMEPAGE_CONFIG_VOLUME_DIR:-/app/config}:z
+      - ${HOMEPAGE_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    deploy:
+      mode: ${HOMEPAGE_DEPLOY_MODE:-replicated}
+      replicas: ${HOMEPAGE_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HOMEPAGE_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HOMEPAGE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HOMEPAGE_RESTART_POLICY_CONDITION:-any}
+        delay: ${HOMEPAGE_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HOMEPAGE_RESTART_POLICY_MAX_ATTEMPTS:-3}

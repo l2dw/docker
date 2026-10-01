@@ -1,16 +1,17 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-homepage-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  homepage_data:
-    name: ${HOMEPAGE_DATA_VOLUME_NAME:-homepage_data}
-    driver: local
+  config:
+    name: ${HOMEPAGE_CONFIG_VOLUME_NAME:-homepage_config}
+    external: ${HOMEPAGE_CONFIG_VOLUME_EXTERNAL:-false}
+    driver: ${HOMEPAGE_CONFIG_VOLUME_DRIVER:-local}
     driver_opts:
-      type: none
-      o: bind
-      device: ${HOMEPAGE_DATA_HOST_PATH:-/appdata/homepage/config}
+      type: ${HOMEPAGE_CONFIG_VOLUME_TYPE:-}
+      o: ${HOMEPAGE_CONFIG_VOLUME_OPTS:-}
+      device: ${HOMEPAGE_CONFIG_VOLUME_PATH:-}
 
 services:
   homepage:
@@ -23,16 +24,48 @@ services:
       - TZ=${TZ:-America/Montreal}
       - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS:-homepage.example.com}
     volumes:
-      - homepage_data:${HOMEPAGE_DATA_CONTAINER_PATH:-/app/config}:z
-      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - config:${HOMEPAGE_CONFIG_VOLUME_DIR:-/app/config}:z
+      - ${HOMEPAGE_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
     deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - ${HOMEPAGE_PLACEMENT_CONSTRAINTS:-node.role==manager}
-      restart_policy:
-        condition: on-failure
-        delay: 5s
+      mode: ${HOMEPAGE_DEPLOY_MODE:-replicated}
+      replicas: ${HOMEPAGE_DEPLOY_REPLICAS:-1}
       resources:
         limits:
           memory: ${HOMEPAGE_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HOMEPAGE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HOMEPAGE_RESTART_POLICY_CONDITION:-any}
+        delay: ${HOMEPAGE_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HOMEPAGE_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HOMEPAGE_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-homepage}.loadbalancer.server.port=${HOMEPAGE_PORT:-3000}"
+        - "traefik.http.routers.${APP_NAME:-homepage}.entrypoints=${HOMEPAGE_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-homepage}.rule=Host(`${HOMEPAGE_DOMAIN:-homepage.example.com}`) && PathPrefix(`${HOMEPAGE_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-homepage}.service=${APP_NAME:-homepage}"
+        - "traefik.http.routers.${APP_NAME:-homepage}.middlewares=${HOMEPAGE_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-homepage}.tls=${HOMEPAGE_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-homepage}.tls.certresolver=${HOMEPAGE_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${HOMEPAGE_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${HOMEPAGE_HOMEPAGE_NAME:-Homepage}"
+        - "homepage.icon=${HOMEPAGE_HOMEPAGE_ICON:-homepage.png}"
+        - "homepage.href=${HOMEPAGE_APP_URL:-http://homepage.example.com/}"
+        - "homepage.description=${HOMEPAGE_HOMEPAGE_DESCRIPTION:-Application dashboard}"
+        - "homepage.siteMonitor=${HOMEPAGE_HOMEPAGE_SITEMONITOR:-http://homepage:3000}"
+    labels:
+      - "traefik.enable=${HOMEPAGE_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-homepage}.loadbalancer.server.port=${HOMEPAGE_PORT:-3000}"
+      - "traefik.http.routers.${APP_NAME:-homepage}.entrypoints=${HOMEPAGE_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-homepage}.rule=Host(`${HOMEPAGE_DOMAIN:-homepage.example.com}`) && PathPrefix(`${HOMEPAGE_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-homepage}.service=${APP_NAME:-homepage}"
+      - "traefik.http.routers.${APP_NAME:-homepage}.middlewares=${HOMEPAGE_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-homepage}.tls=${HOMEPAGE_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-homepage}.tls.certresolver=${HOMEPAGE_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${HOMEPAGE_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${HOMEPAGE_HOMEPAGE_NAME:-Homepage}"
+      - "homepage.icon=${HOMEPAGE_HOMEPAGE_ICON:-homepage.png}"
+      - "homepage.href=${HOMEPAGE_APP_URL:-http://homepage.example.com/}"
+      - "homepage.description=${HOMEPAGE_HOMEPAGE_DESCRIPTION:-Application dashboard}"
+      - "homepage.siteMonitor=${HOMEPAGE_HOMEPAGE_SITEMONITOR:-http://homepage:3000}"

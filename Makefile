@@ -259,35 +259,6 @@ stack-logs: .check-stack-name ## Follow merged logs from all services (STACK_LOG
 stack-watch-logs: ## Watch merged logs for STACK_NAME (same as stack-logs — kept for wording / scripts)
 	@$(MAKE) stack-logs STACK_NAME="$(STACK_NAME)" STACK_LOG_TAIL="$(STACK_LOG_TAIL)" STACK_LOG_ARGS="$(STACK_LOG_ARGS)"
 
-## —— 🐝 homepage commands ———————————————————————————————————
-HOMEPAGE_STACK_NAME := homepage
-HOMEPAGE_STACK_SERVICES := homepage
-
-homepage-pull-images: ## Pull the Homepage image
-	$(DOCKER) pull $(HOMEPAGE_IMAGE)
-
-homepage-stack-up: homepage-pull-images ## Deploy the Homepage stack
-	$(MAKE) stack-deploy STACK_NAME=$(HOMEPAGE_STACK_NAME)
-
-homepage-stack-down: ## Remove the Homepage stack
-	$(MAKE) stack-rm STACK_NAME=$(HOMEPAGE_STACK_NAME)
-
-homepage-stack-recreate: homepage-stack-down homepage-stack-up ## Recreate the Homepage stack
-
-homepage-stack-logs: ## Show logs of the Homepage stack
-	$(MAKE) stack-logs STACK_NAME=$(HOMEPAGE_STACK_NAME)
-
-homepage-stack-watch-logs: ## Watch logs of the Homepage stack
-	$(MAKE) stack-watch-logs STACK_NAME=$(HOMEPAGE_STACK_NAME)
-
-homepage-stack-debug: ## Debug the Homepage Swarm stack
-	@echo "--- docker stack services ($(HOMEPAGE_STACK_NAME))"
-	@$(DOCKER) stack services $(HOMEPAGE_STACK_NAME) 2>/dev/null || true
-	@echo "--- docker stack ps ($(HOMEPAGE_STACK_NAME))"
-	@$(DOCKER) stack ps $(HOMEPAGE_STACK_NAME) --no-trunc 2>/dev/null || true
-	@echo "--- docker service logs ($(HOMEPAGE_STACK_NAME)_homepage)"
-	@$(DOCKER) service logs $(HOMEPAGE_STACK_NAME)_homepage --tail 50 --timestamps 2>/dev/null || true
-
 ## —— Infrastructure 🐳 ————————————————————————————————————————————————————————————————
 setup: ## Setup infrastructure (see docs/MAKE.md; remote: ssh -t host make setup)
 	@echo "Setting up infrastructure..."
@@ -346,3 +317,6 @@ commit-changes: ## Commit changes to the infrastructure
 	git add .
 	git commit -m "Update infrastructure: $(DATETIME)"
 	git push origin
+
+# Per-project targets (e.g. homepage-stack-up)
+-include homepage/Makefile
