@@ -1,0 +1,47 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-plane-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  admin:
+    image: ${PLANE_ADMIN_IMAGE:-docker.io/makeplane/plane-admin:stable}
+    restart: ${PLANE_RESTART:-unless-stopped}
+    privileged: ${PLANE_PRIVILEGED:-false}
+    env_file:
+      - ${PLANE_ADMIN_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+    networks:
+      - default
+    deploy:
+      mode: ${PLANE_ADMIN_DEPLOY_MODE:-replicated}
+      replicas: ${PLANE_ADMIN_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${PLANE_ADMIN_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PLANE_ADMIN_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PLANE_ADMIN_RESTART_POLICY_CONDITION:-any}
+        delay: ${PLANE_ADMIN_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PLANE_ADMIN_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${PLANE_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-plane}-admin.loadbalancer.server.port=${PLANE_ADMIN_PORT:-3000}"
+        - "traefik.http.routers.${APP_NAME:-plane}-admin.entrypoints=${PLANE_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-plane}-admin.rule=Host(`${PLANE_DOMAIN:-plane.example.com}`) && (Path(`/god-mode`) || PathPrefix(`/god-mode/`))"
+        - "traefik.http.routers.${APP_NAME:-plane}-admin.service=${APP_NAME:-plane}-admin"
+        - "traefik.http.routers.${APP_NAME:-plane}-admin.middlewares=${PLANE_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-plane}-admin.tls=${PLANE_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-plane}-admin.tls.certresolver=${PLANE_TLS_CERTRESOLVER:-letsencrypt}"
+    labels:
+      - "traefik.enable=${PLANE_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-plane}-admin.loadbalancer.server.port=${PLANE_ADMIN_PORT:-3000}"
+      - "traefik.http.routers.${APP_NAME:-plane}-admin.entrypoints=${PLANE_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-plane}-admin.rule=Host(`${PLANE_DOMAIN:-plane.example.com}`) && (Path(`/god-mode`) || PathPrefix(`/god-mode/`))"
+      - "traefik.http.routers.${APP_NAME:-plane}-admin.service=${APP_NAME:-plane}-admin"
+      - "traefik.http.routers.${APP_NAME:-plane}-admin.middlewares=${PLANE_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-plane}-admin.tls=${PLANE_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-plane}-admin.tls.certresolver=${PLANE_TLS_CERTRESOLVER:-letsencrypt}"

@@ -1,0 +1,47 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-plane-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  space:
+    image: ${PLANE_SPACE_IMAGE:-docker.io/makeplane/plane-space:stable}
+    restart: ${PLANE_RESTART:-unless-stopped}
+    privileged: ${PLANE_PRIVILEGED:-false}
+    env_file:
+      - ${PLANE_SPACE_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+    networks:
+      - default
+    deploy:
+      mode: ${PLANE_SPACE_DEPLOY_MODE:-replicated}
+      replicas: ${PLANE_SPACE_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${PLANE_SPACE_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PLANE_SPACE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PLANE_SPACE_RESTART_POLICY_CONDITION:-any}
+        delay: ${PLANE_SPACE_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PLANE_SPACE_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${PLANE_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-plane}-space.loadbalancer.server.port=${PLANE_SPACE_PORT:-3000}"
+        - "traefik.http.routers.${APP_NAME:-plane}-space.entrypoints=${PLANE_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-plane}-space.rule=Host(`${PLANE_DOMAIN:-plane.example.com}`) && (Path(`/spaces`) || PathPrefix(`/spaces/`))"
+        - "traefik.http.routers.${APP_NAME:-plane}-space.service=${APP_NAME:-plane}-space"
+        - "traefik.http.routers.${APP_NAME:-plane}-space.middlewares=${PLANE_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-plane}-space.tls=${PLANE_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-plane}-space.tls.certresolver=${PLANE_TLS_CERTRESOLVER:-letsencrypt}"
+    labels:
+      - "traefik.enable=${PLANE_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-plane}-space.loadbalancer.server.port=${PLANE_SPACE_PORT:-3000}"
+      - "traefik.http.routers.${APP_NAME:-plane}-space.entrypoints=${PLANE_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-plane}-space.rule=Host(`${PLANE_DOMAIN:-plane.example.com}`) && (Path(`/spaces`) || PathPrefix(`/spaces/`))"
+      - "traefik.http.routers.${APP_NAME:-plane}-space.service=${APP_NAME:-plane}-space"
+      - "traefik.http.routers.${APP_NAME:-plane}-space.middlewares=${PLANE_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-plane}-space.tls=${PLANE_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-plane}-space.tls.certresolver=${PLANE_TLS_CERTRESOLVER:-letsencrypt}"

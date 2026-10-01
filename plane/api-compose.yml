@@ -1,0 +1,78 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-plane-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  api:
+    image: ${PLANE_API_IMAGE:-docker.io/makeplane/plane-backend:stable}
+    command: ./bin/docker-entrypoint-api.sh
+    restart: ${PLANE_RESTART:-unless-stopped}
+    privileged: ${PLANE_PRIVILEGED:-false}
+    env_file:
+      - ${PLANE_API_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - WEB_URL=${PLANE_APP_URL:-http://plane.example.com}
+      - DEBUG=${PLANE_DEBUG:-0}
+      - CORS_ALLOWED_ORIGINS=${PLANE_CORS_ALLOWED_ORIGINS:-http://plane.example.com}
+      - GUNICORN_WORKERS=${PLANE_GUNICORN_WORKERS:-1}
+      - USE_MINIO=${PLANE_USE_MINIO:-1}
+      - DATABASE_URL=${PLANE_DATABASE_URL:-postgresql://plane:ChangeMe@postgres:5432/plane}
+      - SECRET_KEY=${PLANE_SECRET_KEY:-ChangeMe}
+      - AMQP_URL=${PLANE_AMQP_URL:-amqp://plane:ChangeMe@rabbitmq:5672/plane}
+      - API_KEY_RATE_LIMIT=${PLANE_API_KEY_RATE_LIMIT:-60/minute}
+      - AUTHENTICATION_RATE_LIMIT=${PLANE_AUTHENTICATION_RATE_LIMIT:-10/minute}
+      - MINIO_ENDPOINT_SSL=${PLANE_MINIO_ENDPOINT_SSL:-0}
+      - LIVE_SERVER_SECRET_KEY=${PLANE_LIVE_SERVER_SECRET_KEY:-ChangeMe}
+      - WEBHOOK_ALLOWED_IPS=${PLANE_WEBHOOK_ALLOWED_IPS:-}
+      - WEBHOOK_ALLOWED_HOSTS=${PLANE_WEBHOOK_ALLOWED_HOSTS:-}
+      - PGHOST=${PLANE_PGHOST:-postgres}
+      - PGDATABASE=${PLANE_PGDATABASE:-plane}
+      - POSTGRES_USER=${PLANE_POSTGRES_USER:-plane}
+      - POSTGRES_PASSWORD=${PLANE_POSTGRES_PASSWORD:-ChangeMe}
+      - POSTGRES_DB=${PLANE_POSTGRES_DB:-plane}
+      - POSTGRES_PORT=${PLANE_POSTGRES_PORT:-5432}
+      - REDIS_HOST=${PLANE_REDIS_HOST:-redis}
+      - REDIS_PORT=${PLANE_REDIS_PORT:-6379}
+      - REDIS_URL=${PLANE_REDIS_URL:-redis://redis:6379/}
+      - AWS_REGION=${PLANE_AWS_REGION:-}
+      - AWS_ACCESS_KEY_ID=${PLANE_AWS_ACCESS_KEY_ID:-access-key}
+      - AWS_SECRET_ACCESS_KEY=${PLANE_AWS_SECRET_ACCESS_KEY:-ChangeMe}
+      - AWS_S3_ENDPOINT_URL=${PLANE_S3_ENDPOINT_URL:-http://minio:9000}
+      - AWS_S3_BUCKET_NAME=${PLANE_S3_BUCKET_NAME:-uploads}
+      - FILE_SIZE_LIMIT=${PLANE_FILE_SIZE_LIMIT:-5242880}
+      - APP_DOMAIN=${PLANE_DOMAIN:-plane.example.com}
+    networks:
+      - default
+    deploy:
+      mode: ${PLANE_API_DEPLOY_MODE:-replicated}
+      replicas: ${PLANE_API_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${PLANE_API_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PLANE_API_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PLANE_API_RESTART_POLICY_CONDITION:-any}
+        delay: ${PLANE_API_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PLANE_API_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${PLANE_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-plane}-api.loadbalancer.server.port=${PLANE_API_PORT:-8000}"
+        - "traefik.http.routers.${APP_NAME:-plane}-api.entrypoints=${PLANE_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-plane}-api.rule=Host(`${PLANE_DOMAIN:-plane.example.com}`) && (Path(`/api`) || PathPrefix(`/api/`) || Path(`/auth`) || PathPrefix(`/auth/`) || Path(`/static`) || PathPrefix(`/static/`))"
+        - "traefik.http.routers.${APP_NAME:-plane}-api.service=${APP_NAME:-plane}-api"
+        - "traefik.http.routers.${APP_NAME:-plane}-api.middlewares=${PLANE_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-plane}-api.tls=${PLANE_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-plane}-api.tls.certresolver=${PLANE_TLS_CERTRESOLVER:-letsencrypt}"
+    labels:
+      - "traefik.enable=${PLANE_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-plane}-api.loadbalancer.server.port=${PLANE_API_PORT:-8000}"
+      - "traefik.http.routers.${APP_NAME:-plane}-api.entrypoints=${PLANE_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-plane}-api.rule=Host(`${PLANE_DOMAIN:-plane.example.com}`) && (Path(`/api`) || PathPrefix(`/api/`) || Path(`/auth`) || PathPrefix(`/auth/`) || Path(`/static`) || PathPrefix(`/static/`))"
+      - "traefik.http.routers.${APP_NAME:-plane}-api.service=${APP_NAME:-plane}-api"
+      - "traefik.http.routers.${APP_NAME:-plane}-api.middlewares=${PLANE_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-plane}-api.tls=${PLANE_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-plane}-api.tls.certresolver=${PLANE_TLS_CERTRESOLVER:-letsencrypt}"
