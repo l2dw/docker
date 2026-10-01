@@ -1,12 +1,17 @@
 networks:
   default:
-    name: ${DEFAULT_NETWORK_NAME:-dokploy-network}
-    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+    name: ${DEFAULT_NETWORK_NAME:-redis-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  redis-data:
-    name: ${REDIS_DATA_VOLUME_NAME:-redis-data}
+  data:
+    name: ${REDIS_DATA_VOLUME_NAME:-redis_data}
     external: ${REDIS_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${REDIS_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${REDIS_DATA_VOLUME_TYPE:-}
+      o: ${REDIS_DATA_VOLUME_OPTS:-}
+      device: ${REDIS_DATA_VOLUME_PATH:-}
 
 services:
   redis:
@@ -16,7 +21,7 @@ services:
     env_file:
       - ${REDIS_ENV_FILE:-.env.example}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-America/Montreal}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     command:
       - redis-server
@@ -25,19 +30,22 @@ services:
       - --requirepass
       - ${REDIS_PASSWORD}
     volumes:
-      - ${REDIS_DATA_DIR:-redis-data}:${REDIS_DATA_CONTAINER_PATH:-/data}
+      - data:${REDIS_DATA_VOLUME_DIR:-/data}:z
     networks:
       default:
         aliases:
+          - ${APP_NAME:-redis}
           - ${REDIS_NETWORK_ALIAS:-dokploy-redis}
     deploy:
       mode: ${REDIS_DEPLOY_MODE:-replicated}
       replicas: ${REDIS_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY_LIMIT:-1G}
       placement:
         constraints:
           - ${REDIS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
-        condition: on-failure
-      resources:
-        limits:
-          memory: ${REDIS_MEMORY_LIMIT:-256M}
+        condition: ${REDIS_RESTART_POLICY_CONDITION:-any}
+        delay: ${REDIS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${REDIS_RESTART_POLICY_MAX_ATTEMPTS:-3}

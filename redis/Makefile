@@ -4,10 +4,11 @@ REDIS_SERVICES_SHORT := redis
 REDIS_ENV := $(REDIS_STACK_NAME)/.env
 REDIS_ENV_EXAMPLE := $(REDIS_STACK_NAME)/.env.example
 REDIS_SECRET_VARS := REDIS_PASSWORD
+NETWORK_DRIVER ?= overlay
 
 redis-pull-images: ## Pull images for the redis stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(REDIS_STACK_NAME)
-redis-setup: ## Ensure redis/.env, generate REDIS_PASSWORD if empty, sync DEFAULT_NETWORK_EXTERNAL
+redis-setup: ## Ensure redis/.env, generate REDIS_PASSWORD, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(REDIS_ENV)'; \
 	exf='$(REDIS_ENV_EXAMPLE)'; \
@@ -46,14 +47,26 @@ redis-setup: ## Ensure redis/.env, generate REDIS_PASSWORD if empty, sync DEFAUL
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
 	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='dokploy-network'; \
+	[ -n "$$net" ] || net='redis-network'; \
 	case "$$net" in \
-		''|dokploy-network) ext=true ;; \
+		dokploy-network) ext=true ;; \
 		*) ext=false ;; \
 	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	echo "redis env OK ($$envf)."
 .redis-setup: redis-setup
 redis-stack-up: .redis-setup ## Deploy the redis stack
@@ -82,7 +95,8 @@ redis-debug-logs: ## Tail recent logs for each redis service
 	done
 redis-compose-upgrade: ## Upgrade the redis compose project
 	$(MAKE) docker-project-upgrade PROJECT_NAME=$(REDIS_STACK_NAME)
-redis-compose-up: .redis-setup ## Deploy redis (compose)
+redis-compose-up: ## Deploy redis (compose)
+	@$(MAKE) redis-setup NETWORK_DRIVER=bridge
 	$(MAKE) docker-project-up PROJECT_NAME=$(REDIS_STACK_NAME)
 redis-compose-down: ## Remove redis (compose)
 	$(MAKE) docker-project-down PROJECT_NAME=$(REDIS_STACK_NAME)
