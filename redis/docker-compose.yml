@@ -14,7 +14,7 @@ volumes:
       device: ${REDIS_DATA_VOLUME_PATH:-}
 
 services:
-  redis:
+  server:
     image: ${REDIS_IMAGE:-docker.io/library/redis:7-alpine}
     restart: ${REDIS_RESTART:-unless-stopped}
     privileged: ${REDIS_PRIVILEGED:-false}
@@ -34,8 +34,8 @@ services:
     networks:
       default:
         aliases:
-          - ${APP_NAME:-redis}
-          - ${REDIS_NETWORK_ALIAS:-dokploy-redis}
+          - ${APP_NAME:-redis}_server
+          - ${REDIS_NETWORK_ALIAS:-redis.server}
     deploy:
       mode: ${REDIS_DEPLOY_MODE:-replicated}
       replicas: ${REDIS_DEPLOY_REPLICAS:-1}

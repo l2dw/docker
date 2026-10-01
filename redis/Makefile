@@ -1,6 +1,6 @@
 ## —— 🐝 redis commands ———————————————————————————————————
 REDIS_STACK_NAME := redis
-REDIS_SERVICES_SHORT := redis
+REDIS_SERVICES_SHORT := server
 REDIS_ENV := $(REDIS_STACK_NAME)/.env
 REDIS_ENV_EXAMPLE := $(REDIS_STACK_NAME)/.env.example
 REDIS_SECRET_VARS := REDIS_PASSWORD
