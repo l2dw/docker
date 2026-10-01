@@ -1,0 +1,62 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-app-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${APP_DATA_VOLUME_NAME:-app_data}
+    external: ${APP_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${APP_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${APP_DATA_VOLUME_TYPE:-}
+      o: ${APP_DATA_VOLUME_OPTS:-}
+      device: ${APP_DATA_VOLUME_PATH:-}
+
+services:
+  app:
+    image: ${APP_IMAGE:-docker.io/library/alpine:latest}
+    restart: ${APP_RESTART:-unless-stopped}
+    privileged: ${APP_PRIVILEGED:-false}
+    env_file:
+      - ${APP_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+    volumes:
+      - data:${APP_DATA_VOLUME_DIR:-/data}:z
+    networks:
+      default:
+        aliases:
+          - ${APP_NAME:-app}
+          - ${APP_ALIAS:-app}
+    deploy:
+      mode: ${APP_DEPLOY_MODE:-replicated}
+      replicas: ${APP_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${APP_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${APP_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${APP_RESTART_POLICY_CONDITION:-any}
+        delay: ${APP_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${APP_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.enabled=${APP_HOMEPAGE_ENABLED:-true}"
+        - "homepage.group=${APP_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${APP_HOMEPAGE_NAME:-App}"
+        - "homepage.icon=${APP_HOMEPAGE_ICON:-app.png}"
+        - "homepage.href=${APP_APP_URL:-}"
+        - "homepage.description=${APP_HOMEPAGE_DESCRIPTION:-Application dashboard}"
+        - "homepage.siteMonitor=${APP_HOMEPAGE_SITEMONITOR:-http://app:3000}"
+        - "homepage.ping=${APP_HOMEPAGE_PING:-}"
+    labels:
+      - "homepage.enabled=${APP_HOMEPAGE_ENABLED:-true}"
+      - "homepage.group=${APP_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${APP_HOMEPAGE_NAME:-App}"
+      - "homepage.icon=${APP_HOMEPAGE_ICON:-app.png}"
+      - "homepage.href=${APP_APP_URL:-}"
+      - "homepage.description=${APP_HOMEPAGE_DESCRIPTION:-Application dashboard}"
+      - "homepage.siteMonitor=${APP_HOMEPAGE_SITEMONITOR:-http://app:3000}"
+      - "homepage.ping=${APP_HOMEPAGE_PING:-}"
