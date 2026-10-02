@@ -1,18 +1,15 @@
 ## —— 🐝 Infisical commands ———————————————————————————————————
 INFISICAL_STACK_NAME := infisical
-INFISICAL_SERVICES_SHORT := backend
+INFISICAL_SERVICES_SHORT := infisical
 INFISICAL_ENV := $(INFISICAL_STACK_NAME)/.env
 INFISICAL_ENV_EXAMPLE := $(INFISICAL_STACK_NAME)/.env.example
-# Generated with openssl when empty (never invented here).
 INFISICAL_SECRET_VARS := INFISICAL_ENCRYPTION_KEY INFISICAL_AUTH_SECRET
-# Required but site-specific — warn only (do not invent).
-INFISICAL_NOTIFY_VARS := INFISICAL_DOMAIN INFISICAL_SITE_URL INFISICAL_DB_CONNECTION_URI INFISICAL_REDIS_URL
-INFISICAL_NETWORK_NAME := infisical-network
+INFISICAL_NOTIFY_VARS := INFISICAL_DOMAIN INFISICAL_SITE_URL INFISICAL_APP_URL INFISICAL_DB_CONNECTION_URI INFISICAL_REDIS_URL
+NETWORK_DRIVER ?= overlay
 
 infisical-pull-images: ## Pull images for the infisical stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(INFISICAL_STACK_NAME)
-
-infisical-setup: ## Ensure infisical/.env, generate secrets, warn on example.com / unreplaced <DB_HOST>/<REDIS_HOST>
+infisical-setup: ## Ensure infisical/.env, generate secrets, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(INFISICAL_ENV)'; \
 	exf='$(INFISICAL_ENV_EXAMPLE)'; \
@@ -36,6 +33,7 @@ infisical-setup: ## Ensure infisical/.env, generate secrets, warn on example.com
 			INFISICAL_AUTH_SECRET) printf '%s' '$(INFISICAL_AUTH_SECRET)' ;; \
 			INFISICAL_DOMAIN) printf '%s' '$(INFISICAL_DOMAIN)' ;; \
 			INFISICAL_SITE_URL) printf '%s' '$(INFISICAL_SITE_URL)' ;; \
+			INFISICAL_APP_URL) printf '%s' '$(INFISICAL_APP_URL)' ;; \
 			INFISICAL_DB_CONNECTION_URI) printf '%s' '$(INFISICAL_DB_CONNECTION_URI)' ;; \
 			INFISICAL_REDIS_URL) printf '%s' '$(INFISICAL_REDIS_URL)' ;; \
 		esac; \
@@ -82,23 +80,35 @@ infisical-setup: ## Ensure infisical/.env, generate secrets, warn on example.com
 		fi; \
 		case "$$k:$$v" in \
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
-			INFISICAL_DB_CONNECTION_URI:*'<DB_HOST>'*) echo "Warning: $$k still contains <DB_HOST> — point it at the external PostgreSQL server." >&2 ;; \
+			INFISICAL_DB_CONNECTION_URI:*dbhost*) echo "Warning: $$k still contains dbhost — point it at the external PostgreSQL server." >&2 ;; \
 			INFISICAL_DB_CONNECTION_URI:*ChangeMe*) echo "Warning: $$k still contains ChangeMe — set the real DB password." >&2 ;; \
-			INFISICAL_REDIS_URL:*'<REDIS_HOST>'*) echo "Warning: $$k still contains <REDIS_HOST> — point it at the external Redis server." >&2 ;; \
+			INFISICAL_REDIS_URL:*redishost*) echo "Warning: $$k still contains redishost — point it at the external Redis server." >&2 ;; \
 		esac; \
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='$(INFISICAL_NETWORK_NAME)'; \
-	case "$$net" in ''|'$(INFISICAL_NETWORK_NAME)') ext=false ;; \
-		*) ext=true ;; \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='infisical-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
 	esac; \
 	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; fi; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
-	echo "Infisical env OK ($$envf)."
+	echo "infisical env OK ($$envf)."
 .infisical-setup: infisical-setup
 infisical-stack-up: .infisical-setup ## Deploy the infisical stack
 	$(MAKE) stack-deploy STACK_NAME=$(INFISICAL_STACK_NAME)
@@ -124,9 +134,8 @@ infisical-debug-logs: ## Tail recent logs for each infisical service
 		$(DOCKER) service logs "$(INFISICAL_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
-infisical-compose-upgrade: ## Upgrade the infisical compose project
-	$(MAKE) docker-project-upgrade PROJECT_NAME=$(INFISICAL_STACK_NAME)
-infisical-compose-up: .infisical-setup ## Deploy infisical (compose)
+infisical-compose-up: ## Deploy infisical (compose)
+	@$(MAKE) infisical-setup NETWORK_DRIVER=bridge
 	$(MAKE) docker-project-up PROJECT_NAME=$(INFISICAL_STACK_NAME)
 infisical-compose-down: ## Remove infisical (compose)
 	$(MAKE) docker-project-down PROJECT_NAME=$(INFISICAL_STACK_NAME)
