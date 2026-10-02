@@ -107,6 +107,11 @@ services:
       nofile:
         soft: ${SIEM_ES_NOFILE_SOFT:-65536}
         hard: ${SIEM_ES_NOFILE_HARD:-65536}
+    ports:
+      - published: ${SIEM_ES_HTTP_PUBLISHED_PORT:-9200}
+        target: ${SIEM_ES_HTTP_PORT:-9200}
+        mode: ${SIEM_ES_HTTP_PORT_MODE:-ingress}
+        protocol: ${SIEM_ES_HTTP_PORT_PROTOCOL:-tcp}
     networks:
       - default
     deploy:
@@ -123,15 +128,6 @@ services:
         delay: ${SIEM_ES_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${SIEM_ES_RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
-        - "traefik.enable=${SIEM_ES_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.middlewares.${APP_NAME:-siem}-es-strip.stripprefix.prefixes=${SIEM_ES_BASE_PATH:-/elasticsearch}"
-        - "traefik.http.services.${APP_NAME:-siem}-es.loadbalancer.server.port=${SIEM_ES_HTTP_PORT:-9200}"
-        - "traefik.http.routers.${APP_NAME:-siem}-es.entrypoints=${SIEM_ES_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.${APP_NAME:-siem}-es.rule=Host(`${SIEM_ES_DOMAIN:-siem.example.com}`) && PathPrefix(`${SIEM_ES_BASE_PATH:-/elasticsearch}`)"
-        - "traefik.http.routers.${APP_NAME:-siem}-es.service=${APP_NAME:-siem}-es"
-        - "traefik.http.routers.${APP_NAME:-siem}-es.middlewares=${SIEM_ES_MIDDLEWARES:-siem-es-strip}"
-        - "traefik.http.routers.${APP_NAME:-siem}-es.tls=${SIEM_ES_TLS_ENABLED:-false}"
-        - "traefik.http.routers.${APP_NAME:-siem}-es.tls.certresolver=${SIEM_ES_TLS_CERTRESOLVER:-letsencrypt}"
         - "homepage.group=${SIEM_ES_HOMEPAGE_GROUP:-SIEM}"
         - "homepage.name=${SIEM_ES_HOMEPAGE_NAME:-Elasticsearch}"
         - "homepage.icon=${SIEM_ES_HOMEPAGE_ICON:-elasticsearch.png}"
@@ -139,15 +135,6 @@ services:
         - "homepage.description=${SIEM_ES_HOMEPAGE_DESCRIPTION:-SIEM Elasticsearch}"
         - "homepage.siteMonitor=${SIEM_ES_HOMEPAGE_SITEMONITOR:-http://elasticsearch:9200}"
     labels:
-      - "traefik.enable=${SIEM_ES_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.middlewares.${APP_NAME:-siem}-es-strip.stripprefix.prefixes=${SIEM_ES_BASE_PATH:-/elasticsearch}"
-      - "traefik.http.services.${APP_NAME:-siem}-es.loadbalancer.server.port=${SIEM_ES_HTTP_PORT:-9200}"
-      - "traefik.http.routers.${APP_NAME:-siem}-es.entrypoints=${SIEM_ES_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_NAME:-siem}-es.rule=Host(`${SIEM_ES_DOMAIN:-siem.example.com}`) && PathPrefix(`${SIEM_ES_BASE_PATH:-/elasticsearch}`)"
-      - "traefik.http.routers.${APP_NAME:-siem}-es.service=${APP_NAME:-siem}-es"
-      - "traefik.http.routers.${APP_NAME:-siem}-es.middlewares=${SIEM_ES_MIDDLEWARES:-siem-es-strip}"
-      - "traefik.http.routers.${APP_NAME:-siem}-es.tls=${SIEM_ES_TLS_ENABLED:-false}"
-      - "traefik.http.routers.${APP_NAME:-siem}-es.tls.certresolver=${SIEM_ES_TLS_CERTRESOLVER:-letsencrypt}"
       - "homepage.group=${SIEM_ES_HOMEPAGE_GROUP:-SIEM}"
       - "homepage.name=${SIEM_ES_HOMEPAGE_NAME:-Elasticsearch}"
       - "homepage.icon=${SIEM_ES_HOMEPAGE_ICON:-elasticsearch.png}"
@@ -179,6 +166,11 @@ services:
     volumes:
       - kb_data:${SIEM_KB_DATA_VOLUME_DIR:-/usr/share/kibana/data}:z
       - certs:${SIEM_KB_CERTS_VOLUME_DIR:-/usr/share/kibana/config/certs}:z
+    ports:
+      - published: ${SIEM_KB_HTTP_PUBLISHED_PORT:-5601}
+        target: ${SIEM_KB_HTTP_PORT:-5601}
+        mode: ${SIEM_KB_HTTP_PORT_MODE:-ingress}
+        protocol: ${SIEM_KB_HTTP_PORT_PROTOCOL:-tcp}
     networks:
       - default
     deploy:
@@ -195,14 +187,6 @@ services:
         delay: ${SIEM_KB_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${SIEM_KB_RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
-        - "traefik.enable=${SIEM_KB_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.services.${APP_NAME:-siem}-kb.loadbalancer.server.port=${SIEM_KB_HTTP_PORT:-5601}"
-        - "traefik.http.routers.${APP_NAME:-siem}-kb.entrypoints=${SIEM_KB_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.${APP_NAME:-siem}-kb.rule=Host(`${SIEM_KB_DOMAIN:-siem.example.com}`) && PathPrefix(`${SIEM_KB_BASE_PATH:-/kibana}`)"
-        - "traefik.http.routers.${APP_NAME:-siem}-kb.service=${APP_NAME:-siem}-kb"
-        - "traefik.http.routers.${APP_NAME:-siem}-kb.middlewares=${SIEM_KB_MIDDLEWARES:-}"
-        - "traefik.http.routers.${APP_NAME:-siem}-kb.tls=${SIEM_KB_TLS_ENABLED:-false}"
-        - "traefik.http.routers.${APP_NAME:-siem}-kb.tls.certresolver=${SIEM_KB_TLS_CERTRESOLVER:-letsencrypt}"
         - "homepage.group=${SIEM_KB_HOMEPAGE_GROUP:-SIEM}"
         - "homepage.name=${SIEM_KB_HOMEPAGE_NAME:-Kibana}"
         - "homepage.icon=${SIEM_KB_HOMEPAGE_ICON:-kibana.png}"
@@ -210,14 +194,6 @@ services:
         - "homepage.description=${SIEM_KB_HOMEPAGE_DESCRIPTION:-SIEM Kibana}"
         - "homepage.siteMonitor=${SIEM_KB_HOMEPAGE_SITEMONITOR:-http://kibana:5601}"
     labels:
-      - "traefik.enable=${SIEM_KB_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.services.${APP_NAME:-siem}-kb.loadbalancer.server.port=${SIEM_KB_HTTP_PORT:-5601}"
-      - "traefik.http.routers.${APP_NAME:-siem}-kb.entrypoints=${SIEM_KB_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_NAME:-siem}-kb.rule=Host(`${SIEM_KB_DOMAIN:-siem.example.com}`) && PathPrefix(`${SIEM_KB_BASE_PATH:-/kibana}`)"
-      - "traefik.http.routers.${APP_NAME:-siem}-kb.service=${APP_NAME:-siem}-kb"
-      - "traefik.http.routers.${APP_NAME:-siem}-kb.middlewares=${SIEM_KB_MIDDLEWARES:-}"
-      - "traefik.http.routers.${APP_NAME:-siem}-kb.tls=${SIEM_KB_TLS_ENABLED:-false}"
-      - "traefik.http.routers.${APP_NAME:-siem}-kb.tls.certresolver=${SIEM_KB_TLS_CERTRESOLVER:-letsencrypt}"
       - "homepage.group=${SIEM_KB_HOMEPAGE_GROUP:-SIEM}"
       - "homepage.name=${SIEM_KB_HOMEPAGE_NAME:-Kibana}"
       - "homepage.icon=${SIEM_KB_HOMEPAGE_ICON:-kibana.png}"
