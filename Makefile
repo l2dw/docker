@@ -354,3 +354,4 @@ s3-client-compose-logs: ## Show logs of the s3-client stack
 	make docker-project-logs PROJECT_NAME=$(S3_CLIENT_STACK_NAME)
 s3-client-compose-watch-logs: ## Watch logs of the s3-client stack
 	make docker-project-watch PROJECT_NAME=$(S3_CLIENT_STACK_NAME)
+-include s3-client/Makefile
