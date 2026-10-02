@@ -1,0 +1,87 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-cockroach-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${COCKROACH_DATA_VOLUME_NAME:-cockroach_data}
+    external: ${COCKROACH_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${COCKROACH_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${COCKROACH_DATA_VOLUME_TYPE:-}
+      o: ${COCKROACH_DATA_VOLUME_OPTS:-}
+      device: ${COCKROACH_DATA_VOLUME_PATH:-}
+  certs:
+    name: ${COCKROACH_CERTS_VOLUME_NAME:-cockroach_certs}
+    external: ${COCKROACH_CERTS_VOLUME_EXTERNAL:-false}
+    driver: ${COCKROACH_CERTS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${COCKROACH_CERTS_VOLUME_TYPE:-}
+      o: ${COCKROACH_CERTS_VOLUME_OPTS:-}
+      device: ${COCKROACH_CERTS_VOLUME_PATH:-}
+
+services:
+  cockroach:
+    image: ${COCKROACH_IMAGE:-docker.io/cockroachdb/cockroach:v24.2.4}
+    hostname: ${COCKROACH_HOSTNAME:-cockroach}
+    command:
+      - start-single-node
+      - --accept-sql-without-tls
+      - --http-addr
+      - 0.0.0.0:8080
+      - --advertise-addr
+      - ${COCKROACH_ADVERTISE_ADDR:-cockroach}
+    restart: ${COCKROACH_RESTART:-unless-stopped}
+    privileged: ${COCKROACH_PRIVILEGED:-false}
+    env_file:
+      - ${COCKROACH_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - COCKROACH_DATABASE=${COCKROACH_DATABASE:-defaultdb}
+      - COCKROACH_USER=${COCKROACH_USER:-root}
+      - COCKROACH_PASSWORD=${COCKROACH_PASSWORD:-ChangeMe}
+    volumes:
+      - data:${COCKROACH_DATA_VOLUME_DIR:-/cockroach/cockroach-data}:z
+      - certs:${COCKROACH_CERTS_VOLUME_DIR:-/cockroach/certs}:z
+    healthcheck:
+      test: ["CMD", "/cockroach/cockroach", "node", "status", "--insecure", "--host=localhost:26257"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - published: ${COCKROACH_SQL_PUBLISHED_PORT:-26257}
+        target: ${COCKROACH_SQL_PORT:-26257}
+        mode: ${COCKROACH_SQL_PORT_MODE:-ingress}
+        protocol: ${COCKROACH_SQL_PORT_PROTOCOL:-tcp}
+    networks:
+      default:
+        aliases:
+          - ${COCKROACH_ALIAS:-cockroach}
+    deploy:
+      mode: ${COCKROACH_DEPLOY_MODE:-replicated}
+      replicas: ${COCKROACH_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${COCKROACH_MEMORY_LIMIT:-2G}
+      placement:
+        constraints:
+          - ${COCKROACH_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${COCKROACH_RESTART_POLICY_CONDITION:-any}
+        delay: ${COCKROACH_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${COCKROACH_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${COCKROACH_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${COCKROACH_HOMEPAGE_NAME:-CockroachDB}"
+        - "homepage.icon=${COCKROACH_HOMEPAGE_ICON:-cockroachdb.png}"
+        - "homepage.href=${COCKROACH_APP_URL:-http://cockroach.example.com/}"
+        - "homepage.description=${COCKROACH_HOMEPAGE_DESCRIPTION:-Distributed SQL}"
+        - "homepage.siteMonitor=${COCKROACH_HOMEPAGE_SITEMONITOR:-http://cockroach:8080/health}"
+    labels:
+      - "homepage.group=${COCKROACH_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${COCKROACH_HOMEPAGE_NAME:-CockroachDB}"
+      - "homepage.icon=${COCKROACH_HOMEPAGE_ICON:-cockroachdb.png}"
+      - "homepage.href=${COCKROACH_APP_URL:-http://cockroach.example.com/}"
+      - "homepage.description=${COCKROACH_HOMEPAGE_DESCRIPTION:-Distributed SQL}"
+      - "homepage.siteMonitor=${COCKROACH_HOMEPAGE_SITEMONITOR:-http://cockroach:8080/health}"
