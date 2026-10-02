@@ -4,47 +4,60 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  siyuan_workspace:
-    name: ${SIYUAN_WORKSPACE_VOLUME_NAME:-siyuan_workspace}
-    external: ${SIYUAN_WORKSPACE_VOLUME_EXTERNAL:-false}
-    driver: ${SIYUAN_WORKSPACE_VOLUME_DRIVER:-local}
-    # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
+  data:
+    name: ${SIYUAN_DATA_VOLUME_NAME:-siyuan_workspace}
+    external: ${SIYUAN_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${SIYUAN_DATA_VOLUME_DRIVER:-local}
     driver_opts:
-      type: ${SIYUAN_WORKSPACE_VOLUME_DRIVER_TYPE:-}
-      o: ${SIYUAN_WORKSPACE_VOLUME_DRIVER_O:-}
-      device: ${SIYUAN_WORKSPACE_VOLUME_DRIVER_DEVICE:-}
+      type: ${SIYUAN_DATA_VOLUME_TYPE:-}
+      o: ${SIYUAN_DATA_VOLUME_OPTS:-}
+      device: ${SIYUAN_DATA_VOLUME_PATH:-}
 
 services:
   siyuan:
-    image: ${SIYUAN_IMAGE:-docker.io/b3log/siyuan:latest}
+    image: ${SIYUAN_IMAGE:-docker.io/b3log/siyuan:v3.8.6}
+    hostname: ${SIYUAN_HOSTNAME:-siyuan}
     command:
       - serve
-      - --workspace=${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}
+      - --workspace=${SIYUAN_DATA_VOLUME_DIR:-/siyuan/workspace}
     restart: ${SIYUAN_RESTART:-unless-stopped}
     privileged: ${SIYUAN_PRIVILEGED:-false}
-    networks:
-      default:
-        aliases:
-          - ${APP_NAME:-siyuan}
-    volumes:
-      - ${SIYUAN_WORKSPACE_HOST_PATH:-siyuan_workspace}:${SIYUAN_WORKSPACE_CONTAINER_PATH:-/siyuan/workspace}:z
     env_file:
       - ${SIYUAN_ENV_FILE:-.env.example}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-America/Montreal}
       - PUID=${SIYUAN_PUID:-1000}
       - PGID=${SIYUAN_PGID:-1000}
       - SIYUAN_LANG=${SIYUAN_LANG:-en}
       - SIYUAN_ACCESS_AUTH_CODE=${SIYUAN_ACCESS_AUTH_CODE:-ChangeMe}
+    volumes:
+      - data:${SIYUAN_DATA_VOLUME_DIR:-/siyuan/workspace}:z
+    networks:
+      - default
     deploy:
       mode: ${SIYUAN_DEPLOY_MODE:-replicated}
       replicas: ${SIYUAN_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${SIYUAN_MEMORY_LIMIT:-1G}
       placement:
         constraints:
           - ${SIYUAN_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
-        condition: on-failure
-        delay: 5s
-      resources:
-        limits:
-          memory: ${SIYUAN_MEMORY_LIMIT:-1G}
+        condition: ${SIYUAN_RESTART_POLICY_CONDITION:-any}
+        delay: ${SIYUAN_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${SIYUAN_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${SIYUAN_HOMEPAGE_GROUP:-Notes}"
+        - "homepage.name=${SIYUAN_HOMEPAGE_NAME:-SiYuan}"
+        - "homepage.icon=${SIYUAN_HOMEPAGE_ICON:-siyuan.png}"
+        - "homepage.href=${SIYUAN_APP_URL:-http://siyuan.example.com/}"
+        - "homepage.description=${SIYUAN_HOMEPAGE_DESCRIPTION:-Local-first knowledge base}"
+        - "homepage.siteMonitor=${SIYUAN_HOMEPAGE_SITEMONITOR:-http://siyuan:6806}"
+    labels:
+      - "homepage.group=${SIYUAN_HOMEPAGE_GROUP:-Notes}"
+      - "homepage.name=${SIYUAN_HOMEPAGE_NAME:-SiYuan}"
+      - "homepage.icon=${SIYUAN_HOMEPAGE_ICON:-siyuan.png}"
+      - "homepage.href=${SIYUAN_APP_URL:-http://siyuan.example.com/}"
+      - "homepage.description=${SIYUAN_HOMEPAGE_DESCRIPTION:-Local-first knowledge base}"
+      - "homepage.siteMonitor=${SIYUAN_HOMEPAGE_SITEMONITOR:-http://siyuan:6806}"

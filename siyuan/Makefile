@@ -3,11 +3,13 @@ SIYUAN_STACK_NAME := siyuan
 SIYUAN_SERVICES_SHORT := siyuan
 SIYUAN_ENV := $(SIYUAN_STACK_NAME)/.env
 SIYUAN_ENV_EXAMPLE := $(SIYUAN_STACK_NAME)/.env.example
-SIYUAN_NOTIFY_VARS := SIYUAN_DOMAIN SIYUAN_ACCESS_AUTH_CODE
+SIYUAN_SECRET_VARS := SIYUAN_ACCESS_AUTH_CODE
+SIYUAN_NOTIFY_VARS := SIYUAN_DOMAIN SIYUAN_APP_URL
+NETWORK_DRIVER ?= overlay
 
 siyuan-pull-images: ## Pull images for the siyuan stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(SIYUAN_STACK_NAME)
-siyuan-setup: ## Ensure siyuan/.env, generate ACCESS_AUTH_CODE secret, set DEFAULT_NETWORK_NAME=siyuan-network / EXTERNAL=false, warn on example.com / ChangeMe
+siyuan-setup: ## Ensure siyuan/.env, generate auth code, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(SIYUAN_ENV)'; \
 	exf='$(SIYUAN_ENV_EXAMPLE)'; \
@@ -27,10 +29,28 @@ siyuan-setup: ## Ensure siyuan/.env, generate ACCESS_AUTH_CODE secret, set DEFAU
 	}; \
 	make_get() { \
 		case $$1 in \
-			SIYUAN_DOMAIN) printf '%s' '$(SIYUAN_DOMAIN)' ;; \
 			SIYUAN_ACCESS_AUTH_CODE) printf '%s' '$(SIYUAN_ACCESS_AUTH_CODE)' ;; \
+			SIYUAN_DOMAIN) printf '%s' '$(SIYUAN_DOMAIN)' ;; \
+			SIYUAN_APP_URL) printf '%s' '$(SIYUAN_APP_URL)' ;; \
 		esac; \
 	}; \
+	is_placeholder() { \
+		case "$$1" in ""|ChangeMe) return 0 ;; *) return 1 ;; esac; \
+	}; \
+	for k in $(SIYUAN_SECRET_VARS); do \
+		v=$$(make_get "$$k"); \
+		[ -n "$$v" ] || v=$$(file_get "$$envf" "$$k"); \
+		[ -n "$$v" ] || v=$$(file_get "$$root" "$$k"); \
+		if is_placeholder "$$v"; then \
+			if ! command -v openssl >/dev/null 2>&1; then \
+				echo "Error: $$k needs a value and openssl is not available." >&2; exit 1; \
+			fi; \
+			v=$$(openssl rand -hex 16); \
+			upsert "$$envf" "$$k" "$$v"; \
+			if [ -n "$$root" ]; then upsert "$$root" "$$k" "$$v"; fi; \
+			echo "Generated $$k → $$envf (and $$root)."; \
+		fi; \
+	done; \
 	missing=0; \
 	for k in $(SIYUAN_NOTIFY_VARS); do \
 		from_make=$$(make_get "$$k"); \
@@ -49,34 +69,32 @@ siyuan-setup: ## Ensure siyuan/.env, generate ACCESS_AUTH_CODE secret, set DEFAU
 		fi; \
 		case "$$v" in \
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
-			*ChangeMe*) echo "Warning: $$k still contains ChangeMe — set a real password in $$envf" >&2 ;; \
 		esac; \
 	done; \
-	sk=$$(make_get SIYUAN_ACCESS_AUTH_CODE); \
-	[ -n "$$sk" ] || sk=$$(file_get "$$envf" SIYUAN_ACCESS_AUTH_CODE); \
-	[ -n "$$sk" ] || sk=$$(file_get "$$root" SIYUAN_ACCESS_AUTH_CODE); \
-	if [ -z "$$sk" ] || [ "$$sk" = ChangeMe ]; then \
-		sk=$$(openssl rand -hex 16); \
-		upsert "$$envf" SIYUAN_ACCESS_AUTH_CODE "$$sk"; \
-		if [ -n "$$root" ]; then upsert "$$root" SIYUAN_ACCESS_AUTH_CODE "$$sk"; fi; \
-		echo "Generated SIYUAN_ACCESS_AUTH_CODE → $$envf"; \
-	elif [ -n "$$from_make" ]; then \
-		upsert "$$envf" SIYUAN_ACCESS_AUTH_CODE "$$from_make"; \
-		if [ -n "$$root" ]; then upsert "$$root" SIYUAN_ACCESS_AUTH_CODE "$$from_make"; fi; \
-	fi; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
 	[ -n "$$net" ] || net='siyuan-network'; \
 	case "$$net" in \
-		siyuan-network) ext=false ;; \
+		dokploy-network) ext=true ;; \
 		*) ext=false ;; \
 	esac; \
 	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; fi; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
-	echo "SiYuan env OK ($$envf)."
+	echo "siyuan env OK ($$envf)."
 .siyuan-setup: siyuan-setup
 siyuan-stack-up: .siyuan-setup ## Deploy the siyuan stack
 	$(MAKE) stack-deploy STACK_NAME=$(SIYUAN_STACK_NAME)
@@ -102,9 +120,8 @@ siyuan-debug-logs: ## Tail recent logs for each siyuan service
 		$(DOCKER) service logs "$(SIYUAN_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
-siyuan-compose-upgrade: ## Upgrade the siyuan compose project
-	$(MAKE) docker-project-upgrade PROJECT_NAME=$(SIYUAN_STACK_NAME)
-siyuan-compose-up: .siyuan-setup ## Deploy siyuan (compose)
+siyuan-compose-up: ## Deploy siyuan (compose)
+	@$(MAKE) siyuan-setup NETWORK_DRIVER=bridge
 	$(MAKE) docker-project-up PROJECT_NAME=$(SIYUAN_STACK_NAME)
 siyuan-compose-down: ## Remove siyuan (compose)
 	$(MAKE) docker-project-down PROJECT_NAME=$(SIYUAN_STACK_NAME)
