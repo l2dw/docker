@@ -79,7 +79,7 @@ services:
         - "homepage.group=${ELASTICSEARCH_HOMEPAGE_GROUP:-Search}"
         - "homepage.name=${ELASTICSEARCH_HOMEPAGE_NAME:-Elasticsearch}"
         - "homepage.icon=${ELASTICSEARCH_HOMEPAGE_ICON:-elasticsearch.png}"
-        - "homepage.href=${ELASTICSEARCH_APP_URL:-http://elasticsearch.example.com/elasticsearch}"
+        - "homepage.href=${ELASTICSEARCH_HOMEPAGE_URL:-}"
         - "homepage.description=${ELASTICSEARCH_HOMEPAGE_DESCRIPTION:-Elasticsearch HTTP}"
         - "homepage.siteMonitor=${ELASTICSEARCH_HOMEPAGE_SITEMONITOR:-http://elasticsearch:9200}"
     labels:
@@ -96,6 +96,6 @@ services:
       - "homepage.group=${ELASTICSEARCH_HOMEPAGE_GROUP:-Search}"
       - "homepage.name=${ELASTICSEARCH_HOMEPAGE_NAME:-Elasticsearch}"
       - "homepage.icon=${ELASTICSEARCH_HOMEPAGE_ICON:-elasticsearch.png}"
-      - "homepage.href=${ELASTICSEARCH_APP_URL:-http://elasticsearch.example.com/elasticsearch}"
+      - "homepage.href=${ELASTICSEARCH_HOMEPAGE_URL:-}"
       - "homepage.description=${ELASTICSEARCH_HOMEPAGE_DESCRIPTION:-Elasticsearch HTTP}"
       - "homepage.siteMonitor=${ELASTICSEARCH_HOMEPAGE_SITEMONITOR:-http://elasticsearch:9200}"
