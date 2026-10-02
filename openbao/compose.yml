@@ -1,0 +1,69 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-openbao-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${OPENBAO_DATA_VOLUME_NAME:-openbao_data}
+    external: ${OPENBAO_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${OPENBAO_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${OPENBAO_DATA_VOLUME_TYPE:-}
+      o: ${OPENBAO_DATA_VOLUME_OPTS:-}
+      device: ${OPENBAO_DATA_VOLUME_PATH:-}
+
+services:
+  openbao:
+    image: ${OPENBAO_IMAGE:-docker.io/openbao/openbao:2.7.1}
+    hostname: ${OPENBAO_HOSTNAME:-openbao}
+    # Persistent file storage (not -dev). Init + unseal required after first boot — see README.
+    command:
+      - server
+    restart: ${OPENBAO_RESTART:-unless-stopped}
+    privileged: ${OPENBAO_PRIVILEGED:-false}
+    env_file:
+      - ${OPENBAO_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - BAO_API_ADDR=${OPENBAO_API_ADDR:-http://openbao.example.com}
+      - BAO_LOCAL_CONFIG=${OPENBAO_LOCAL_CONFIG}
+    volumes:
+      - data:${OPENBAO_DATA_VOLUME_DIR:-/openbao/file}:z
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O /dev/null "http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200" || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - default
+    deploy:
+      mode: ${OPENBAO_DEPLOY_MODE:-replicated}
+      replicas: ${OPENBAO_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${OPENBAO_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${OPENBAO_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${OPENBAO_RESTART_POLICY_CONDITION:-any}
+        delay: ${OPENBAO_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${OPENBAO_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${OPENBAO_HOMEPAGE_GROUP:-Security}"
+        - "homepage.name=${OPENBAO_HOMEPAGE_NAME:-OpenBao}"
+        - "homepage.icon=${OPENBAO_HOMEPAGE_ICON:-vault.png}"
+        - "homepage.href=${OPENBAO_APP_URL:-http://openbao.example.com/}"
+        - "homepage.description=${OPENBAO_HOMEPAGE_DESCRIPTION:-Secrets management}"
+        - "homepage.siteMonitor=${OPENBAO_HOMEPAGE_SITEMONITOR:-http://openbao:8200/v1/sys/health}"
+    labels:
+      - "homepage.group=${OPENBAO_HOMEPAGE_GROUP:-Security}"
+      - "homepage.name=${OPENBAO_HOMEPAGE_NAME:-OpenBao}"
+      - "homepage.icon=${OPENBAO_HOMEPAGE_ICON:-vault.png}"
+      - "homepage.href=${OPENBAO_APP_URL:-http://openbao.example.com/}"
+      - "homepage.description=${OPENBAO_HOMEPAGE_DESCRIPTION:-Secrets management}"
+      - "homepage.siteMonitor=${OPENBAO_HOMEPAGE_SITEMONITOR:-http://openbao:8200/v1/sys/health}"
