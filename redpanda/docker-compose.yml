@@ -111,7 +111,7 @@ services:
         - "homepage.group=${REDPANDA_HOMEPAGE_GROUP:-Infrastructure}"
         - "homepage.name=${REDPANDA_HOMEPAGE_NAME:-Redpanda}"
         - "homepage.icon=${REDPANDA_HOMEPAGE_ICON:-si-apachekafka}"
-        - "homepage.href=${REDPANDA_APP_URL:-http://redpanda.example.com/}"
+        - "homepage.href=${REDPANDA_HOMEPAGE_URL:-}"
         - "homepage.description=${REDPANDA_HOMEPAGE_DESCRIPTION:-Kafka-compatible streaming}"
         - "homepage.siteMonitor=${REDPANDA_HOMEPAGE_SITEMONITOR:-http://console:8080}"
     labels:
@@ -126,6 +126,6 @@ services:
       - "homepage.group=${REDPANDA_HOMEPAGE_GROUP:-Infrastructure}"
       - "homepage.name=${REDPANDA_HOMEPAGE_NAME:-Redpanda}"
       - "homepage.icon=${REDPANDA_HOMEPAGE_ICON:-si-apachekafka}"
-      - "homepage.href=${REDPANDA_APP_URL:-http://redpanda.example.com/}"
+      - "homepage.href=${REDPANDA_HOMEPAGE_URL:-}"
       - "homepage.description=${REDPANDA_HOMEPAGE_DESCRIPTION:-Kafka-compatible streaming}"
       - "homepage.siteMonitor=${REDPANDA_HOMEPAGE_SITEMONITOR:-http://console:8080}"
