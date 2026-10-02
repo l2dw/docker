@@ -319,7 +319,7 @@ services:
         - "homepage.group=${HULY_HOMEPAGE_GROUP:-Productivity}"
         - "homepage.name=${HULY_HOMEPAGE_NAME:-Huly}"
         - "homepage.icon=${HULY_HOMEPAGE_ICON:-si-linear}"
-        - "homepage.href=${HULY_PUBLIC_URL:-https://huly.example.com}"
+        - "homepage.href=${HULY_HOMEPAGE_URL:-}"
         - "homepage.description=${HULY_HOMEPAGE_DESCRIPTION:-All-in-one project management}"
         - "homepage.siteMonitor=${HULY_HOMEPAGE_SITEMONITOR:-http://front:8080}"
     labels:
@@ -335,7 +335,7 @@ services:
       - "homepage.group=${HULY_HOMEPAGE_GROUP:-Productivity}"
       - "homepage.name=${HULY_HOMEPAGE_NAME:-Huly}"
       - "homepage.icon=${HULY_HOMEPAGE_ICON:-si-linear}"
-      - "homepage.href=${HULY_PUBLIC_URL:-https://huly.example.com}"
+      - "homepage.href=${HULY_HOMEPAGE_URL:-}"
       - "homepage.description=${HULY_HOMEPAGE_DESCRIPTION:-All-in-one project management}"
       - "homepage.siteMonitor=${HULY_HOMEPAGE_SITEMONITOR:-http://front:8080}"
 
