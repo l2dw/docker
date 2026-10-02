@@ -60,7 +60,7 @@ services:
         - "homepage.group=${SIYUAN_HOMEPAGE_GROUP:-Notes}"
         - "homepage.name=${SIYUAN_HOMEPAGE_NAME:-SiYuan}"
         - "homepage.icon=${SIYUAN_HOMEPAGE_ICON:-siyuan.png}"
-        - "homepage.href=${SIYUAN_APP_URL:-http://siyuan.example.com/}"
+        - "homepage.href=${SIYUAN_HOMEPAGE_URL:-}"
         - "homepage.description=${SIYUAN_HOMEPAGE_DESCRIPTION:-Local-first knowledge base}"
         - "homepage.siteMonitor=${SIYUAN_HOMEPAGE_SITEMONITOR:-http://siyuan:6806}"
     labels:
@@ -76,6 +76,6 @@ services:
       - "homepage.group=${SIYUAN_HOMEPAGE_GROUP:-Notes}"
       - "homepage.name=${SIYUAN_HOMEPAGE_NAME:-SiYuan}"
       - "homepage.icon=${SIYUAN_HOMEPAGE_ICON:-siyuan.png}"
-      - "homepage.href=${SIYUAN_APP_URL:-http://siyuan.example.com/}"
+      - "homepage.href=${SIYUAN_HOMEPAGE_URL:-}"
       - "homepage.description=${SIYUAN_HOMEPAGE_DESCRIPTION:-Local-first knowledge base}"
       - "homepage.siteMonitor=${SIYUAN_HOMEPAGE_SITEMONITOR:-http://siyuan:6806}"
