@@ -56,15 +56,6 @@ services:
         delay: ${BUGSINK_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${BUGSINK_RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
-        - "traefik.enable=${BUGSINK_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.middlewares.${APP_NAME:-bugsink}-strip.stripprefix.prefixes=${BUGSINK_BASE_PATH:-/}"
-        - "traefik.http.services.${APP_NAME:-bugsink}.loadbalancer.server.port=${BUGSINK_PORT:-8000}"
-        - "traefik.http.routers.${APP_NAME:-bugsink}.entrypoints=${BUGSINK_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.${APP_NAME:-bugsink}.rule=Host(`${BUGSINK_DOMAIN:-bugsink.example.com}`) && PathPrefix(`${BUGSINK_BASE_PATH:-/}`)"
-        - "traefik.http.routers.${APP_NAME:-bugsink}.service=${APP_NAME:-bugsink}"
-        - "traefik.http.routers.${APP_NAME:-bugsink}.middlewares=${BUGSINK_MIDDLEWARES:-}"
-        - "traefik.http.routers.${APP_NAME:-bugsink}.tls=${BUGSINK_TLS_ENABLED:-false}"
-        - "traefik.http.routers.${APP_NAME:-bugsink}.tls.certresolver=${BUGSINK_TLS_CERTRESOLVER:-letsencrypt}"
         - "homepage.group=${BUGSINK_HOMEPAGE_GROUP:-Observability}"
         - "homepage.name=${BUGSINK_HOMEPAGE_NAME:-Bugsink}"
         - "homepage.icon=${BUGSINK_HOMEPAGE_ICON:-bugsink.png}"
@@ -72,15 +63,6 @@ services:
         - "homepage.description=${BUGSINK_HOMEPAGE_DESCRIPTION:-Self-hosted error tracking}"
         - "homepage.siteMonitor=${BUGSINK_HOMEPAGE_SITEMONITOR:-http://bugsink:8000/health/ready}"
     labels:
-      - "traefik.enable=${BUGSINK_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.middlewares.${APP_NAME:-bugsink}-strip.stripprefix.prefixes=${BUGSINK_BASE_PATH:-/}"
-      - "traefik.http.services.${APP_NAME:-bugsink}.loadbalancer.server.port=${BUGSINK_PORT:-8000}"
-      - "traefik.http.routers.${APP_NAME:-bugsink}.entrypoints=${BUGSINK_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_NAME:-bugsink}.rule=Host(`${BUGSINK_DOMAIN:-bugsink.example.com}`) && PathPrefix(`${BUGSINK_BASE_PATH:-/}`)"
-      - "traefik.http.routers.${APP_NAME:-bugsink}.service=${APP_NAME:-bugsink}"
-      - "traefik.http.routers.${APP_NAME:-bugsink}.middlewares=${BUGSINK_MIDDLEWARES:-}"
-      - "traefik.http.routers.${APP_NAME:-bugsink}.tls=${BUGSINK_TLS_ENABLED:-false}"
-      - "traefik.http.routers.${APP_NAME:-bugsink}.tls.certresolver=${BUGSINK_TLS_CERTRESOLVER:-letsencrypt}"
       - "homepage.group=${BUGSINK_HOMEPAGE_GROUP:-Observability}"
       - "homepage.name=${BUGSINK_HOMEPAGE_NAME:-Bugsink}"
       - "homepage.icon=${BUGSINK_HOMEPAGE_ICON:-bugsink.png}"

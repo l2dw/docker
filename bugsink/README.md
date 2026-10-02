@@ -1,45 +1,31 @@
 # Bugsink
 
-Self-hosted error tracking ([bugsink/bugsink](https://github.com/bugsink/bugsink)) on `dokploy-network`.
+Self-hosted error tracking ([bugsink/bugsink](https://github.com/bugsink/bugsink)). Default network `bugsink-network` (Dokploy overlay optional).
 
-## Setup
-
-```sh
-# From devops/docker-templates
-cp bugsink/.env.example .env   # or merge into existing .env / bugsink/.env
-# set BUGSINK_SECRET_KEY (openssl rand -base64 50)
-# set BUGSINK_CREATE_SUPERUSER=you@example.com:strong-password
-# production: set BUGSINK_DATABASE_URL (postgres/mysql)
-```
-
-## Makefile
-
-`make bugsink-*` deploys `bugsink/docker-compose.yml` (not the root copy).
+`.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${BUGSINK_ENV_FILE:-.env.example}`; production: `BUGSINK_ENV_FILE=.env`.
 
 ```sh
-make bugsink-pull-images
+make bugsink-setup \
+  BUGSINK_DOMAIN=bugsink.example.com \
+  BUGSINK_BASE_URL=https://bugsink.example.com/bugsink
 make bugsink-stack-up
-make bugsink-stack-down
-make bugsink-stack-recreate
-make bugsink-stack-logs
-make bugsink-stack-watch-logs
-make bugsink-debug
-make bugsink-debug-logs
-# compose (non-swarm)
-make bugsink-compose-upgrade
+# or
 make bugsink-compose-up
-make bugsink-compose-down
-make bugsink-compose-recreate
-make bugsink-compose-logs
-make bugsink-compose-watch-logs
 ```
 
-Traefik routes `Host(BUGSINK_DOMAIN)` → port `BUGSINK_PORT` (default **8000**).
+| File | Labels |
+|------|--------|
+| [`compose.yml`](compose.yml) | Homepage only |
+| [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage |
 
-## Notes
+## Base path
 
-- `BUGSINK_SECRET_KEY` is required (≥50 characters).
-- Leave `BUGSINK_DATA` empty to use the `bugsink_data` named volume mounted at `/data`.
-- Leave `BUGSINK_DATABASE_URL` empty for SQLite (dev only). Prefer Postgres/MySQL in production.
-- Placement defaults to any Linux node; set `BUGSINK_PLACEMENT_CONSTRAINTS` to pin.
-- Behind TLS Traefik: set `BUGSINK_BEHIND_HTTPS_PROXY=true`, `BUGSINK_USE_X_FORWARDED_HOST=true`, and `BUGSINK_BASE_URL=https://…`.
+Default `BUGSINK_BASE_PATH=/bugsink` with Traefik strip middleware `bugsink-strip`. Host-only: `BUGSINK_BASE_PATH=/` and clear `BUGSINK_MIDDLEWARES`. Align `BUGSINK_BASE_URL`. Homepage: `BUGSINK_HOMEPAGE_URL=` empty by default.
+
+## Networks
+
+Default `bugsink-network` / `EXTERNAL=false`. Dokploy: `DEFAULT_NETWORK_NAME=dokploy-network`.
+
+## Volumes
+
+Compose key `data` → `/data`. Local / bind / NFS / external via `BUGSINK_DATA_VOLUME_*`.
