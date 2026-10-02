@@ -4,10 +4,11 @@ ADGUARD_SERVICES_SHORT := adguard
 ADGUARD_ENV := $(ADGUARD_STACK_NAME)/.env
 ADGUARD_ENV_EXAMPLE := $(ADGUARD_STACK_NAME)/.env.example
 ADGUARD_NOTIFY_VARS := ADGUARD_APP_URL ADGUARD_DOMAIN
+NETWORK_DRIVER ?= overlay
 
 adguard-pull-images: ## Pull images for the adguard stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(ADGUARD_STACK_NAME)
-adguard-setup: ## Ensure adguard/.env, warn on DOMAIN/APP_URL
+adguard-setup: ## Ensure adguard/.env, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(ADGUARD_ENV)'; \
 	exf='$(ADGUARD_ENV_EXAMPLE)'; \
@@ -51,6 +52,28 @@ adguard-setup: ## Ensure adguard/.env, warn on DOMAIN/APP_URL
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
 		esac; \
 	done; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='adguard-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "AdGuard env OK ($$envf)."
 .adguard-setup: adguard-setup

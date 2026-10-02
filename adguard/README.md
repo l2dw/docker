@@ -1,6 +1,6 @@
 # AdGuard Home
 
-[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (`adguard/adguardhome`) — network-wide DNS filtering. Joins `dokploy-network`; does not run Traefik/WAF.
+[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (`adguard/adguardhome`) — network-wide DNS filtering. Does not run Traefik/WAF (joins the stack network; use Dokploy overlay when needed).
 
 Docs: [Docker wiki](https://github.com/AdguardTeam/AdGuardHome/wiki/Docker), [reverse proxy FAQ](https://adguard-dns.io/kb/adguard-home/faq/#reverseproxy).
 
@@ -19,12 +19,27 @@ On the `adguard` branch, root `README.md` / `compose.yml` / `docker-compose.yml`
 
 | File | Labels |
 |------|--------|
-| [`compose.yml`](compose.yml) | None (no Traefik / Homepage) |
+| [`compose.yml`](compose.yml) | Homepage only |
 | [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage — used by `make` |
 
 ## Base path
 
-**Subpath deploy is not supported.** AdGuard redirects to absolute paths (`/login.html`) and has no vendor base-path setting. Use a **dedicated subdomain** (`ADGUARD_DOMAIN` + Host-only Traefik rule). Keep `ADGUARD_BASE_PATH=/`.
+**Subpath deploy is not supported.** AdGuard redirects to absolute paths (`/login.html`) and has no vendor base-path setting. Use a **dedicated subdomain** (`ADGUARD_DOMAIN` + Host-only Traefik rule). Keep `ADGUARD_BASE_PATH=/`. Homepage link: set `ADGUARD_HOMEPAGE_URL` (empty by default).
+
+## Networks
+
+Default: `adguard-network` / `DEFAULT_NETWORK_EXTERNAL=false` (created by `make adguard-setup`). To join Dokploy + Traefik: set `DEFAULT_NETWORK_NAME=dokploy-network` (setup sets `EXTERNAL=true`).
+
+## Volumes
+
+Compose keys `conf` and `work` → `/opt/adguardhome/conf` and `/opt/adguardhome/work`.
+
+| Mode | `*_VOLUME_EXTERNAL` | `DRIVER` | `TYPE` | `OPTS` | `PATH` |
+|------|---------------------|----------|--------|--------|--------|
+| Local named (default) | `false` | `local` | empty | empty | empty |
+| Bind | `false` | `local` | `none` | `bind` | e.g. `/appdata/adguard/conf` |
+| NFS | `false` | `local` | `nfs` | `addr=host,rw,nfsvers=4` | e.g. `:/exports/adguard/conf` |
+| External | `true` | — | — | — | — |
 
 ## DNS ports
 
@@ -38,30 +53,9 @@ First boot: open `http://<host>:${ADGUARD_PORT_SETUP:-3053}` for the wizard. The
 make adguard-setup
 make adguard-pull-images
 make adguard-stack-up
-make adguard-stack-upgrade
-make adguard-stack-down
-make adguard-stack-logs
+make adguard-compose-up
 make adguard-debug
 make adguard-debug-logs
-make adguard-compose-up
-make adguard-compose-down
-make adguard-compose-restart
 ```
 
-## Required env
-
-| Variable | Notes |
-|----------|--------|
-| `ADGUARD_APP_URL` | Public URL (default `http://adguard.example.com`) |
-| `ADGUARD_DOMAIN` | Traefik `Host()` |
-| `ADGUARD_BASE_PATH` | Keep `/` (subpath unsupported) |
-| `ADGUARD_ENV_FILE` | Compose dotenv (default `.env.example`) |
-| `ADGUARD_PORT_DNS_TCP` / `UDP` | Host DNS ports (default `53`) |
-| `ADGUARD_PORT_SETUP` | First-run wizard (default `3053`) |
-
-## Volumes
-
-| Mount | Default | Role |
-|-------|---------|------|
-| `/opt/adguardhome/conf` | `adguard-conf` | `AdGuardHome.yaml`, TLS certs |
-| `/opt/adguardhome/work` | `adguard-work` | Query log, stats, filter data |
+`APP_NAME` scopes Traefik router/service names (`APP_NAME=adguard` in `.env.example`; Dokploy may override).
