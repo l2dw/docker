@@ -202,7 +202,7 @@ services:
       - DEBUG=${PLANE_DEBUG:-0}
       - CORS_ALLOWED_ORIGINS=${PLANE_CORS_ALLOWED_ORIGINS:-http://plane.example.com}
       - GUNICORN_WORKERS=${PLANE_GUNICORN_WORKERS:-1}
-      - USE_MINIO=${PLANE_USE_MINIO:-1}
+      - USE_MINIO=${PLANE_USE_MINIO:-0}
       - DATABASE_URL=${PLANE_DATABASE_URL:-postgresql://plane:ChangeMe@postgres:5432/plane}
       - SECRET_KEY=${PLANE_SECRET_KEY:-ChangeMe}
       - AMQP_URL=${PLANE_AMQP_URL:-amqp://plane:ChangeMe@rabbitmq:5672/plane}
@@ -275,7 +275,7 @@ services:
       - DEBUG=${PLANE_DEBUG:-0}
       - CORS_ALLOWED_ORIGINS=${PLANE_CORS_ALLOWED_ORIGINS:-http://plane.example.com}
       - GUNICORN_WORKERS=${PLANE_GUNICORN_WORKERS:-1}
-      - USE_MINIO=${PLANE_USE_MINIO:-1}
+      - USE_MINIO=${PLANE_USE_MINIO:-0}
       - DATABASE_URL=${PLANE_DATABASE_URL:-postgresql://plane:ChangeMe@postgres:5432/plane}
       - SECRET_KEY=${PLANE_SECRET_KEY:-ChangeMe}
       - AMQP_URL=${PLANE_AMQP_URL:-amqp://plane:ChangeMe@rabbitmq:5672/plane}
@@ -330,7 +330,7 @@ services:
       - DEBUG=${PLANE_DEBUG:-0}
       - CORS_ALLOWED_ORIGINS=${PLANE_CORS_ALLOWED_ORIGINS:-http://plane.example.com}
       - GUNICORN_WORKERS=${PLANE_GUNICORN_WORKERS:-1}
-      - USE_MINIO=${PLANE_USE_MINIO:-1}
+      - USE_MINIO=${PLANE_USE_MINIO:-0}
       - DATABASE_URL=${PLANE_DATABASE_URL:-postgresql://plane:ChangeMe@postgres:5432/plane}
       - SECRET_KEY=${PLANE_SECRET_KEY:-ChangeMe}
       - AMQP_URL=${PLANE_AMQP_URL:-amqp://plane:ChangeMe@rabbitmq:5672/plane}
@@ -385,7 +385,7 @@ services:
       - DEBUG=${PLANE_DEBUG:-0}
       - CORS_ALLOWED_ORIGINS=${PLANE_CORS_ALLOWED_ORIGINS:-http://plane.example.com}
       - GUNICORN_WORKERS=${PLANE_GUNICORN_WORKERS:-1}
-      - USE_MINIO=${PLANE_USE_MINIO:-1}
+      - USE_MINIO=${PLANE_USE_MINIO:-0}
       - DATABASE_URL=${PLANE_DATABASE_URL:-postgresql://plane:ChangeMe@postgres:5432/plane}
       - SECRET_KEY=${PLANE_SECRET_KEY:-ChangeMe}
       - AMQP_URL=${PLANE_AMQP_URL:-amqp://plane:ChangeMe@rabbitmq:5672/plane}

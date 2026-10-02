@@ -41,7 +41,39 @@ PLANE_POSTGRES_PORT=5432
 PLANE_DATABASE_URL=postgresql://plane:ChangeMe@postgres:5432/plane
 ```
 
-Create role + database `plane` on the external Postgres before deploy. `PLANE_DATABASE_URL` is the source of truth for the backend.
+`PLANE_DATABASE_URL` is the source of truth for the backend. Create the role + database on the **external** Postgres **before** the first deploy (migrator needs them).
+
+Connect as a superuser (examples: `psql` on the host, or `docker exec` into the Postgres task):
+
+```sh
+# From a shell that can reach Postgres (adjust container / host)
+psql -U postgres -h postgres -d postgres <<'SQL'
+CREATE USER plane WITH PASSWORD 'ChangeMe';
+CREATE DATABASE plane OWNER plane;
+GRANT ALL PRIVILEGES ON DATABASE plane TO plane;
+-- Postgres 15+: also grant schema usage on the new DB
+\c plane
+GRANT ALL ON SCHEMA public TO plane;
+ALTER SCHEMA public OWNER TO plane;
+SQL
+```
+
+Swarm / Dokploy (find the Postgres task, then exec):
+
+```sh
+CID=$(docker ps -q -f name=postgresql | head -1)
+docker exec -i "$CID" psql -U postgres -d postgres <<'SQL'
+CREATE USER plane WITH PASSWORD 'ChangeMe';
+CREATE DATABASE plane OWNER plane;
+GRANT ALL PRIVILEGES ON DATABASE plane TO plane;
+SQL
+docker exec -i "$CID" psql -U postgres -d plane <<'SQL'
+GRANT ALL ON SCHEMA public TO plane;
+ALTER SCHEMA public OWNER TO plane;
+SQL
+```
+
+If the role already exists: `ALTER USER plane WITH PASSWORD '…';`. Align `PLANE_DATABASE_URL` with the same user / password / host / db name. Host must resolve on the shared overlay (`postgres`, `postgresql.otspace.ca`, etc.).
 
 ### Redis / Valkey
 
@@ -51,7 +83,7 @@ PLANE_REDIS_PORT=6379
 PLANE_REDIS_URL=redis://redis:6379/
 ```
 
-Use a Redis-compatible instance (Valkey works). Auth URL form if needed: `redis://:password@redis:6379/0`.
+Use a Redis-compatible instance (Valkey works). Auth URL form if needed: `redis://:password@redis:6379/0` (or a DB index, e.g. `/3`). No special “create database” step beyond picking a free logical DB index if you share the instance.
 
 ### RabbitMQ
 
@@ -64,26 +96,60 @@ PLANE_RABBITMQ_VHOST=plane
 PLANE_AMQP_URL=amqp://plane:ChangeMe@rabbitmq:5672/plane
 ```
 
-Create the vhost/user (or point `PLANE_AMQP_URL` at an existing AMQP endpoint).
+Celery needs a reachable broker. **Mismatch** (wrong user / password / vhost) shows up as API crash-loop:
+
+`ACCESS_REFUSED - Login was refused using authentication mechanism PLAIN`
+
+Either point `PLANE_AMQP_URL` at an existing user/vhost, **or** create a dedicated vhost + user on the external broker (same network alias, e.g. `rabbitmq`).
+
+```sh
+# Container of the RabbitMQ stack (service name may be broker / rabbitmq)
+CID=$(docker ps -q -f name=rabbitmq | head -1)
+# Prefer a precise filter if several match, e.g. -f name=rabbitmq-xxx_broker
+
+docker exec "$CID" rabbitmqctl add_vhost plane
+docker exec "$CID" rabbitmqctl add_user plane 'ChangeMe'
+# If user already exists: rabbitmqctl set_password plane 'ChangeMe'
+docker exec "$CID" rabbitmqctl set_permissions -p plane plane '.*' '.*' '.*'
+
+docker exec "$CID" rabbitmqctl list_vhosts name
+docker exec "$CID" rabbitmqctl list_permissions -p plane
+```
+
+Management UI (if enabled): Admin → Virtual Hosts / Users — same effect.
+
+URL form:
+
+| Piece | Example | Notes |
+|-------|---------|--------|
+| User / pass | `plane` / `ChangeMe` | Must match `add_user` / `set_password` |
+| Host | `rabbitmq` | Overlay DNS / network alias of the broker |
+| Vhost | `plane` | Path after host — `…:5672/plane` (not `/` unless you use the default vhost) |
+
+Default broker vhost `/` would be:
+
+`amqp://rabbit:…@rabbitmq:5672/` (trailing slash = vhost `/`).
+
+After fixing AMQP, redeploy or force-update `api`, `worker`, and `beat-worker`.
 
 ### S3 / MinIO
 
 ```env
-PLANE_USE_MINIO=1
+PLANE_USE_MINIO=0
 PLANE_MINIO_ENDPOINT_SSL=0
 PLANE_AWS_REGION=
 PLANE_AWS_ACCESS_KEY_ID=access-key
 PLANE_AWS_SECRET_ACCESS_KEY=ChangeMe
-PLANE_S3_ENDPOINT_URL=http://minio:9000
-PLANE_S3_BUCKET_NAME=uploads
+PLANE_S3_ENDPOINT_URL=https://s3.example.com
+PLANE_S3_BUCKET_NAME=plane
 ```
 
 | Mode | `PLANE_USE_MINIO` | Notes |
 |------|-------------------|--------|
-| MinIO / path-style compatible | `1` | Endpoint is your MinIO API URL; create bucket `uploads` (or match `PLANE_S3_BUCKET_NAME`) |
-| AWS S3 | `0` | Set region + real S3 endpoint; keys must allow object R/W on the bucket |
+| Same-host MinIO (proxied) | `1` | Plane rewrites upload URLs to the **request host** (`https://<PLANE_DOMAIN>/<bucket>`). Needs a reverse-proxy path to MinIO on that host. |
+| External S3 / rustfs / MinIO URL | `0` | Use when `PLANE_S3_ENDPOINT_URL` is a **different host** (e.g. `https://s3.example.com`). Browser uploads go there; configure **bucket CORS** for `https://<PLANE_DOMAIN>`. |
 
-Plane talks to S3/MinIO **directly** via these vars — there is no `/uploads` Traefik route in this stack.
+Plane talks to S3/MinIO **directly** via these vars — there is no `/uploads` Traefik route in this stack. For external object storage always set `PLANE_USE_MINIO=0`.
 
 
 ## Base path
