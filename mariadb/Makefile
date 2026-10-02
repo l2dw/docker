@@ -1,3 +1,4 @@
+NETWORK_DRIVER ?= overlay
 ## —— 🐝 mariadb commands ———————————————————————————————————
 MARIADB_STACK_NAME := mariadb
 MARIADB_SERVICES_SHORT := mariadb
