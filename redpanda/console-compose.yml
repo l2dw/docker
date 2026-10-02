@@ -1,0 +1,64 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-redpanda-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  console:
+    image: ${REDPANDA_CONSOLE_IMAGE:-docker.redpanda.com/redpandadata/console:v2.8.5}
+    restart: ${REDPANDA_RESTART:-unless-stopped}
+    privileged: ${REDPANDA_PRIVILEGED:-false}
+    env_file:
+      - ${REDPANDA_CONSOLE_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - KAFKA_BROKERS=${REDPANDA_CONSOLE_KAFKA_BROKERS:-redpanda:9092}
+      - KAFKA_SCHEMAREGISTRY_ENABLED=${REDPANDA_CONSOLE_SCHEMA_ENABLED:-true}
+      - KAFKA_SCHEMAREGISTRY_URLS=${REDPANDA_CONSOLE_SCHEMA_URL:-http://redpanda:8081}
+      - REDPANDA_ADMINAPI_ENABLED=${REDPANDA_CONSOLE_ADMIN_ENABLED:-true}
+      - REDPANDA_ADMINAPI_URLS=${REDPANDA_CONSOLE_ADMIN_URL:-http://redpanda:9644}
+    networks:
+      - default
+    deploy:
+      mode: ${REDPANDA_CONSOLE_DEPLOY_MODE:-replicated}
+      replicas: ${REDPANDA_CONSOLE_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${REDPANDA_CONSOLE_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${REDPANDA_CONSOLE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${REDPANDA_CONSOLE_RESTART_POLICY_CONDITION:-any}
+        delay: ${REDPANDA_CONSOLE_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${REDPANDA_CONSOLE_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${REDPANDA_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-redpanda}-console.loadbalancer.server.port=${REDPANDA_CONSOLE_PORT:-8080}"
+        - "traefik.http.routers.${APP_NAME:-redpanda}-console.entrypoints=${REDPANDA_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-redpanda}-console.rule=Host(`${REDPANDA_DOMAIN:-redpanda.example.com}`)"
+        - "traefik.http.routers.${APP_NAME:-redpanda}-console.service=${APP_NAME:-redpanda}-console"
+        - "traefik.http.routers.${APP_NAME:-redpanda}-console.middlewares=${REDPANDA_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-redpanda}-console.tls=${REDPANDA_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-redpanda}-console.tls.certresolver=${REDPANDA_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${REDPANDA_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${REDPANDA_HOMEPAGE_NAME:-Redpanda}"
+        - "homepage.icon=${REDPANDA_HOMEPAGE_ICON:-si-apachekafka}"
+        - "homepage.href=${REDPANDA_APP_URL:-http://redpanda.example.com/}"
+        - "homepage.description=${REDPANDA_HOMEPAGE_DESCRIPTION:-Kafka-compatible streaming}"
+        - "homepage.siteMonitor=${REDPANDA_HOMEPAGE_SITEMONITOR:-http://console:8080}"
+    labels:
+      - "traefik.enable=${REDPANDA_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-redpanda}-console.loadbalancer.server.port=${REDPANDA_CONSOLE_PORT:-8080}"
+      - "traefik.http.routers.${APP_NAME:-redpanda}-console.entrypoints=${REDPANDA_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-redpanda}-console.rule=Host(`${REDPANDA_DOMAIN:-redpanda.example.com}`)"
+      - "traefik.http.routers.${APP_NAME:-redpanda}-console.service=${APP_NAME:-redpanda}-console"
+      - "traefik.http.routers.${APP_NAME:-redpanda}-console.middlewares=${REDPANDA_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-redpanda}-console.tls=${REDPANDA_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-redpanda}-console.tls.certresolver=${REDPANDA_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${REDPANDA_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${REDPANDA_HOMEPAGE_NAME:-Redpanda}"
+      - "homepage.icon=${REDPANDA_HOMEPAGE_ICON:-si-apachekafka}"
+      - "homepage.href=${REDPANDA_APP_URL:-http://redpanda.example.com/}"
+      - "homepage.description=${REDPANDA_HOMEPAGE_DESCRIPTION:-Kafka-compatible streaming}"
+      - "homepage.siteMonitor=${REDPANDA_HOMEPAGE_SITEMONITOR:-http://console:8080}"
