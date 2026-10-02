@@ -4,9 +4,14 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  portainer_data:
+  data:
     name: ${PORTAINER_DATA_VOLUME_NAME:-portainer_data}
     external: ${PORTAINER_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${PORTAINER_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${PORTAINER_DATA_VOLUME_TYPE:-}
+      o: ${PORTAINER_DATA_VOLUME_OPTS:-}
+      device: ${PORTAINER_DATA_VOLUME_PATH:-}
 
 services:
   server:
@@ -22,19 +27,34 @@ services:
     env_file:
       - ${PORTAINER_ENV_FILE:-.env.example}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-America/Montreal}
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      - ${PORTAINER_DATA_DIR:-portainer_data}:/data
+      - data:${PORTAINER_DATA_VOLUME_DIR:-/data}:z
     deploy:
       mode: ${PORTAINER_DEPLOY_MODE:-replicated}
       replicas: ${PORTAINER_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${PORTAINER_MEMORY_LIMIT:-1G}
       placement:
         constraints:
           - ${PORTAINER_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
-        condition: on-failure
-        delay: 5s
-      resources:
-        limits:
-          memory: ${PORTAINER_MEMORY_LIMIT:-1G}
+        condition: ${PORTAINER_RESTART_POLICY_CONDITION:-any}
+        delay: ${PORTAINER_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PORTAINER_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${PORTAINER_HOMEPAGE_GROUP:-Infra}"
+        - "homepage.name=${PORTAINER_HOMEPAGE_NAME:-Portainer}"
+        - "homepage.icon=${PORTAINER_HOMEPAGE_ICON:-portainer.png}"
+        - "homepage.href=${PORTAINER_HOMEPAGE_URL:-}"
+        - "homepage.description=${PORTAINER_HOMEPAGE_DESCRIPTION:-Portainer CE}"
+        - "homepage.siteMonitor=${PORTAINER_HOMEPAGE_SITEMONITOR:-http://server:9000}"
+    labels:
+      - "homepage.group=${PORTAINER_HOMEPAGE_GROUP:-Infra}"
+      - "homepage.name=${PORTAINER_HOMEPAGE_NAME:-Portainer}"
+      - "homepage.icon=${PORTAINER_HOMEPAGE_ICON:-portainer.png}"
+      - "homepage.href=${PORTAINER_HOMEPAGE_URL:-}"
+      - "homepage.description=${PORTAINER_HOMEPAGE_DESCRIPTION:-Portainer CE}"
+      - "homepage.siteMonitor=${PORTAINER_HOMEPAGE_SITEMONITOR:-http://server:9000}"
