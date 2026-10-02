@@ -270,3 +270,4 @@ postfix-relay-stack-test-send: ## Test send via Swarm DNS (Docker Desktop: local
 		-v "$(CURDIR)/bin/send-test-email.sh:/send-test-email.sh:ro" \
 		-e TZ="$(TZ)" -e SMTP_SUBJECT="$(SMTP_SUBJECT)" python:3-alpine \
 		sh /send-test-email.sh --to "$(SMTP_TO)" --host postfix-relay --port 25 --from "$(SMTP_FROM)"
+-include postfix-relay/Makefile
