@@ -4,79 +4,68 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  jenkins_home:
-    name: ${JENKINS_HOME_VOLUME_NAME:-jenkins_home}
-    external: ${JENKINS_HOME_VOLUME_EXTERNAL:-false}
+  data:
+    name: ${JENKINS_DATA_VOLUME_NAME:-jenkins_home}
+    external: ${JENKINS_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${JENKINS_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${JENKINS_DATA_VOLUME_TYPE:-}
+      o: ${JENKINS_DATA_VOLUME_OPTS:-}
+      device: ${JENKINS_DATA_VOLUME_PATH:-}
 
 services:
   jenkins:
-    image: ${JENKINS_REGISTRY:-docker.io}/${JENKINS_IMAGE_PATH:-jenkins/jenkins}:${JENKINS_IMAGE_TAG:-latest}
-    x-pull-policy: ${JENKINS_PULL_POLICY:-always}
+    image: ${JENKINS_IMAGE:-docker.io/jenkins/jenkins:lts}
     restart: ${JENKINS_RESTART:-unless-stopped}
     privileged: ${JENKINS_PRIVILEGED:-false}
-    environment:
-      - TZ=${TZ:-UTC}
-      - JENKINS_IMAGE_TAG=${JENKINS_IMAGE_TAG:-latest}
-      - JENKINS_OPTS=${JENKINS_OPTS:-"--prefix=/jenkins"}
-      ## See .env.example for more environment variables
     env_file:
-      - ${JENKINS_ENV_FILE:-.env}
+      - ${JENKINS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - JENKINS_OPTS=${JENKINS_OPTS:---prefix=/jenkins}
     volumes:
-      - ${JENKINS_HOST_HOME_PATH:-jenkins_home}:/var/jenkins_home:z
+      - data:${JENKINS_DATA_VOLUME_DIR:-/var/jenkins_home}:z
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-    # ports:
-    #   - target: ${JENKINS_CONTAINER_PORT:-8080}
-    #     published: ${JENKINS_CONTAINER_HOST_PORT:-8080}
-    #     protocol: tcp
-    #     mode: ${JENKINS_CONTAINER_PORT_MODE:-host}
-    ## Deploy
     deploy:
+      mode: ${JENKINS_DEPLOY_MODE:-replicated}
       replicas: ${JENKINS_DEPLOY_REPLICAS:-1}
-      mode: ${JENKINS_DEPLOY_SWARM_MODE:-replicated}
       resources:
         limits:
-          memory: ${JENKINS_MEMORY_LIMIT:-512M}
+          memory: ${JENKINS_MEMORY_LIMIT:-1G}
       placement:
         constraints:
-          # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
-          - ${JENKINS_DEPLOY_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+          - ${JENKINS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${JENKINS_RESTART_POLICY_CONDITION:-any}
+        delay: ${JENKINS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${JENKINS_RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
-        # Traefik configuration
-        - "traefik.enable=${JENKINS_TRAEFIK_ENABLE:-true}"
-        # Service configuration
-        - "traefik.http.services.${APP_NAME:-jenkins}.loadbalancer.server.port=${JENKINS_CONTAINER_PORT:-8080}"
-        # Router configuration
-        - "traefik.http.routers.${APP_NAME:-jenkins}.entrypoints=${JENKINS_TRAEFIK_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.${APP_NAME:-jenkins}.rule=Host(`${JENKINS_DOMAIN:-example.com}`) && PathPrefix(`${JENKINS_BASE_PATH:-/jenkins}`)"
+        - "traefik.enable=${JENKINS_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-jenkins}.loadbalancer.server.port=${JENKINS_PORT:-8080}"
+        - "traefik.http.routers.${APP_NAME:-jenkins}.entrypoints=${JENKINS_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-jenkins}.rule=Host(`${JENKINS_DOMAIN:-jenkins.example.com}`) && PathPrefix(`${JENKINS_BASE_PATH:-/}`)"
         - "traefik.http.routers.${APP_NAME:-jenkins}.service=${APP_NAME:-jenkins}"
-        - "traefik.http.routers.${APP_NAME:-jenkins}.middlewares=${JENKINS_TRAEFIK_MIDDLEWARES:-}"
-        - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TRAEFIK_TLS_ENABLE:-false}"
-        - "traefik.http.routers.${APP_NAME:-jenkins}.tls.certresolver=${JENKINS_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
-        ## Homepage configuration
-        - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-}"
-        - "homepage.name=${APP_NAME:-Jenkins}"
-        - "homepage.icon=${APP_NAME:-jenkins.png}"
-        - "homepage.href=${JENKINS_HOMEPAGE_HREF:-http://example.com/jenkins}"
-        - "homepage.description=${JENKINS_HOMEPAGE_DESCRIPTION:-}"
-        - "homepage.siteMonitor=${JENKINS_HOMEPAGE_SITEMONITOR:-http://example.com/jenkins}"
-        - "homepage.ping=${JENKINS_HOMEPAGE_PING:-}"
+        - "traefik.http.routers.${APP_NAME:-jenkins}.middlewares=${JENKINS_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-jenkins}.tls.certresolver=${JENKINS_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-CI}"
+        - "homepage.name=${JENKINS_HOMEPAGE_NAME:-Jenkins}"
+        - "homepage.icon=${JENKINS_HOMEPAGE_ICON:-jenkins.png}"
+        - "homepage.href=${JENKINS_HOMEPAGE_URL:-}"
+        - "homepage.description=${JENKINS_HOMEPAGE_DESCRIPTION:-Jenkins CI}"
+        - "homepage.siteMonitor=${JENKINS_HOMEPAGE_SITEMONITOR:-http://jenkins:8080/jenkins/login}"
     labels:
-      # Traefik configuration
-      - "traefik.enable=${JENKINS_TRAEFIK_ENABLE:-true}"
-      # Service configuration
-      - "traefik.http.services.${APP_NAME:-jenkins}.loadbalancer.server.port=${JENKINS_CONTAINER_PORT:-8080}"
-      # Router configuration
-      - "traefik.http.routers.${APP_NAME:-jenkins}.entrypoints=${JENKINS_TRAEFIK_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_NAME:-jenkins}.rule=Host(`${JENKINS_DOMAIN:-example.com}`) && PathPrefix(`${JENKINS_BASE_PATH:-/jenkins}`)"
+      - "traefik.enable=${JENKINS_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-jenkins}.loadbalancer.server.port=${JENKINS_PORT:-8080}"
+      - "traefik.http.routers.${APP_NAME:-jenkins}.entrypoints=${JENKINS_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-jenkins}.rule=Host(`${JENKINS_DOMAIN:-jenkins.example.com}`) && PathPrefix(`${JENKINS_BASE_PATH:-/}`)"
       - "traefik.http.routers.${APP_NAME:-jenkins}.service=${APP_NAME:-jenkins}"
-      - "traefik.http.routers.${APP_NAME:-jenkins}.middlewares=${JENKINS_TRAEFIK_MIDDLEWARES:-}"
-      - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TRAEFIK_TLS_ENABLE:-false}"
-      - "traefik.http.routers.${APP_NAME:-jenkins}.tls.certresolver=${JENKINS_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
-      ## Homepage configuration
-      - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-}"
-      - "homepage.name=${APP_NAME:-Jenkins}"
-      - "homepage.icon=${APP_NAME:-jenkins.png}"
-      - "homepage.href=${JENKINS_HOMEPAGE_HREF:-http://example.com/jenkins}"
-      - "homepage.description=${JENKINS_HOMEPAGE_DESCRIPTION:-}"
-      - "homepage.siteMonitor=${JENKINS_HOMEPAGE_SITEMONITOR:-http://example.com/jenkins}"
-      - "homepage.ping=${JENKINS_HOMEPAGE_PING:-}"
+      - "traefik.http.routers.${APP_NAME:-jenkins}.middlewares=${JENKINS_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-jenkins}.tls=${JENKINS_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-jenkins}.tls.certresolver=${JENKINS_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-CI}"
+      - "homepage.name=${JENKINS_HOMEPAGE_NAME:-Jenkins}"
+      - "homepage.icon=${JENKINS_HOMEPAGE_ICON:-jenkins.png}"
+      - "homepage.href=${JENKINS_HOMEPAGE_URL:-}"
+      - "homepage.description=${JENKINS_HOMEPAGE_DESCRIPTION:-Jenkins CI}"
+      - "homepage.siteMonitor=${JENKINS_HOMEPAGE_SITEMONITOR:-http://jenkins:8080/jenkins/login}"

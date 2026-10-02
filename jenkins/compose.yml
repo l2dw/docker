@@ -4,39 +4,52 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  jenkins_home:
-    name: ${JENKINS_HOME_VOLUME_NAME:-jenkins_home}
-    external: ${JENKINS_HOME_VOLUME_EXTERNAL:-false}
+  data:
+    name: ${JENKINS_DATA_VOLUME_NAME:-jenkins_home}
+    external: ${JENKINS_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${JENKINS_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${JENKINS_DATA_VOLUME_TYPE:-}
+      o: ${JENKINS_DATA_VOLUME_OPTS:-}
+      device: ${JENKINS_DATA_VOLUME_PATH:-}
 
 services:
   jenkins:
-    image: ${JENKINS_REGISTRY:-docker.io}/${JENKINS_IMAGE_PATH:-jenkins/jenkins}:${JENKINS_IMAGE_TAG:-latest}
-    x-pull-policy: ${JENKINS_PULL_POLICY:-always}
+    image: ${JENKINS_IMAGE:-docker.io/jenkins/jenkins:lts}
     restart: ${JENKINS_RESTART:-unless-stopped}
     privileged: ${JENKINS_PRIVILEGED:-false}
-    environment:
-      - TZ=${TZ:-UTC}
-      - JENKINS_IMAGE_TAG=${JENKINS_IMAGE_TAG:-latest}
-      - JENKINS_OPTS=${JENKINS_OPTS:-"--prefix=${JENKINS_BASE_PATH:-/jenkins}"}
-      ## See .env.example for more environment variables
     env_file:
-      - ${JENKINS_ENV_FILE:-.env}
+      - ${JENKINS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - JENKINS_OPTS=${JENKINS_OPTS:---prefix=/jenkins}
     volumes:
-      - ${JENKINS_HOME_MOUNT_VOLUME_PATH:-jenkins_home}:/var/jenkins_home:z
+      - data:${JENKINS_DATA_VOLUME_DIR:-/var/jenkins_home}:z
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-    # ports:
-    #   - target: ${JENKINS_CONTAINER_PORT:-8080}
-    #     published: ${JENKINS_CONTAINER_HOST_PORT:-8080}
-    #     protocol: tcp
-    #     mode: ${JENKINS_CONTAINER_PORT_MODE:-host}
-    ## Deploy
     deploy:
+      mode: ${JENKINS_DEPLOY_MODE:-replicated}
       replicas: ${JENKINS_DEPLOY_REPLICAS:-1}
-      mode: ${JENKINS_DEPLOY_SWARM_MODE:-replicated}
       resources:
         limits:
-          memory: ${JENKINS_MEMORY_LIMIT:-512M}
+          memory: ${JENKINS_MEMORY_LIMIT:-1G}
       placement:
         constraints:
-          # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
-          - ${JENKINS_DEPLOY_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+          - ${JENKINS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${JENKINS_RESTART_POLICY_CONDITION:-any}
+        delay: ${JENKINS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${JENKINS_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-CI}"
+        - "homepage.name=${JENKINS_HOMEPAGE_NAME:-Jenkins}"
+        - "homepage.icon=${JENKINS_HOMEPAGE_ICON:-jenkins.png}"
+        - "homepage.href=${JENKINS_HOMEPAGE_URL:-}"
+        - "homepage.description=${JENKINS_HOMEPAGE_DESCRIPTION:-Jenkins CI}"
+        - "homepage.siteMonitor=${JENKINS_HOMEPAGE_SITEMONITOR:-http://jenkins:8080/jenkins/login}"
+    labels:
+      - "homepage.group=${JENKINS_HOMEPAGE_GROUP:-CI}"
+      - "homepage.name=${JENKINS_HOMEPAGE_NAME:-Jenkins}"
+      - "homepage.icon=${JENKINS_HOMEPAGE_ICON:-jenkins.png}"
+      - "homepage.href=${JENKINS_HOMEPAGE_URL:-}"
+      - "homepage.description=${JENKINS_HOMEPAGE_DESCRIPTION:-Jenkins CI}"
+      - "homepage.siteMonitor=${JENKINS_HOMEPAGE_SITEMONITOR:-http://jenkins:8080/jenkins/login}"

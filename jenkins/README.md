@@ -1,22 +1,15 @@
 # Jenkins
 
-## Makefile
+Jenkins LTS (`docker.io/jenkins/jenkins:lts`) with Traefik PathPrefix `/jenkins` via `JENKINS_OPTS=--prefix=/jenkins`.
 
 ```sh
-# Run from root
-make jenkins-pull-images
+make jenkins-setup JENKINS_DOMAIN=jenkins.example.com
 make jenkins-stack-up
-make jenkins-stack-down
-make jenkins-stack-recreate
-make jenkins-stack-logs
-make jenkins-stack-watch-logs
-make jenkins-debug
-make jenkins-debug-logs
-# compose
-make jenkins-compose-upgrade
-make jenkins-compose-up
-make jenkins-compose-down
-make jenkins-compose-recreate
-make jenkins-compose-logs
-make jenkins-compose-watch-logs
 ```
+
+| File | Labels |
+|------|--------|
+| [`compose.yml`](compose.yml) | Homepage only |
+| [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage |
+
+`JENKINS_HOMEPAGE_URL=` empty by default. Mounts Docker socket for agents/out-of-container builds.
