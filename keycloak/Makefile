@@ -5,6 +5,7 @@ KEYCLOAK_ENV := $(KEYCLOAK_STACK_NAME)/.env
 KEYCLOAK_ENV_EXAMPLE := $(KEYCLOAK_STACK_NAME)/.env.example
 KEYCLOAK_SECRET_VARS := KEYCLOAK_DB_PASSWORD KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD
 KEYCLOAK_NOTIFY_VARS := KEYCLOAK_APP_URL KEYCLOAK_DOMAIN KEYCLOAK_DB_URL
+NETWORK_DRIVER ?= overlay
 # Stack-local overlay network. DEFAULT_NETWORK_EXTERNAL is false; set an external overlay NAME at runtime to join a shared one.
 KEYCLOAK_NETWORK_NAME := keycloak-network
 
@@ -79,6 +80,28 @@ keycloak-setup: ## Ensure keycloak/.env, generate admin/DB passwords, warn on AP
 	esac; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext (stack-scoped in $$envf)"; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='keycloak-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Keycloak env OK ($$envf)."
 .keycloak-setup: keycloak-setup
