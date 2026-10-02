@@ -81,7 +81,7 @@ services:
         - "homepage.group=${COCKROACH_HOMEPAGE_GROUP:-Infrastructure}"
         - "homepage.name=${COCKROACH_HOMEPAGE_NAME:-CockroachDB}"
         - "homepage.icon=${COCKROACH_HOMEPAGE_ICON:-cockroachdb.png}"
-        - "homepage.href=${COCKROACH_APP_URL:-http://cockroach.example.com/}"
+        - "homepage.href=${COCKROACH_HOMEPAGE_URL:-}"
         - "homepage.description=${COCKROACH_HOMEPAGE_DESCRIPTION:-Distributed SQL}"
         - "homepage.siteMonitor=${COCKROACH_HOMEPAGE_SITEMONITOR:-http://cockroach:8080/health}"
     labels:
@@ -96,6 +96,6 @@ services:
       - "homepage.group=${COCKROACH_HOMEPAGE_GROUP:-Infrastructure}"
       - "homepage.name=${COCKROACH_HOMEPAGE_NAME:-CockroachDB}"
       - "homepage.icon=${COCKROACH_HOMEPAGE_ICON:-cockroachdb.png}"
-      - "homepage.href=${COCKROACH_APP_URL:-http://cockroach.example.com/}"
+      - "homepage.href=${COCKROACH_HOMEPAGE_URL:-}"
       - "homepage.description=${COCKROACH_HOMEPAGE_DESCRIPTION:-Distributed SQL}"
       - "homepage.siteMonitor=${COCKROACH_HOMEPAGE_SITEMONITOR:-http://cockroach:8080/health}"
