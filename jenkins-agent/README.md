@@ -1,17 +1,10 @@
-# Jenkins-agent
+# Jenkins Agent
 
-## Makefile
+Inbound Jenkins agent (`jenkins/inbound-agent:lts`) with optional local Dockerfile build. No Traefik (worker). Homepage labels present for inventory.
 
 ```sh
-# Run from devops/docker-templates (parent of the dokploy/ folder)
-
-## 1. copy and adjust .env from .env.example
-STACK_NAME=jenkins-agent
-make jenkins-agent-stack-deploy
+make jenkins-agent-setup
 make jenkins-agent-stack-up
-make jenkins-agent-stack-down
-make jenkins-agent-stack-recreate
-make jenkins-agent-stack-logs
-make jenkins-agent-stack-watch
-make jenkins-agent-stack-debug
 ```
+
+Set `JENKINS_SERVER_URL`, `JENKINS_AGENT_NODE_NAME`, and `JENKINS_AGENT_NODE_SECRET` from the Jenkins controller.

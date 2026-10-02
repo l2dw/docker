@@ -375,3 +375,4 @@ jenkins-agent-compose-logs: ## Show logs of the jenkins-agent stack
 	make docker-project-logs PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)
 jenkins-agent-compose-watch-logs: ## Watch logs of the jenkins-agent stack
 	make docker-project-watch PROJECT_NAME=$(JENKINS_AGENT_STACK_NAME)
+-include jenkins-agent/Makefile
