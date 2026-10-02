@@ -19,7 +19,7 @@ On the `sonatype` branch, root `README.md` / `compose.yml` / `docker-compose.yml
 
 | File | Labels |
 |------|--------|
-| [`compose.yml`](compose.yml) | None (no Traefik / Homepage) |
+| [`compose.yml`](compose.yml) | Homepage only |
 | [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage — used by `make` |
 
 ## Base path

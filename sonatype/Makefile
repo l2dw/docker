@@ -7,7 +7,7 @@ SONATYPE_NOTIFY_VARS := SONATYPE_APP_URL SONATYPE_DOMAIN
 
 sonatype-pull-images: ## Pull images for the sonatype stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(SONATYPE_STACK_NAME)
-sonatype-setup: ## Ensure sonatype/.env, warn on DOMAIN/APP_URL
+sonatype-setup: ## Ensure sonatype/.env, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(SONATYPE_ENV)'; \
 	exf='$(SONATYPE_ENV_EXAMPLE)'; \
@@ -51,6 +51,28 @@ sonatype-setup: ## Ensure sonatype/.env, warn on DOMAIN/APP_URL
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
 		esac; \
 	done; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='sonatype-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Sonatype env OK ($$envf)."
 .sonatype-setup: sonatype-setup
