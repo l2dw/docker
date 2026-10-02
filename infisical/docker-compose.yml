@@ -51,7 +51,7 @@ services:
         - "homepage.group=${INFISICAL_HOMEPAGE_GROUP:-Security}"
         - "homepage.name=${INFISICAL_HOMEPAGE_NAME:-Infisical}"
         - "homepage.icon=${INFISICAL_HOMEPAGE_ICON:-infisical.png}"
-        - "homepage.href=${INFISICAL_APP_URL:-http://infisical.example.com/}"
+        - "homepage.href=${INFISICAL_HOMEPAGE_URL:-}"
         - "homepage.description=${INFISICAL_HOMEPAGE_DESCRIPTION:-Secrets management platform}"
         - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://infisical:8080}"
     labels:
@@ -67,6 +67,6 @@ services:
       - "homepage.group=${INFISICAL_HOMEPAGE_GROUP:-Security}"
       - "homepage.name=${INFISICAL_HOMEPAGE_NAME:-Infisical}"
       - "homepage.icon=${INFISICAL_HOMEPAGE_ICON:-infisical.png}"
-      - "homepage.href=${INFISICAL_APP_URL:-http://infisical.example.com/}"
+      - "homepage.href=${INFISICAL_HOMEPAGE_URL:-}"
       - "homepage.description=${INFISICAL_HOMEPAGE_DESCRIPTION:-Secrets management platform}"
       - "homepage.siteMonitor=${INFISICAL_HOMEPAGE_SITEMONITOR:-http://infisical:8080}"
