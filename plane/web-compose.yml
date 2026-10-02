@@ -39,7 +39,7 @@ services:
         - "homepage.group=${PLANE_HOMEPAGE_GROUP:-Productivity}"
         - "homepage.name=${PLANE_HOMEPAGE_NAME:-Plane}"
         - "homepage.icon=${PLANE_HOMEPAGE_ICON:-plane.png}"
-        - "homepage.href=${PLANE_APP_URL:-http://plane.example.com/}"
+        - "homepage.href=${PLANE_HOMEPAGE_URL:-}"
         - "homepage.description=${PLANE_HOMEPAGE_DESCRIPTION:-Project management}"
         - "homepage.siteMonitor=${PLANE_HOMEPAGE_SITEMONITOR:-http://web:3000}"
     labels:
@@ -54,6 +54,6 @@ services:
       - "homepage.group=${PLANE_HOMEPAGE_GROUP:-Productivity}"
       - "homepage.name=${PLANE_HOMEPAGE_NAME:-Plane}"
       - "homepage.icon=${PLANE_HOMEPAGE_ICON:-plane.png}"
-      - "homepage.href=${PLANE_APP_URL:-http://plane.example.com/}"
+      - "homepage.href=${PLANE_HOMEPAGE_URL:-}"
       - "homepage.description=${PLANE_HOMEPAGE_DESCRIPTION:-Project management}"
       - "homepage.siteMonitor=${PLANE_HOMEPAGE_SITEMONITOR:-http://web:3000}"
