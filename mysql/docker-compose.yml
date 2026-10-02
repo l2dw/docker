@@ -5,50 +5,43 @@ networks:
 
 volumes:
   data:
-    name: ${MYSQL_DATA_VOLUME_NAME:-mysql-data}
+    name: ${MYSQL_DATA_VOLUME_NAME:-mysql_data}
     external: ${MYSQL_DATA_VOLUME_EXTERNAL:-false}
     driver: ${MYSQL_DATA_VOLUME_DRIVER:-local}
-    # Empty type/o/device keeps the default Docker named-volume behavior.
     driver_opts:
-      type: ${MYSQL_DATA_VOLUME_DRIVER_TYPE:-}
-      o: ${MYSQL_DATA_VOLUME_DRIVER_O:-}
-      device: ${MYSQL_DATA_VOLUME_DRIVER_DEVICE:-}
+      type: ${MYSQL_DATA_VOLUME_TYPE:-}
+      o: ${MYSQL_DATA_VOLUME_OPTS:-}
+      device: ${MYSQL_DATA_VOLUME_PATH:-}
 
 services:
-  server:
+  mysql:
     image: ${MYSQL_IMAGE:-docker.io/library/mysql:8.0}
     restart: ${MYSQL_RESTART:-unless-stopped}
     privileged: ${MYSQL_PRIVILEGED:-false}
     env_file:
       - ${MYSQL_ENV_FILE:-.env.example}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-America/Montreal}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-}
       - MYSQL_DATABASE=${MYSQL_DATABASE:-mysql}
       - MYSQL_USER=${MYSQL_USER:-mysql}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-}
     volumes:
-      - ${MYSQL_DATA_HOST_PATH:-data}:${MYSQL_DATA_CONTAINER_PATH:-/var/lib/mysql}
-    networks:
-      default:
-        aliases:
-          - ${MYSQL_NETWORK_ALIAS:-mysql-server}
+      - data:${MYSQL_DATA_VOLUME_DIR:-/var/lib/mysql}:z
     ports:
-      - published: ${MYSQL_PUBLISHED_PORT:-23306}
-        target: ${MYSQL_PORT:-3306}
+      - target: ${MYSQL_PORT:-3306}
+        published: ${MYSQL_PUBLISHED_PORT:-23306}
+        protocol: ${MYSQL_PORT_PROTOCOL:-tcp}
         mode: ${MYSQL_PORT_MODE:-ingress}
-        protocol: tcp
     healthcheck:
       test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "127.0.0.1",
-          "-uroot",
-          "-p$$MYSQL_ROOT_PASSWORD",
-        ]
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - 127.0.0.1
+        - -uroot
+        - -p${MYSQL_ROOT_PASSWORD}
       interval: ${MYSQL_HEALTHCHECK_INTERVAL:-10s}
       timeout: ${MYSQL_HEALTHCHECK_TIMEOUT:-5s}
       retries: ${MYSQL_HEALTHCHECK_RETRIES:-5}
@@ -56,15 +49,27 @@ services:
     deploy:
       mode: ${MYSQL_DEPLOY_MODE:-replicated}
       replicas: ${MYSQL_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${MYSQL_MEMORY_LIMIT:-512M}
       placement:
         constraints:
           - ${MYSQL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
-        condition: on-failure
-        delay: 5s
-      update_config:
-        order: stop-first
-        failure_action: rollback
-      resources:
-        limits:
-          memory: ${MYSQL_MEMORY_LIMIT:-512M}
+        condition: ${MYSQL_RESTART_POLICY_CONDITION:-any}
+        delay: ${MYSQL_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${MYSQL_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${MYSQL_HOMEPAGE_GROUP:-Database}"
+        - "homepage.name=${MYSQL_HOMEPAGE_NAME:-MySQL}"
+        - "homepage.icon=${MYSQL_HOMEPAGE_ICON:-mysql.png}"
+        - "homepage.href=${MYSQL_HOMEPAGE_URL:-}"
+        - "homepage.description=${MYSQL_HOMEPAGE_DESCRIPTION:-MySQL server}"
+        - "homepage.siteMonitor=${MYSQL_HOMEPAGE_SITEMONITOR:-}"
+    labels:
+      - "homepage.group=${MYSQL_HOMEPAGE_GROUP:-Database}"
+      - "homepage.name=${MYSQL_HOMEPAGE_NAME:-MySQL}"
+      - "homepage.icon=${MYSQL_HOMEPAGE_ICON:-mysql.png}"
+      - "homepage.href=${MYSQL_HOMEPAGE_URL:-}"
+      - "homepage.description=${MYSQL_HOMEPAGE_DESCRIPTION:-MySQL server}"
+      - "homepage.siteMonitor=${MYSQL_HOMEPAGE_SITEMONITOR:-}"
