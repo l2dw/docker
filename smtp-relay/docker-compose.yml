@@ -11,7 +11,7 @@ services:
     env_file:
       - ${SMTP_RELAY_ENV_FILE:-.env.example}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-America/Montreal}
       - MAILNAME=${SMTP_RELAY_MAILNAME:-smtp.example.com}
       - PORT=${SMTP_RELAY_PORT_TARGET:-25}
       - RELAY_NETWORKS=${SMTP_RELAY_NETWORKS:-:192.168.0.0/16:10.0.0.0/8:172.16.0.0/12}
@@ -30,12 +30,27 @@ services:
     deploy:
       mode: ${SMTP_RELAY_DEPLOY_MODE:-replicated}
       replicas: ${SMTP_RELAY_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${SMTP_RELAY_MEMORY_LIMIT:-256M}
       placement:
         constraints:
           - ${SMTP_RELAY_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
-        condition: on-failure
-        delay: 5s
-      resources:
-        limits:
-          memory: ${SMTP_RELAY_MEMORY_LIMIT:-256M}
+        condition: ${SMTP_RELAY_RESTART_POLICY_CONDITION:-any}
+        delay: ${SMTP_RELAY_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${SMTP_RELAY_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${SMTP_RELAY_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${SMTP_RELAY_HOMEPAGE_NAME:-SMTP Relay}"
+        - "homepage.icon=${SMTP_RELAY_HOMEPAGE_ICON:-email.png}"
+        - "homepage.href=${SMTP_RELAY_HOMEPAGE_URL:-}"
+        - "homepage.description=${SMTP_RELAY_HOMEPAGE_DESCRIPTION:-Outbound SMTP relay}"
+        - "homepage.siteMonitor=${SMTP_RELAY_HOMEPAGE_SITEMONITOR:-}"
+    labels:
+      - "homepage.group=${SMTP_RELAY_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${SMTP_RELAY_HOMEPAGE_NAME:-SMTP Relay}"
+      - "homepage.icon=${SMTP_RELAY_HOMEPAGE_ICON:-email.png}"
+      - "homepage.href=${SMTP_RELAY_HOMEPAGE_URL:-}"
+      - "homepage.description=${SMTP_RELAY_HOMEPAGE_DESCRIPTION:-Outbound SMTP relay}"
+      - "homepage.siteMonitor=${SMTP_RELAY_HOMEPAGE_SITEMONITOR:-}"
