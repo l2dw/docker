@@ -1,6 +1,6 @@
 # Vaultwarden
 
-[Vaultwarden](https://github.com/dani-garcia/vaultwarden) (`vaultwarden/server`) — unofficial Bitwarden-compatible server. Joins `dokploy-network`; does not run Traefik/WAF. HTTP **80** inside the container (Traefik); data at `/data`. Default DB is **SQLite** (`DATABASE_URL=sqlite:///data/db.sqlite3`).
+[Vaultwarden](https://github.com/dani-garcia/vaultwarden) (`vaultwarden/server`) — unofficial Bitwarden-compatible server. Default network `vaultwarden-network` (Dokploy overlay optional); does not run Traefik/WAF. HTTP **80** inside the container (Traefik); data at `/data`. Default DB is **SQLite** (`DATABASE_URL=sqlite:///data/db.sqlite3`).
 
 Docs: [Docker wiki](https://github.com/dani-garcia/vaultwarden/wiki), [alternate base dir](https://github.com/dani-garcia/vaultwarden/wiki/Using-an-alternate-base-dir), [proxy examples](https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples), [admin page](https://github.com/dani-garcia/vaultwarden/wiki/Enabling-admin-page).
 
@@ -20,7 +20,7 @@ On the `vaultwarden` branch, root `README.md` / `compose.yml` / `docker-compose.
 
 | File | Labels |
 |------|--------|
-| [`compose.yml`](compose.yml) | None (no Traefik / Homepage) |
+| [`compose.yml`](compose.yml) | Homepage only |
 | [`docker-compose.yml`](docker-compose.yml) | Traefik + Homepage — used by `make` |
 
 Web vault needs **HTTPS** in browsers (Web Crypto). Enable Traefik TLS (`VAULTWARDEN_TLS_ENABLED=true`, `VAULTWARDEN_ENTRYPOINTS=websecure`) or terminate TLS in front. Websocket notifications use the same HTTP port (no extra 3012 publish).

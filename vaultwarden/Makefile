@@ -5,10 +5,11 @@ VAULTWARDEN_ENV := $(VAULTWARDEN_STACK_NAME)/.env
 VAULTWARDEN_ENV_EXAMPLE := $(VAULTWARDEN_STACK_NAME)/.env.example
 VAULTWARDEN_SECRET_VARS := VAULTWARDEN_ADMIN_TOKEN
 VAULTWARDEN_NOTIFY_VARS := VAULTWARDEN_APP_URL VAULTWARDEN_DOMAIN
+NETWORK_DRIVER ?= overlay
 
 vaultwarden-pull-images: ## Pull images for the vaultwarden stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(VAULTWARDEN_STACK_NAME)
-vaultwarden-setup: ## Ensure vaultwarden/.env, generate ADMIN_TOKEN, warn on APP_URL/DOMAIN
+vaultwarden-setup: ## Ensure vaultwarden/.env, generate ADMIN_TOKEN, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(VAULTWARDEN_ENV)'; \
 	exf='$(VAULTWARDEN_ENV_EXAMPLE)'; \
@@ -67,6 +68,28 @@ vaultwarden-setup: ## Ensure vaultwarden/.env, generate ADMIN_TOKEN, warn on APP
 			*example.com*) echo "Warning: $$k=$$v still uses example.com — set the real value in $$envf" >&2 ;; \
 		esac; \
 	done; \
+	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
+	[ -n "$$net" ] || net='vaultwarden-network'; \
+	case "$$net" in \
+		dokploy-network) ext=true ;; \
+		*) ext=false ;; \
+	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
+	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
+	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Vaultwarden env OK ($$envf)."
 .vaultwarden-setup: vaultwarden-setup

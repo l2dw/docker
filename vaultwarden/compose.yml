@@ -4,20 +4,25 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  vaultwarden-data:
-    name: ${VAULTWARDEN_DATA_VOLUME_NAME:-vaultwarden-data}
+  data:
+    name: ${VAULTWARDEN_DATA_VOLUME_NAME:-vaultwarden_data}
     external: ${VAULTWARDEN_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${VAULTWARDEN_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${VAULTWARDEN_DATA_VOLUME_TYPE:-}
+      o: ${VAULTWARDEN_DATA_VOLUME_OPTS:-}
+      device: ${VAULTWARDEN_DATA_VOLUME_PATH:-}
 
 services:
   vaultwarden:
-    image: ${VAULTWARDEN_IMAGE:-docker.io/vaultwarden/server:latest}
+    image: ${VAULTWARDEN_IMAGE:-docker.io/vaultwarden/server:1.37.3}
     restart: ${VAULTWARDEN_RESTART:-unless-stopped}
     privileged: ${VAULTWARDEN_PRIVILEGED:-false}
     env_file:
       - ${VAULTWARDEN_ENV_FILE:-.env.example}
     environment:
-      - TZ=${TZ:-America/Toronto}
-      - DOMAIN=${VAULTWARDEN_APP_URL:-http://example.com/vaultwarden}
+      - TZ=${TZ:-America/Montreal}
+      - DOMAIN=${VAULTWARDEN_APP_URL:-http://vaultwarden.example.com/vaultwarden}
       - DATABASE_URL=${VAULTWARDEN_DATABASE_URL:-sqlite:///data/db.sqlite3}
       - SIGNUPS_ALLOWED=${VAULTWARDEN_SIGNUPS_ALLOWED:-false}
       - INVITATIONS_ALLOWED=${VAULTWARDEN_INVITATIONS_ALLOWED:-true}
@@ -32,15 +37,31 @@ services:
       - SMTP_USERNAME=${VAULTWARDEN_SMTP_USERNAME:-}
       - SMTP_PASSWORD=${VAULTWARDEN_SMTP_PASSWORD:-}
     volumes:
-      - ${VAULTWARDEN_DATA_DIR:-vaultwarden-data}:/data
+      - data:${VAULTWARDEN_DATA_VOLUME_DIR:-/data}:z
     deploy:
       mode: ${VAULTWARDEN_DEPLOY_MODE:-replicated}
       replicas: ${VAULTWARDEN_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${VAULTWARDEN_MEMORY_LIMIT:-512M}
       placement:
         constraints:
           - ${VAULTWARDEN_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
-        condition: on-failure
-      resources:
-        limits:
-          memory: ${VAULTWARDEN_MEMORY_LIMIT:-512M}
+        condition: ${VAULTWARDEN_RESTART_POLICY_CONDITION:-any}
+        delay: ${VAULTWARDEN_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${VAULTWARDEN_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${VAULTWARDEN_HOMEPAGE_GROUP:-Security}"
+        - "homepage.name=${VAULTWARDEN_HOMEPAGE_NAME:-Vaultwarden}"
+        - "homepage.icon=${VAULTWARDEN_HOMEPAGE_ICON:-vaultwarden.png}"
+        - "homepage.href=${VAULTWARDEN_HOMEPAGE_URL:-}"
+        - "homepage.description=${VAULTWARDEN_HOMEPAGE_DESCRIPTION:-Bitwarden-compatible password manager}"
+        - "homepage.siteMonitor=${VAULTWARDEN_HOMEPAGE_SITEMONITOR:-http://vaultwarden:80/vaultwarden/alive}"
+    labels:
+      - "homepage.group=${VAULTWARDEN_HOMEPAGE_GROUP:-Security}"
+      - "homepage.name=${VAULTWARDEN_HOMEPAGE_NAME:-Vaultwarden}"
+      - "homepage.icon=${VAULTWARDEN_HOMEPAGE_ICON:-vaultwarden.png}"
+      - "homepage.href=${VAULTWARDEN_HOMEPAGE_URL:-}"
+      - "homepage.description=${VAULTWARDEN_HOMEPAGE_DESCRIPTION:-Bitwarden-compatible password manager}"
+      - "homepage.siteMonitor=${VAULTWARDEN_HOMEPAGE_SITEMONITOR:-http://vaultwarden:80/vaultwarden/alive}"
