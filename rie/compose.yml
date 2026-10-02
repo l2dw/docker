@@ -2,32 +2,33 @@ networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-rie-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
-  dokploy-network:
-    external: true
+
 volumes:
-  appdata:
-    name: ${APPDATA_VOLUME_NAME:-appdata}
-    external: ${APPDATA_VOLUME_EXTERNAL:-false}
-    driver: ${APPDATA_VOLUME_DRIVER:-local}
+  data:
+    name: ${RIE_DATA_VOLUME_NAME:-rie_data}
+    external: ${RIE_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${RIE_DATA_VOLUME_DRIVER:-local}
     driver_opts:
-      type: ${APPDATA_VOLUME_DRIVER_TYPE:-}
-      o: ${APPDATA_VOLUME_DRIVER_O:-}
-      device: ${APPDATA_VOLUME_DRIVER_DEVICE:-}
+      type: ${RIE_DATA_VOLUME_TYPE:-}
+      o: ${RIE_DATA_VOLUME_OPTS:-}
+      device: ${RIE_DATA_VOLUME_PATH:-}
+
 services:
   app:
-    image: ${IMAGE:-atelier.cen.umontreal.ca/rie/rie:latest}
-    extra_hosts:
-      - workspace.local:10.0.1.241
-    networks:
-      default:
-        aliases:
-          - ${APP_NAME:-rie}
-      dokploy-network: {}
+    image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie:latest}
+    restart: ${RIE_RESTART:-unless-stopped}
+    privileged: ${RIE_PRIVILEGED:-false}
     volumes:
-      - ${APPDATA_HOST_PATH:-appdata}:${APPDATA_CONTAINER_PATH:-/appdata}:z
+      - data:${RIE_DATA_VOLUME_DIR:-/appdata}:z
     env_file:
       - ${ENV_FILE:-.env.example}
+    # All env vars from .env.example, exposed via `environment:` (grouped by
+    # app) so Docker Compose unquotes them on interpolation. This defeats
+    # Dokploy's quoted `env_file` values ("true") that would otherwise break
+    # the strict `[ "$VAR" = "true" ]` checks in fullstack.entrypoint.sh and
+    # corrupt PG_DATABASE_URL construction.
     environment:
+      # ── General ──────────────────────────────────────────────
       NODE_ENV: ${NODE_ENV:-production}
       ENV_NAME: ${ENV_NAME:-prod}
       TZ: ${TZ:-America/Montreal}
@@ -38,17 +39,21 @@ services:
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       NO_PROXY: ${NO_PROXY:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # ── Service toggles (entrypoint) ─────────────────────────
       ENABLE_SERVICE_API: ${ENABLE_SERVICE_API:-true}
       ENABLE_SERVICE_WEB_APP: ${ENABLE_SERVICE_WEB_APP:-true}
+      # ── rie-api (Hono / Effect-ts) ────────────────────────────
       API_PORT: ${API_PORT:-4000}
       API_BASE_PATH: ${API_BASE_PATH:-/api}
       RIE_API_DOMAIN: ${RIE_API_DOMAIN:-rie.example.com}
       RIE_API_URL: ${RIE_API_URL:-http://rie.example.com/api}
+      # Database (unquoted so PG_DATABASE_URL builds correctly)
       PG_DATABASE_NAME: ${PG_DATABASE_NAME:-}
       PG_DATABASE_USER: ${PG_DATABASE_USER:-}
       PG_DATABASE_PASSWORD: ${PG_DATABASE_PASSWORD:-}
       PG_DATABASE_HOST: ${PG_DATABASE_HOST:-}
       PG_DATABASE_PORT: ${PG_DATABASE_PORT:-5432}
+      # S3 / MinIO
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
@@ -56,18 +61,21 @@ services:
       S3_USE_SSL: ${S3_USE_SSL:-false}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-rie-storage}
+      # SMTP / Email
       SMTP_HOST: ${SMTP_HOST:-localhost}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-no-reply@rie.umontreal.ca}
       SIGNUP_ALLOWED_EMAIL_SUFFIXES: ${SIGNUP_ALLOWED_EMAIL_SUFFIXES:-}
+      # ── apps/auth (Better Auth / Microsoft AD) ───────────────
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-}
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       RIE_AUTH_CLIENT_ID: ${RIE_AUTH_CLIENT_ID:-}
       RIE_AUTH_CLIENT_SECRET: ${RIE_AUTH_CLIENT_SECRET:-}
+      # ── rie-web (Next.js) ─────────────────────────────────────
       CLIENT_PORT: ${CLIENT_PORT:-3000}
       CLIENT_HTTP_PROTOCOL: ${CLIENT_HTTP_PROTOCOL:-http}
       CLIENT_HTTP_HOST: ${CLIENT_HTTP_HOST:-localhost}
@@ -87,15 +95,12 @@ services:
       NEXT_PUBLIC_API_BASE_PATH: ${NEXT_PUBLIC_API_BASE_PATH:-/api}
       NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
       NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}
+      # ── OpenTelemetry ────────────────────────────────────────
       OTEL_API_ENABLED: ${OTEL_API_ENABLED:-false}
       OTEL_CLIENT_ENABLED: ${OTEL_CLIENT_ENABLED:-false}
       OTEL_SERVICE_NAME_API: ${OTEL_SERVICE_NAME_API:-rie-api}
       OTEL_SERVICE_NAME_CLIENT: ${OTEL_SERVICE_NAME_CLIENT:-rie-web}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-    ports:
-      - target: ${APP_PORT:-3000}
-        published: ${PUBLISHED_PORT:-30000}
-        protocol: tcp
     deploy:
       mode: ${DEPLOY_MODE:-replicated}
       replicas: ${DEPLOY_REPLICAS:-1}
@@ -109,4 +114,17 @@ services:
         condition: ${RESTART_POLICY_CONDITION:-any}
         delay: ${RESTART_POLICY_DELAY:-5s}
         max_attempts: ${RESTART_POLICY_MAX_ATTEMPTS:-3}
-      labels: {}
+      labels:
+        - "homepage.group=${RIE_HOMEPAGE_GROUP:-APP}"
+        - "homepage.name=${RIE_HOMEPAGE_NAME:-RIE}"
+        - "homepage.icon=${RIE_HOMEPAGE_ICON:-rie.png}"
+        - "homepage.href=${RIE_HOMEPAGE_URL:-}"
+        - "homepage.description=${RIE_HOMEPAGE_DESCRIPTION:-RIE application}"
+        - "homepage.siteMonitor=${RIE_HOMEPAGE_SITEMONITOR:-http://app:3000}"
+    labels:
+      - "homepage.group=${RIE_HOMEPAGE_GROUP:-APP}"
+      - "homepage.name=${RIE_HOMEPAGE_NAME:-RIE}"
+      - "homepage.icon=${RIE_HOMEPAGE_ICON:-rie.png}"
+      - "homepage.href=${RIE_HOMEPAGE_URL:-}"
+      - "homepage.description=${RIE_HOMEPAGE_DESCRIPTION:-RIE application}"
+      - "homepage.siteMonitor=${RIE_HOMEPAGE_SITEMONITOR:-http://app:3000}"

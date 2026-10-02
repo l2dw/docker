@@ -4,25 +4,22 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  appdata:
-    name: ${APPDATA_VOLUME_NAME:-appdata}
-    external: ${APPDATA_VOLUME_EXTERNAL:-false}
-    driver: ${APPDATA_VOLUME_DRIVER:-local}
-    # Empty type/o/device = normal Docker named volume. Set for bind or NFS — see README.
+  data:
+    name: ${RIE_DATA_VOLUME_NAME:-rie_data}
+    external: ${RIE_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${RIE_DATA_VOLUME_DRIVER:-local}
     driver_opts:
-      type: ${APPDATA_VOLUME_DRIVER_TYPE:-}
-      o: ${APPDATA_VOLUME_DRIVER_O:-}
-      device: ${APPDATA_VOLUME_DRIVER_DEVICE:-}
+      type: ${RIE_DATA_VOLUME_TYPE:-}
+      o: ${RIE_DATA_VOLUME_OPTS:-}
+      device: ${RIE_DATA_VOLUME_PATH:-}
 
 services:
   app:
-    image: ${IMAGE:-atelier.cen.umontreal.ca/rie/rie:latest}
-    networks:
-      default:
-        aliases:
-          - ${APP_NAME:-rie}
+    image: ${RIE_IMAGE:-atelier.cen.umontreal.ca/rie/rie:latest}
+    restart: ${RIE_RESTART:-unless-stopped}
+    privileged: ${RIE_PRIVILEGED:-false}
     volumes:
-      - ${APPDATA_HOST_PATH:-appdata}:${APPDATA_CONTAINER_PATH:-/appdata}:z
+      - data:${RIE_DATA_VOLUME_DIR:-/appdata}:z
     env_file:
       - ${ENV_FILE:-.env.example}
     # All env vars from .env.example, exposed via `environment:` (grouped by
@@ -126,15 +123,12 @@ services:
         - "traefik.http.routers.${APP_NAME:-rie}.middlewares=${TRAEFIK_MIDDLEWARES:-}"
         - "traefik.http.routers.${APP_NAME:-rie}.tls=${TRAEFIK_TLS_ENABLED:-false}"
         - "traefik.http.routers.${APP_NAME:-rie}.tls.certresolver=${TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
-        ## Homepage configuration
-        - "homepage.enabled=${HOMEPAGE_ENABLED:-true}"
-        - "homepage.group=${HOMEPAGE_GROUP:-APP}"
-        - "homepage.name=${HOMEPAGE_NAME:-RIE}"
-        - "homepage.icon=${HOMEPAGE_ICON:-}"
-        - "homepage.href=${HOMEPAGE_HREF:-http://rie.example.com/}"
-        - "homepage.description=${HOMEPAGE_DESCRIPTION:-}"
-        - "homepage.siteMonitor=${HOMEPAGE_SITEMONITOR:-http://rie.example.com/}"
-        - "homepage.ping=${HOMEPAGE_PING:-http://rie.example.com}"
+        - "homepage.group=${RIE_HOMEPAGE_GROUP:-APP}"
+        - "homepage.name=${RIE_HOMEPAGE_NAME:-RIE}"
+        - "homepage.icon=${RIE_HOMEPAGE_ICON:-rie.png}"
+        - "homepage.href=${RIE_HOMEPAGE_URL:-}"
+        - "homepage.description=${RIE_HOMEPAGE_DESCRIPTION:-RIE application}"
+        - "homepage.siteMonitor=${RIE_HOMEPAGE_SITEMONITOR:-http://app:3000}"
     labels:
       - "traefik.enable=${TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.${APP_NAME:-rie}.loadbalancer.server.port=${APP_PORT:-3000}"
@@ -144,12 +138,9 @@ services:
       - "traefik.http.routers.${APP_NAME:-rie}.middlewares=${TRAEFIK_MIDDLEWARES:-}"
       - "traefik.http.routers.${APP_NAME:-rie}.tls=${TRAEFIK_TLS_ENABLED:-false}"
       - "traefik.http.routers.${APP_NAME:-rie}.tls.certresolver=${TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
-      ## Homepage configuration
-      - "homepage.enabled=${HOMEPAGE_ENABLED:-true}"
-      - "homepage.group=${HOMEPAGE_GROUP:-APP}"
-      - "homepage.name=${HOMEPAGE_NAME:-RIE}"
-      - "homepage.icon=${HOMEPAGE_ICON:-}"
-      - "homepage.href=${HOMEPAGE_HREF:-http://rie.example.com/}"
-      - "homepage.description=${HOMEPAGE_DESCRIPTION:-}"
-      - "homepage.siteMonitor=${HOMEPAGE_SITEMONITOR:-http://rie.example.com/}"
-      - "homepage.ping=${HOMEPAGE_PING:-http://rie.example.com}"
+      - "homepage.group=${RIE_HOMEPAGE_GROUP:-APP}"
+      - "homepage.name=${RIE_HOMEPAGE_NAME:-RIE}"
+      - "homepage.icon=${RIE_HOMEPAGE_ICON:-rie.png}"
+      - "homepage.href=${RIE_HOMEPAGE_URL:-}"
+      - "homepage.description=${RIE_HOMEPAGE_DESCRIPTION:-RIE application}"
+      - "homepage.siteMonitor=${RIE_HOMEPAGE_SITEMONITOR:-http://app:3000}"
