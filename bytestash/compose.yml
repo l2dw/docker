@@ -52,14 +52,6 @@ services:
         delay: ${BYTESTASH_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${BYTESTASH_RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
-        - "traefik.enable=${BYTESTASH_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
-        - "traefik.http.services.${APP_NAME:-bytestash}.loadbalancer.server.port=${BYTESTASH_PORT:-5000}"
-        - "traefik.http.routers.${APP_NAME:-bytestash}.entrypoints=${BYTESTASH_ENTRYPOINTS:-web}"
-        - "traefik.http.routers.${APP_NAME:-bytestash}.rule=Host(`${BYTESTASH_DOMAIN:-bytestash.example.com}`) && PathPrefix(`${BYTESTASH_BASE_PATH:-/}`)"
-        - "traefik.http.routers.${APP_NAME:-bytestash}.service=${APP_NAME:-bytestash}"
-        - "traefik.http.routers.${APP_NAME:-bytestash}.middlewares=${BYTESTASH_MIDDLEWARES:-}"
-        - "traefik.http.routers.${APP_NAME:-bytestash}.tls=${BYTESTASH_TLS_ENABLED:-false}"
-        - "traefik.http.routers.${APP_NAME:-bytestash}.tls.certresolver=${BYTESTASH_TLS_CERTRESOLVER:-letsencrypt}"
         - "homepage.group=${BYTESTASH_HOMEPAGE_GROUP:-Productivity}"
         - "homepage.name=${BYTESTASH_HOMEPAGE_NAME:-ByteStash}"
         - "homepage.icon=${BYTESTASH_HOMEPAGE_ICON:-bytestash.png}"
@@ -67,14 +59,6 @@ services:
         - "homepage.description=${BYTESTASH_HOMEPAGE_DESCRIPTION:-Code snippet manager}"
         - "homepage.siteMonitor=${BYTESTASH_HOMEPAGE_SITEMONITOR:-http://bytestash:5000}"
     labels:
-      - "traefik.enable=${BYTESTASH_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
-      - "traefik.http.services.${APP_NAME:-bytestash}.loadbalancer.server.port=${BYTESTASH_PORT:-5000}"
-      - "traefik.http.routers.${APP_NAME:-bytestash}.entrypoints=${BYTESTASH_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_NAME:-bytestash}.rule=Host(`${BYTESTASH_DOMAIN:-bytestash.example.com}`) && PathPrefix(`${BYTESTASH_BASE_PATH:-/}`)"
-      - "traefik.http.routers.${APP_NAME:-bytestash}.service=${APP_NAME:-bytestash}"
-      - "traefik.http.routers.${APP_NAME:-bytestash}.middlewares=${BYTESTASH_MIDDLEWARES:-}"
-      - "traefik.http.routers.${APP_NAME:-bytestash}.tls=${BYTESTASH_TLS_ENABLED:-false}"
-      - "traefik.http.routers.${APP_NAME:-bytestash}.tls.certresolver=${BYTESTASH_TLS_CERTRESOLVER:-letsencrypt}"
       - "homepage.group=${BYTESTASH_HOMEPAGE_GROUP:-Productivity}"
       - "homepage.name=${BYTESTASH_HOMEPAGE_NAME:-ByteStash}"
       - "homepage.icon=${BYTESTASH_HOMEPAGE_ICON:-bytestash.png}"

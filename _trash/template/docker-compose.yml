@@ -1,0 +1,86 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-tpl-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  tpl-data:
+    name: ${TPL_DATA_VOLUME_NAME:-tpl_data}
+    external: ${TPL_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  tpl:
+    image: ${TPL_IMAGE_REGISTRY:-docker.io}/${TPL_IMAGE_PATH:-tpl/tpl}:${TPL_IMAGE_TAG:-latest}
+    x-pull-policy: ${TPL_PULL_POLICY:-always}
+    restart: ${TPL_RESTART:-unless-stopped}
+    privileged: ${TPL_PRIVILEGED:-false}
+    environment:
+      - TZ=${TZ:-UTC}
+      - TPL_IMAGE_TAG=${TPL_IMAGE_TAG:-latest}
+      ## See .env.example for more environment variables
+    # env_file:
+    #   - ${TPL_ENV_FILE:-.env}
+    volumes:
+      - ${TPL_DATA_HOST_PATH:-tpl-data}:${TPL_DATA_CONTAINER_PATH:-/data/tpl}:z
+      # - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    # ports:
+    #   - target: ${TPL_CONTAINER_PORT:-80}
+    #     published: ${TPL_CONTAINER_HOST_PORT:-80}
+    #     protocol: tcp
+    #     mode: ${TPL_CONTAINER_PORT_MODE:-host}
+    ## Deploy
+    deploy:
+      replicas: ${TPL_DEPLOY_REPLICAS:-1}
+      mode: ${TPL_DEPLOY_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${TPL_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          # Empty / unset → any Linux node (Swarm scheduler picks). Override to pin.
+          - ${TPL_DEPLOY_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      labels:
+        # Traefik configuration
+        - "traefik.enable=${TPL_TRAEFIK_ENABLE:-true}"
+        # # Middleware configuration
+        # - "traefik.http.middlewares.stripprefix-tpl.stripprefix.prefixes=${TPL_BASE_PATH:-/tpl}"
+        # Service configuration
+        - "traefik.http.services.${APP_NAME:-tpl}.loadbalancer.server.port=${TPL_CONTAINER_PORT:-80}"
+        # Router configuration
+        - "traefik.http.routers.${APP_NAME:-tpl}.entrypoints=${TPL_TRAEFIK_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-tpl}.rule=Host(`${TPL_DOMAIN:-example.com}`) && PathPrefix(`${TPL_BASE_PATH:-/tpl}`)"
+        - "traefik.http.routers.${APP_NAME:-tpl}.service=${APP_NAME:-tpl}"
+        # - "traefik.http.routers.${APP_NAME:-tpl}.middlewares=${TPL_TRAEFIK_MIDDLEWARES:-stripprefix-tpl}"
+        - "traefik.http.routers.${APP_NAME:-tpl}.middlewares=${TPL_TRAEFIK_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-tpl}.tls=${TPL_TRAEFIK_TLS_ENABLE:-false}"
+        - "traefik.http.routers.${APP_NAME:-tpl}.tls.certresolver=${TPL_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+        ## Homepage configuration
+        - "homepage.group=${TPL_HOMEPAGE_GROUP:-}"
+        - "homepage.name=${APP_NAME:-Tpl}"
+        - "homepage.icon=${APP_NAME:-tpl.png}"
+        - "homepage.href=${TPL_HOMEPAGE_HREF:-http://example.com/tpl}"
+        - "homepage.description=${TPL_HOMEPAGE_DESCRIPTION:-}"
+        - "homepage.siteMonitor=${TPL_HOMEPAGE_SITEMONITOR:-http://example.com/tpl}"
+        - "homepage.ping=${TPL_HOMEPAGE_PING:-}"
+    labels:
+      # Traefik configuration
+      - "traefik.enable=${TPL_TRAEFIK_ENABLE:-true}"
+      # Middleware configuration
+      - "traefik.http.middlewares.stripprefix-tpl.stripprefix.prefixes=${TPL_BASE_PATH:-/tpl}"
+      # Service configuration
+      - "traefik.http.services.${APP_NAME:-tpl}.loadbalancer.server.port=${TPL_CONTAINER_PORT:-80}"
+      # Router configuration
+      - "traefik.http.routers.${APP_NAME:-tpl}.entrypoints=${TPL_TRAEFIK_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-tpl}.rule=Host(`${TPL_DOMAIN:-example.com}`) && PathPrefix(`${TPL_BASE_PATH:-/tpl}`)"
+      - "traefik.http.routers.${APP_NAME:-tpl}.service=${APP_NAME:-tpl}"
+      - "traefik.http.routers.${APP_NAME:-tpl}.middlewares=${TPL_TRAEFIK_MIDDLEWARES:-stripprefix-tpl}"
+      - "traefik.http.routers.${APP_NAME:-tpl}.tls=${TPL_TRAEFIK_TLS_ENABLE:-false}"
+      - "traefik.http.routers.${APP_NAME:-tpl}.tls.certresolver=${TPL_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}"
+      ## Homepage configuration
+      - "homepage.group=${TPL_HOMEPAGE_GROUP:-}"
+      - "homepage.name=${APP_NAME:-Tpl}"
+      - "homepage.icon=${APP_NAME:-tpl.png}"
+      - "homepage.href=${TPL_HOMEPAGE_HREF:-http://example.com/tpl}"
+      - "homepage.description=${TPL_HOMEPAGE_DESCRIPTION:-}"
+      - "homepage.siteMonitor=${TPL_HOMEPAGE_SITEMONITOR:-http://example.com/tpl}"
+      - "homepage.ping=${TPL_HOMEPAGE_PING:-}"

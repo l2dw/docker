@@ -1,0 +1,45 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  jenkins_data:
+    name: ${JENKINS_DATA_VOLUME_NAME:-jenkins_data}
+    external: ${JENKINS_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  jenkins:
+    image: ${JENKINS_IMAGE:-docker.io/jenkins/jenkins:latest}
+    volumes:
+      - ${JENKINS_MOUNT_DATA:-jenkins_data}:/var/jenkins_home
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - JENKINS_OPTS=${JENKINS_OPTS:-"--prefix=/jenkins"}
+    ## Deploy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==${JENKINS_PLACEMENT_CONSTRAINTS:-manager}
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.jenkins.loadbalancer.server.port: 8080
+        traefik.http.routers.jenkins.entrypoints: ${JENKINS_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.jenkins.rule: Host(`${JENKINS_DOMAIN:-example.com}`) && PathPrefix(`${JENKINS_PATH_PREFIX:-/jenkins}`)
+        traefik.http.routers.jenkins.service: jenkins
+        traefik.http.routers.jenkins.middlewares: "${JENKINS_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.jenkins.tls: "${JENKINS_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.jenkins.tls.certresolver: ${JENKINS_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${JENKINS_HOMEPAGE_GROUP:-Infrastructure}
+        homepage.name: ${JENKINS_HOMEPAGE_NAME:-Jenkins}
+        homepage.icon: ${JENKINS_HOMEPAGE_ICON:-jenkins.png}
+        homepage.href: http://${JENKINS_DOMAIN:-example.com}/${JENKINS_PATH_PREFIX:-/jenkins}
+        homepage.description: ${JENKINS_HOMEPAGE_DESCRIPTION:-}
+        homepage.siteMonitor: ${JENKINS_HOMEPAGE_SITEMONITOR}
+        homepage.ping: ${JENKINS_HOMEPAGE_PING}

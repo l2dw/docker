@@ -1,0 +1,63 @@
+networks:
+  default:
+    name: ${RUSTFS_NETWORK:-dokploy-network}
+    external: ${RUSTFS_NETWORK_EXTERNAL:-true}
+
+volumes:
+  rustfs_data:
+    name: ${RUSTFS_DATA_VOLUME_NAME:-rustfs_data}
+    external: ${RUSTFS_DATA_VOLUME_EXTERNAL:-false}
+
+services:
+  rustfs:
+    image: ${RUSTFS_IMAGE:-docker.io/rustfs/rustfs:latest}
+    volumes:
+      - ${RUSTFS_DATA_DIR:-rustfs_data}:/data
+    environment:
+      - TZ
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - RUSTFS_ACCESS_KEY
+      - RUSTFS_SECRET_KEY
+      - RUSTFS_VOLUMES=/data
+      - RUSTFS_ADDRESS=0.0.0.0:9000
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+    ## Deploy
+    deploy:
+      replicas: ${RUSTFS_REPLICAS:-1}
+      mode: ${RUSTFS_SWARM_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${RUSTFS_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - node.role==${RUSTFS_PLACEMENT_NODE_ROLE:-manager}
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.rustfs-s3.loadbalancer.server.port: 9000
+        traefik.http.routers.rustfs-s3.entrypoints: ${RUSTFS_TRAEFIK_ENTRYPOINT:-web}
+        traefik.http.routers.rustfs-s3.rule: Host(`${RUSTFS_DOMAIN:-rustfs.home}`)
+        traefik.http.routers.rustfs-s3.service: rustfs-s3
+        traefik.http.routers.rustfs-s3.middlewares: "${RUSTFS_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.rustfs-s3.tls: "${RUSTFS_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.rustfs-s3.tls.certresolver: ${RUSTFS_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## RustFS Console
+        traefik.http.services.rustfs-console.loadbalancer.server.port: 9001
+        traefik.http.routers.rustfs-console.entrypoints: ${RUSTFS_TRAEFIK_ENTRYPOINT:-web}
+        traefik.http.routers.rustfs-console.rule: Host(`${RUSTFS_DOMAIN:-rustfs.home}`) && PathPrefix(`/rustfs`)
+        traefik.http.routers.rustfs-console.service: rustfs-console
+        traefik.http.routers.rustfs-console.middlewares: "${RUSTFS_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.rustfs-console.tls: "${RUSTFS_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.rustfs-console.tls.certresolver: ${RUSTFS_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${RUSTFS_HOMEPAGE_GROUP:-Infra}
+        homepage.name: ${RUSTFS_HOMEPAGE_NAME:-RustFS}
+        homepage.icon: ${RUSTFS_HOMEPAGE_ICON:-rustfs.png}
+        homepage.href: ${RUSTFS_HOMEPAGE_HREF:-}
+        homepage.description: ${RUSTFS_HOMEPAGE_DESCRIPTION:-}
+        homepage.siteMonitor: ${RUSTFS_HOMEPAGE_SITEMONITOR:-}
+        homepage.ping: ${RUSTFS_HOMEPAGE_PING:-http://rustfs:9000}
+
+

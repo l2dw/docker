@@ -1,0 +1,58 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK:-dokploy-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-true}
+
+volumes:
+  sonatype_data:
+    name: ${SONATYPE_DATA_VOLUME_NAME:-sonatype_data}
+    external: ${SONATYPE_DATA_VOLUME_EXTERNAL:-false}
+  sonatype_logs:
+    name: ${SONATYPE_LOGS_VOLUME_NAME:-sonatype_logs}
+    external: ${SONATYPE_LOGS_VOLUME_EXTERNAL:-false}
+
+services:
+  sonatype:
+    image: ${SONATYPE_IMAGE:-sonatype/sonatype:latest}
+    x-pull-policy: always
+    volumes:
+      - ${SONATYPE_MOUNT_DATA:-sonatype_data}:/var/sonatype
+      - ${SONATYPE_MOUNT_LOGS:-sonatype_logs}:/var/log/sonatype
+      - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    environment:
+      TZ: ${TZ}
+      http_proxy: ${HTTP_PROXY}
+      https_proxy: ${HTTPS_PROXY}
+      no_proxy: ${NO_PROXY}
+      HTTP_PROXY: ${HTTP_PROXY}
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      NO_PROXY: ${NO_PROXY}
+    ## Deploy
+    deploy:
+      replicas: ${SONATYPE_REPLICAS:-1}
+      mode: ${SONATYPE_SWARM_MODE:-replicated}
+      resources:
+        limits:
+          memory: ${SONATYPE_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${SONATYPE_PLACEMENT_CONSTRAINTS:-node.role==manager}
+      labels:
+        traefik.enable: "true"
+        traefik.http.services.sonatype.loadbalancer.server.port: 80
+        traefik.http.routers.sonatype.entrypoints: ${SONATYPE_TRAEFIK_ENTRYPOINTS:-web}
+        traefik.http.routers.sonatype.rule: Host(`${SONATYPE_DOMAIN:-sonatype.example.com}`) && PathPrefix(`${SONATYPE_BASE_PATH:-/}`)
+        traefik.http.routers.sonatype.service: sonatype
+        traefik.http.routers.sonatype.middlewares: "${SONATYPE_TRAEFIK_MIDDLEWARES:-}"
+        traefik.http.routers.sonatype.tls: "${SONATYPE_TRAEFIK_TLS_ENABLED:-false}"
+        traefik.http.routers.sonatype.tls.certresolver: ${SONATYPE_TRAEFIK_TLS_CERTRESOLVER:-letsencrypt}
+        ## Homepage configuration
+        homepage.group: ${SONATYPE_HOMEPAGE_GROUP:-}
+        homepage.name: ${SONATYPE_HOMEPAGE_NAME:-Sonatype}
+        homepage.icon: ${SONATYPE_HOMEPAGE_ICON:-sonatype.png}
+        homepage.href: ${SONATYPE_HOMEPAGE_HREF:-http://sonatype.example.com}
+        homepage.description: ${SONATYPE_HOMEPAGE_DESCRIPTION:-}
+        homepage.siteMonitor: ${SONATYPE_HOMEPAGE_SITEMONITOR:-http://sonatype.example.com}
+        homepage.ping: ${SONATYPE_HOMEPAGE_PING:-}
+
+
