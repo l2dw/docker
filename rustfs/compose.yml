@@ -4,29 +4,34 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  rustfs-data:
-    name: ${RUSTFS_DATA_VOLUME_NAME:-rustfs-data}
+  data:
+    name: ${RUSTFS_DATA_VOLUME_NAME:-rustfs_data}
     external: ${RUSTFS_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${RUSTFS_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${RUSTFS_DATA_VOLUME_TYPE:-}
+      o: ${RUSTFS_DATA_VOLUME_OPTS:-}
+      device: ${RUSTFS_DATA_VOLUME_PATH:-}
   rustfs-logs:
     name: ${RUSTFS_LOGS_VOLUME_NAME:-rustfs-logs}
     external: ${RUSTFS_LOGS_VOLUME_EXTERNAL:-false}
 
 services:
   rustfs:
-    image: ${RUSTFS_IMAGE:-docker.io/rustfs/rustfs:latest}
+    image: ${RUSTFS_IMAGE:-docker.io/rustfs/rustfs:1.0.0}
     # Volumes come from RUSTFS_VOLUMES (default /data = SNSD). Do not set command — it would override env.
     restart: ${RUSTFS_RESTART:-unless-stopped}
     privileged: ${RUSTFS_PRIVILEGED:-false}
     env_file:
       - ${RUSTFS_ENV_FILE:-.env.example}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-America/Montreal}
       - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-}
       - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-}
       - RUSTFS_CONSOLE_ENABLE=${RUSTFS_CONSOLE_ENABLE:-true}
       - RUSTFS_VOLUMES=${RUSTFS_VOLUMES:-/data}
     volumes:
-      - ${RUSTFS_DATA_DIR:-rustfs-data}:${RUSTFS_DATA_CONTAINER_PATH:-/data}
+      - data:${RUSTFS_DATA_VOLUME_DIR:-/data}:z
       - ${RUSTFS_LOGS_DIR:-rustfs-logs}:${RUSTFS_LOGS_CONTAINER_PATH:-/var/log/rustfs}
     # Host publish (compose.yml only — not in labeled docker-compose.yml / Traefik path).
     # target = container listen ports (fixed). published = host port.
