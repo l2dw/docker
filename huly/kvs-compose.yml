@@ -1,0 +1,31 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  kvs:
+    image: ${HULY_KVS_IMAGE:-docker.io/hardcoreeng/hulykvs:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_KVS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - HULY_DB_CONNECTION=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - HULY_TOKEN_SECRET=${HULY_SECRET:-ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_KVS_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_KVS_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_KVS_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${HULY_KVS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_KVS_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_KVS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_KVS_RESTART_POLICY_MAX_ATTEMPTS:-3}

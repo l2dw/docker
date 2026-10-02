@@ -1,0 +1,53 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  stats:
+    image: ${HULY_STATS_IMAGE:-docker.io/hardcoreeng/stats:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_STATS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - PORT=${HULY_STATS_PORT:-4900}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_STATS_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_STATS_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_STATS_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${HULY_STATS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_STATS_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_STATS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_STATS_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HULY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-huly}-stats.loadbalancer.server.port=${HULY_STATS_PORT:-4900}"
+        - "traefik.http.routers.${APP_NAME:-huly}-stats.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-stats.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_stats`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-stats.service=${APP_NAME:-huly}-stats"
+        - "traefik.http.routers.${APP_NAME:-huly}-stats.middlewares=${APP_NAME:-huly}-stats-strip"
+        - "traefik.http.routers.${APP_NAME:-huly}-stats.priority=100"
+        - "traefik.http.routers.${APP_NAME:-huly}-stats.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-stats.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.middlewares.${APP_NAME:-huly}-stats-strip.stripprefix.prefixes=/_stats"
+    labels:
+      - "traefik.enable=${HULY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-huly}-stats.loadbalancer.server.port=${HULY_STATS_PORT:-4900}"
+      - "traefik.http.routers.${APP_NAME:-huly}-stats.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-stats.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_stats`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-stats.service=${APP_NAME:-huly}-stats"
+      - "traefik.http.routers.${APP_NAME:-huly}-stats.middlewares=${APP_NAME:-huly}-stats-strip"
+      - "traefik.http.routers.${APP_NAME:-huly}-stats.priority=100"
+      - "traefik.http.routers.${APP_NAME:-huly}-stats.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-stats.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.middlewares.${APP_NAME:-huly}-stats-strip.stripprefix.prefixes=/_stats"

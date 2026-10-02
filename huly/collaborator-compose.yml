@@ -1,0 +1,56 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  collaborator:
+    image: ${HULY_COLLABORATOR_IMAGE:-docker.io/hardcoreeng/collaborator:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_COLLABORATOR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - COLLABORATOR_PORT=${HULY_COLLABORATOR_PORT:-3078}
+      - SECRET=${HULY_SECRET:-ChangeMe}
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_COLLABORATOR_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_COLLABORATOR_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_COLLABORATOR_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_COLLABORATOR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_COLLABORATOR_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_COLLABORATOR_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_COLLABORATOR_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HULY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-huly}-collaborator.loadbalancer.server.port=${HULY_COLLABORATOR_PORT:-3078}"
+        - "traefik.http.routers.${APP_NAME:-huly}-collaborator.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-collaborator.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_collaborator`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-collaborator.service=${APP_NAME:-huly}-collaborator"
+        - "traefik.http.routers.${APP_NAME:-huly}-collaborator.middlewares=${APP_NAME:-huly}-collaborator-strip"
+        - "traefik.http.routers.${APP_NAME:-huly}-collaborator.priority=100"
+        - "traefik.http.routers.${APP_NAME:-huly}-collaborator.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-collaborator.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.middlewares.${APP_NAME:-huly}-collaborator-strip.stripprefix.prefixes=/_collaborator"
+    labels:
+      - "traefik.enable=${HULY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-huly}-collaborator.loadbalancer.server.port=${HULY_COLLABORATOR_PORT:-3078}"
+      - "traefik.http.routers.${APP_NAME:-huly}-collaborator.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-collaborator.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_collaborator`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-collaborator.service=${APP_NAME:-huly}-collaborator"
+      - "traefik.http.routers.${APP_NAME:-huly}-collaborator.middlewares=${APP_NAME:-huly}-collaborator-strip"
+      - "traefik.http.routers.${APP_NAME:-huly}-collaborator.priority=100"
+      - "traefik.http.routers.${APP_NAME:-huly}-collaborator.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-collaborator.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.middlewares.${APP_NAME:-huly}-collaborator-strip.stripprefix.prefixes=/_collaborator"

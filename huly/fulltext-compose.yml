@@ -1,0 +1,38 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  fulltext:
+    image: ${HULY_FULLTEXT_IMAGE:-docker.io/hardcoreeng/fulltext:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_FULLTEXT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - FULLTEXT_DB_URL=${HULY_FULLTEXT_DB_URL:-http://elasticsearch:9200}
+      - ELASTIC_INDEX_NAME=${HULY_ELASTIC_INDEX_NAME:-huly_storage_index}
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - REKONI_URL=http://rekoni:4004
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_FULLTEXT_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_FULLTEXT_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_FULLTEXT_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_FULLTEXT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_FULLTEXT_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_FULLTEXT_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_FULLTEXT_RESTART_POLICY_MAX_ATTEMPTS:-3}

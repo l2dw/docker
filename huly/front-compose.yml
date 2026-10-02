@@ -1,0 +1,80 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  front:
+    image: ${HULY_FRONT_IMAGE:-docker.io/hardcoreeng/front:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_FRONT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_PORT=${HULY_FRONT_PORT:-8080}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - LOVE_ENDPOINT=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_love
+      - ACCOUNTS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_accounts
+      - ACCOUNTS_URL_INTERNAL=http://account:3000
+      - REKONI_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_rekoni
+      - CALENDAR_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_calendar
+      - GMAIL_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_gmail
+      - TELEGRAM_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_telegram
+      - STATS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_stats
+      - UPLOAD_URL=${HULY_UPLOAD_URL:-/files}
+      - ELASTIC_URL=${HULY_ELASTIC_URL:-http://elasticsearch:9200}
+      - COLLABORATOR_URL=${HULY_WS_SCHEME:-wss}://${HULY_DOMAIN:-huly.example.com}/_collaborator
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - TITLE=${HULY_TITLE:-Huly Self Host}
+      - DEFAULT_LANGUAGE=${HULY_DEFAULT_LANGUAGE:-en}
+      - LAST_NAME_FIRST=${HULY_LAST_NAME_FIRST:-true}
+      - DESKTOP_UPDATES_CHANNEL=${HULY_DESKTOP_CHANNEL:-0.7.426}
+      - DISABLED_FEATURES=${HULY_DISABLED_FEATURES:-auto-translate,mailboxes}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_FRONT_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_FRONT_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_FRONT_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_FRONT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_FRONT_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_FRONT_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_FRONT_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HULY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-huly}-front.loadbalancer.server.port=${HULY_FRONT_PORT:-8080}"
+        - "traefik.http.routers.${APP_NAME:-huly}-front.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-front.rule=Host(`${HULY_DOMAIN:-huly.example.com}`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-front.service=${APP_NAME:-huly}-front"
+        - "traefik.http.routers.${APP_NAME:-huly}-front.middlewares=${HULY_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-huly}-front.priority=1"
+        - "traefik.http.routers.${APP_NAME:-huly}-front.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-front.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${HULY_HOMEPAGE_GROUP:-Productivity}"
+        - "homepage.name=${HULY_HOMEPAGE_NAME:-Huly}"
+        - "homepage.icon=${HULY_HOMEPAGE_ICON:-si-linear}"
+        - "homepage.href=${HULY_PUBLIC_URL:-https://huly.example.com}"
+        - "homepage.description=${HULY_HOMEPAGE_DESCRIPTION:-All-in-one project management}"
+        - "homepage.siteMonitor=${HULY_HOMEPAGE_SITEMONITOR:-http://front:8080}"
+    labels:
+      - "traefik.enable=${HULY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-huly}-front.loadbalancer.server.port=${HULY_FRONT_PORT:-8080}"
+      - "traefik.http.routers.${APP_NAME:-huly}-front.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-front.rule=Host(`${HULY_DOMAIN:-huly.example.com}`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-front.service=${APP_NAME:-huly}-front"
+      - "traefik.http.routers.${APP_NAME:-huly}-front.middlewares=${HULY_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-huly}-front.priority=1"
+      - "traefik.http.routers.${APP_NAME:-huly}-front.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-front.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${HULY_HOMEPAGE_GROUP:-Productivity}"
+      - "homepage.name=${HULY_HOMEPAGE_NAME:-Huly}"
+      - "homepage.icon=${HULY_HOMEPAGE_ICON:-si-linear}"
+      - "homepage.href=${HULY_PUBLIC_URL:-https://huly.example.com}"
+      - "homepage.description=${HULY_HOMEPAGE_DESCRIPTION:-All-in-one project management}"
+      - "homepage.siteMonitor=${HULY_HOMEPAGE_SITEMONITOR:-http://front:8080}"

@@ -1,0 +1,75 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  transactor:
+    image: ${HULY_TRANSACTOR_IMAGE:-docker.io/hardcoreeng/transactor:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_TRANSACTOR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_PORT=${HULY_TRANSACTOR_PORT:-3333}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - FRONT_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}
+      - ACCOUNTS_URL=http://account:3000
+      - FULLTEXT_URL=http://fulltext:4700
+      - STATS_URL=http://stats:4900
+      - LAST_NAME_FIRST=${HULY_LAST_NAME_FIRST:-true}
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_TRANSACTOR_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_TRANSACTOR_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_TRANSACTOR_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_TRANSACTOR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_TRANSACTOR_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_TRANSACTOR_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_TRANSACTOR_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HULY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-huly}-transactor.loadbalancer.server.port=${HULY_TRANSACTOR_PORT:-3333}"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_transactor`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor.service=${APP_NAME:-huly}-transactor"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor.middlewares=${APP_NAME:-huly}-transactor-strip"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor.priority=100"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.middlewares.${APP_NAME:-huly}-transactor-strip.stripprefix.prefixes=/_transactor"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/eyJ`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.service=${APP_NAME:-huly}-transactor"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.middlewares=${HULY_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.priority=110"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+    labels:
+      - "traefik.enable=${HULY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-huly}-transactor.loadbalancer.server.port=${HULY_TRANSACTOR_PORT:-3333}"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_transactor`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor.service=${APP_NAME:-huly}-transactor"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor.middlewares=${APP_NAME:-huly}-transactor-strip"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor.priority=100"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.middlewares.${APP_NAME:-huly}-transactor-strip.stripprefix.prefixes=/_transactor"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/eyJ`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.service=${APP_NAME:-huly}-transactor"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.middlewares=${HULY_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.priority=110"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-transactor-jwt.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"

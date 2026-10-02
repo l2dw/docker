@@ -1,0 +1,62 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  account:
+    image: ${HULY_ACCOUNT_IMAGE:-docker.io/hardcoreeng/account:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_ACCOUNT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_PORT=${HULY_ACCOUNT_PORT:-3000}
+      - ACCOUNT_PORT=${HULY_ACCOUNT_PORT:-3000}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - TRANSACTOR_URL=ws://transactor:3333;${HULY_WS_SCHEME:-wss}://${HULY_DOMAIN:-huly.example.com}/_transactor
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - FRONT_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}
+      - STATS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_stats
+      - MODEL_ENABLED=${HULY_MODEL_ENABLED:-*}
+      - ACCOUNTS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_accounts
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_ACCOUNT_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_ACCOUNT_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_ACCOUNT_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_ACCOUNT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_ACCOUNT_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_ACCOUNT_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_ACCOUNT_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HULY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-huly}-account.loadbalancer.server.port=${HULY_ACCOUNT_PORT:-3000}"
+        - "traefik.http.routers.${APP_NAME:-huly}-account.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-account.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_accounts`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-account.service=${APP_NAME:-huly}-account"
+        - "traefik.http.routers.${APP_NAME:-huly}-account.middlewares=${APP_NAME:-huly}-account-strip"
+        - "traefik.http.routers.${APP_NAME:-huly}-account.priority=100"
+        - "traefik.http.routers.${APP_NAME:-huly}-account.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-account.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.middlewares.${APP_NAME:-huly}-account-strip.stripprefix.prefixes=/_accounts"
+    labels:
+      - "traefik.enable=${HULY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-huly}-account.loadbalancer.server.port=${HULY_ACCOUNT_PORT:-3000}"
+      - "traefik.http.routers.${APP_NAME:-huly}-account.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-account.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_accounts`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-account.service=${APP_NAME:-huly}-account"
+      - "traefik.http.routers.${APP_NAME:-huly}-account.middlewares=${APP_NAME:-huly}-account-strip"
+      - "traefik.http.routers.${APP_NAME:-huly}-account.priority=100"
+      - "traefik.http.routers.${APP_NAME:-huly}-account.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-account.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.middlewares.${APP_NAME:-huly}-account-strip.stripprefix.prefixes=/_accounts"

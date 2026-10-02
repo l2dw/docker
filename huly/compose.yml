@@ -1,0 +1,291 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+
+services:
+  rekoni:
+    image: ${HULY_REKONI_IMAGE:-docker.io/hardcoreeng/rekoni-service:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_REKONI_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SECRET=${HULY_SECRET:-ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_REKONI_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_REKONI_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_REKONI_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${HULY_REKONI_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_REKONI_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_REKONI_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_REKONI_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  transactor:
+    image: ${HULY_TRANSACTOR_IMAGE:-docker.io/hardcoreeng/transactor:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_TRANSACTOR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_PORT=${HULY_TRANSACTOR_PORT:-3333}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - FRONT_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}
+      - ACCOUNTS_URL=http://account:3000
+      - FULLTEXT_URL=http://fulltext:4700
+      - STATS_URL=http://stats:4900
+      - LAST_NAME_FIRST=${HULY_LAST_NAME_FIRST:-true}
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_TRANSACTOR_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_TRANSACTOR_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_TRANSACTOR_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_TRANSACTOR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_TRANSACTOR_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_TRANSACTOR_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_TRANSACTOR_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  collaborator:
+    image: ${HULY_COLLABORATOR_IMAGE:-docker.io/hardcoreeng/collaborator:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_COLLABORATOR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - COLLABORATOR_PORT=${HULY_COLLABORATOR_PORT:-3078}
+      - SECRET=${HULY_SECRET:-ChangeMe}
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_COLLABORATOR_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_COLLABORATOR_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_COLLABORATOR_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_COLLABORATOR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_COLLABORATOR_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_COLLABORATOR_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_COLLABORATOR_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  account:
+    image: ${HULY_ACCOUNT_IMAGE:-docker.io/hardcoreeng/account:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_ACCOUNT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_PORT=${HULY_ACCOUNT_PORT:-3000}
+      - ACCOUNT_PORT=${HULY_ACCOUNT_PORT:-3000}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - TRANSACTOR_URL=ws://transactor:3333;${HULY_WS_SCHEME:-wss}://${HULY_DOMAIN:-huly.example.com}/_transactor
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - FRONT_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}
+      - STATS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_stats
+      - MODEL_ENABLED=${HULY_MODEL_ENABLED:-*}
+      - ACCOUNTS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_accounts
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_ACCOUNT_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_ACCOUNT_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_ACCOUNT_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_ACCOUNT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_ACCOUNT_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_ACCOUNT_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_ACCOUNT_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  workspace:
+    image: ${HULY_WORKSPACE_IMAGE:-docker.io/hardcoreeng/workspace:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_WORKSPACE_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - TRANSACTOR_URL=ws://transactor:3333;${HULY_WS_SCHEME:-wss}://${HULY_DOMAIN:-huly.example.com}/_transactor
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - MODEL_ENABLED=${HULY_MODEL_ENABLED:-*}
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+      - ACCOUNTS_DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - INIT_REPO_DIR=${HULY_INIT_REPO_DIR:-}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_WORKSPACE_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_WORKSPACE_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_WORKSPACE_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_WORKSPACE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_WORKSPACE_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_WORKSPACE_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_WORKSPACE_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  front:
+    image: ${HULY_FRONT_IMAGE:-docker.io/hardcoreeng/front:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_FRONT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_PORT=${HULY_FRONT_PORT:-8080}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - LOVE_ENDPOINT=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_love
+      - ACCOUNTS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_accounts
+      - ACCOUNTS_URL_INTERNAL=http://account:3000
+      - REKONI_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_rekoni
+      - CALENDAR_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_calendar
+      - GMAIL_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_gmail
+      - TELEGRAM_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_telegram
+      - STATS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_stats
+      - UPLOAD_URL=${HULY_UPLOAD_URL:-/files}
+      - ELASTIC_URL=${HULY_ELASTIC_URL:-http://elasticsearch:9200}
+      - COLLABORATOR_URL=${HULY_WS_SCHEME:-wss}://${HULY_DOMAIN:-huly.example.com}/_collaborator
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - TITLE=${HULY_TITLE:-Huly Self Host}
+      - DEFAULT_LANGUAGE=${HULY_DEFAULT_LANGUAGE:-en}
+      - LAST_NAME_FIRST=${HULY_LAST_NAME_FIRST:-true}
+      - DESKTOP_UPDATES_CHANNEL=${HULY_DESKTOP_CHANNEL:-0.7.426}
+      - DISABLED_FEATURES=${HULY_DISABLED_FEATURES:-auto-translate,mailboxes}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_FRONT_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_FRONT_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_FRONT_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_FRONT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_FRONT_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_FRONT_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_FRONT_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  fulltext:
+    image: ${HULY_FULLTEXT_IMAGE:-docker.io/hardcoreeng/fulltext:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_FULLTEXT_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - FULLTEXT_DB_URL=${HULY_FULLTEXT_DB_URL:-http://elasticsearch:9200}
+      - ELASTIC_INDEX_NAME=${HULY_ELASTIC_INDEX_NAME:-huly_storage_index}
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - REKONI_URL=http://rekoni:4004
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_FULLTEXT_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_FULLTEXT_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_FULLTEXT_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_FULLTEXT_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_FULLTEXT_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_FULLTEXT_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_FULLTEXT_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  stats:
+    image: ${HULY_STATS_IMAGE:-docker.io/hardcoreeng/stats:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_STATS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - PORT=${HULY_STATS_PORT:-4900}
+      - SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_STATS_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_STATS_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_STATS_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${HULY_STATS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_STATS_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_STATS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_STATS_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  kvs:
+    image: ${HULY_KVS_IMAGE:-docker.io/hardcoreeng/hulykvs:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_KVS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - HULY_DB_CONNECTION=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - HULY_TOKEN_SECRET=${HULY_SECRET:-ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_KVS_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_KVS_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_KVS_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${HULY_KVS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_KVS_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_KVS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_KVS_RESTART_POLICY_MAX_ATTEMPTS:-3}
