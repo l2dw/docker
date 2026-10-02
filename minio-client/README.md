@@ -1,17 +1,11 @@
-# Minio-client
+# MinIO Client
 
-## Makefile
+MinIO Client (`minio/mc`) sidecar (`sleep infinity`). Default network `minio-client-network`.
 
 ```sh
-# Run from devops/docker-templates (parent of the dokploy/ folder)
-
-## 1. copy and adjust .env from .env.example
-STACK_NAME=minio-client
-make minio-client-stack-deploy
-make minio-client-stack-up
-make minio-client-stack-down
-make minio-client-stack-recreate
-make minio-client-stack-logs
-make minio-client-stack-watch
-make minio-client-stack-debug
+make minio-client-setup
+make minio-client-compose-up
+docker exec -it minio-client-minio-client-1 mc --help
 ```
+
+Homepage labels present; `MINIO_CLIENT_HOMEPAGE_URL=` empty by default.

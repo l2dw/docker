@@ -342,3 +342,4 @@ minio-client-stack-debug: ## Debug minio-client swarm stack: services, tasks (st
 		$(DOCKER) service logs "$(MINIO_CLIENT_STACK_NAME)_$$s" --tail 50 --timestamps 2>&1 || echo "(no logs or service missing)"; \
 		echo; \
 	done
+-include minio-client/Makefile
