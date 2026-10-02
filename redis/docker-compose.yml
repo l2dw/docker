@@ -31,11 +31,6 @@ services:
       - ${REDIS_PASSWORD}
     volumes:
       - data:${REDIS_DATA_VOLUME_DIR:-/data}:z
-    networks:
-      default:
-        aliases:
-          - ${APP_NAME:-redis}_server
-          - ${REDIS_NETWORK_ALIAS:-redis.server}
     deploy:
       mode: ${REDIS_DEPLOY_MODE:-replicated}
       replicas: ${REDIS_DEPLOY_REPLICAS:-1}
@@ -49,3 +44,17 @@ services:
         condition: ${REDIS_RESTART_POLICY_CONDITION:-any}
         delay: ${REDIS_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${REDIS_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${REDIS_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${REDIS_HOMEPAGE_NAME:-Redis}"
+        - "homepage.icon=${REDIS_HOMEPAGE_ICON:-redis.png}"
+        - "homepage.href=${REDIS_HOMEPAGE_URL:-}"
+        - "homepage.description=${REDIS_HOMEPAGE_DESCRIPTION:-In-memory data store}"
+        - "homepage.siteMonitor=${REDIS_HOMEPAGE_SITEMONITOR:-}"
+    labels:
+      - "homepage.group=${REDIS_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${REDIS_HOMEPAGE_NAME:-Redis}"
+      - "homepage.icon=${REDIS_HOMEPAGE_ICON:-redis.png}"
+      - "homepage.href=${REDIS_HOMEPAGE_URL:-}"
+      - "homepage.description=${REDIS_HOMEPAGE_DESCRIPTION:-In-memory data store}"
+      - "homepage.siteMonitor=${REDIS_HOMEPAGE_SITEMONITOR:-}"
