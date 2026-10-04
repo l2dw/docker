@@ -45,7 +45,13 @@ services:
       - data:${COCKROACH_DATA_VOLUME_DIR:-/cockroach/cockroach-data}:z
       - certs:${COCKROACH_CERTS_VOLUME_DIR:-/cockroach/certs}:z
     healthcheck:
-      test: ["CMD", "/cockroach/cockroach", "node", "status", "--insecure", "--host=localhost:26257"]
+      test:
+        - CMD
+        - /cockroach/cockroach
+        - node
+        - status
+        - --insecure
+        - --host=localhost:26257
       interval: 10s
       timeout: 5s
       retries: 10

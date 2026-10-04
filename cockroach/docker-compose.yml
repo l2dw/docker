@@ -20,7 +20,6 @@ volumes:
       type: ${COCKROACH_CERTS_VOLUME_TYPE:-}
       o: ${COCKROACH_CERTS_VOLUME_OPTS:-}
       device: ${COCKROACH_CERTS_VOLUME_PATH:-}
-
 services:
   cockroach:
     image: ${COCKROACH_IMAGE:-docker.io/cockroachdb/cockroach:v24.2.4}
@@ -45,7 +44,13 @@ services:
       - data:${COCKROACH_DATA_VOLUME_DIR:-/cockroach/cockroach-data}:z
       - certs:${COCKROACH_CERTS_VOLUME_DIR:-/cockroach/certs}:z
     healthcheck:
-      test: ["CMD", "/cockroach/cockroach", "node", "status", "--insecure", "--host=localhost:26257"]
+      test:
+        - CMD
+        - /cockroach/cockroach
+        - node
+        - status
+        - --insecure
+        - --host=localhost:26257
       interval: 10s
       timeout: 5s
       retries: 10
@@ -72,6 +77,7 @@ services:
       labels:
         - "traefik.enable=${COCKROACH_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
         - "traefik.http.services.${APP_NAME:-cockroach}.loadbalancer.server.port=${COCKROACH_HTTP_PORT:-8080}"
+        - "traefik.http.services.${APP_NAME:-cockroach}.loadbalancer.server.scheme=${COCKROACH_HTTP_SCHEME:-http}"
         - "traefik.http.routers.${APP_NAME:-cockroach}.entrypoints=${COCKROACH_ENTRYPOINTS:-web}"
         - "traefik.http.routers.${APP_NAME:-cockroach}.rule=Host(`${COCKROACH_DOMAIN:-cockroach.example.com}`)"
         - "traefik.http.routers.${APP_NAME:-cockroach}.service=${APP_NAME:-cockroach}"
@@ -87,6 +93,7 @@ services:
     labels:
       - "traefik.enable=${COCKROACH_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       - "traefik.http.services.${APP_NAME:-cockroach}.loadbalancer.server.port=${COCKROACH_HTTP_PORT:-8080}"
+      - "traefik.http.services.${APP_NAME:-cockroach}.loadbalancer.server.scheme=${COCKROACH_HTTP_SCHEME:-http}"
       - "traefik.http.routers.${APP_NAME:-cockroach}.entrypoints=${COCKROACH_ENTRYPOINTS:-web}"
       - "traefik.http.routers.${APP_NAME:-cockroach}.rule=Host(`${COCKROACH_DOMAIN:-cockroach.example.com}`)"
       - "traefik.http.routers.${APP_NAME:-cockroach}.service=${APP_NAME:-cockroach}"
