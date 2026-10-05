@@ -23,9 +23,12 @@ services:
       - ${ELASTICSEARCH_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Montreal}
-      - discovery.type=${ELASTICSEARCH_DISCOVERY_TYPE:-single-node}
+      # Single-node default. Multi-node (Dokploy ×3): set ELASTICSEARCH_DISCOVERY_TYPE= (empty) so this is unset.
+      - discovery.type=${ELASTICSEARCH_DISCOVERY_TYPE-single-node}
       - cluster.name=${ELASTICSEARCH_CLUSTER_NAME:-elasticsearch}
       - node.name=${ELASTICSEARCH_NODE_NAME:-elasticsearch}
+      - discovery.seed_hosts=${ELASTICSEARCH_DISCOVERY_SEED_HOSTS:-}
+      - cluster.initial_master_nodes=${ELASTICSEARCH_INITIAL_MASTER_NODES:-}
       - xpack.security.enabled=${ELASTICSEARCH_XPACK_SECURITY_ENABLED:-false}
       - xpack.security.http.ssl.enabled=${ELASTICSEARCH_XPACK_SECURITY_HTTP_SSL_ENABLED:-false}
       - xpack.ml.enabled=${ELASTICSEARCH_XPACK_ML_ENABLED:-false}
@@ -43,7 +46,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl -fsS "http://127.0.0.1:9200/_cluster/health?wait_for_status=green&timeout=5s" >/dev/null
+        - curl -fsS "http://127.0.0.1:9200/_cluster/health?wait_for_status=${ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS:-yellow}&timeout=5s" >/dev/null
       interval: 15s
       timeout: 10s
       retries: 20
