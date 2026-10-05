@@ -23,12 +23,12 @@ services:
       - ${ELASTICSEARCH_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Montreal}
-      # Single-node default. Multi-node (Dokploy ×3): set ELASTICSEARCH_DISCOVERY_TYPE= (empty) so this is unset.
+      # Single-node default. Multi-node (Dokploy ×3): set ELASTICSEARCH_DISCOVERY_TYPE= (empty).
+      # Do NOT set discovery.seed_hosts / cluster.initial_master_nodes here when empty — ES rejects null settings (exit 70).
+      # Multi-node: add those keys only in .env / Dokploy env (literal ES setting names), never empty.
       - discovery.type=${ELASTICSEARCH_DISCOVERY_TYPE-single-node}
       - cluster.name=${ELASTICSEARCH_CLUSTER_NAME:-elasticsearch}
       - node.name=${ELASTICSEARCH_NODE_NAME:-elasticsearch}
-      - discovery.seed_hosts=${ELASTICSEARCH_DISCOVERY_SEED_HOSTS:-}
-      - cluster.initial_master_nodes=${ELASTICSEARCH_INITIAL_MASTER_NODES:-}
       - xpack.security.enabled=${ELASTICSEARCH_XPACK_SECURITY_ENABLED:-false}
       - xpack.security.http.ssl.enabled=${ELASTICSEARCH_XPACK_SECURITY_HTTP_SSL_ENABLED:-false}
       - xpack.ml.enabled=${ELASTICSEARCH_XPACK_ML_ENABLED:-false}

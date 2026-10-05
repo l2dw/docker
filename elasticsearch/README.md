@@ -30,16 +30,16 @@ Works out of the box — one Dokploy/Compose stack, one volume, one DNS alias:
 ELASTICSEARCH_DISCOVERY_TYPE=single-node
 ELASTICSEARCH_CLUSTER_NAME=elasticsearch
 ELASTICSEARCH_NODE_NAME=elasticsearch
-ELASTICSEARCH_DISCOVERY_SEED_HOSTS=
-ELASTICSEARCH_INITIAL_MASTER_NODES=
 ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS=yellow
 ```
 
-Leave `SEED_HOSTS` / `INITIAL_MASTER_NODES` empty. Do **not** raise `ELASTICSEARCH_DEPLOY_REPLICAS` — replicas share one volume and do not form a cluster.
+Do **not** set `discovery.seed_hosts` / `cluster.initial_master_nodes` (empty values crash ES: `null-valued setting`, exit 70). Do **not** raise `ELASTICSEARCH_DEPLOY_REPLICAS` — replicas share one volume and do not form a cluster.
 
 ## Multi-node cluster (3 Dokploy stacks)
 
 Use **three** Dokploy applications from the same compose, on **`dokploy-network`**, each with its own volume and DNS name. Compose substitution uses `${ELASTICSEARCH_DISCOVERY_TYPE-single-node}` (no `:`): an **empty** `ELASTICSEARCH_DISCOVERY_TYPE=` disables single-node mode.
+
+`discovery.seed_hosts` and `cluster.initial_master_nodes` are **not** in `environment:` (empty strings are rejected). Add them only when forming a cluster, as **literal** ES setting names in `.env` / Dokploy env (loaded via `env_file`).
 
 | Dokploy app | `APP_NAME` / hostname / node / alias | Volume name |
 |-------------|--------------------------------------|-------------|
@@ -54,9 +54,10 @@ DEFAULT_NETWORK_NAME=dokploy-network
 DEFAULT_NETWORK_EXTERNAL=true
 ELASTICSEARCH_CLUSTER_NAME=elasticsearch
 ELASTICSEARCH_DISCOVERY_TYPE=
-ELASTICSEARCH_DISCOVERY_SEED_HOSTS=elasticsearch-01,elasticsearch-02,elasticsearch-03
-ELASTICSEARCH_INITIAL_MASTER_NODES=elasticsearch-01,elasticsearch-02,elasticsearch-03
 ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS=green
+# Literal ES settings (non-empty only) — via env_file / Dokploy env:
+discovery.seed_hosts=elasticsearch-01,elasticsearch-02,elasticsearch-03
+cluster.initial_master_nodes=elasticsearch-01,elasticsearch-02,elasticsearch-03
 ```
 
 **Per node (example node 1):**
@@ -164,4 +165,4 @@ docker volume create elasticsearch_data
 - `ELASTICSEARCH_DOMAIN`, `ELASTICSEARCH_APP_URL`
 - `ELASTICSEARCH_BASE_PATH` / `ELASTICSEARCH_MIDDLEWARES` (subpath vs Host-only)
 - `ELASTICSEARCH_NETWORK_ALIAS` (default `dokploy-elasticsearch`)
-- Multi-node: empty `ELASTICSEARCH_DISCOVERY_TYPE`, plus `ELASTICSEARCH_DISCOVERY_SEED_HOSTS` and `ELASTICSEARCH_INITIAL_MASTER_NODES`
+- Multi-node: empty `ELASTICSEARCH_DISCOVERY_TYPE`, plus non-empty literal `discovery.seed_hosts` and `cluster.initial_master_nodes` in `.env` / Dokploy (not in compose `environment:`)
