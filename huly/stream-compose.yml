@@ -1,0 +1,70 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  stream:
+    image: ${HULY_STREAM_IMAGE:-docker.io/hardcoreeng/stream:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_STREAM_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - STREAM_SERVER_SECRET=${HULY_SECRET:-ChangeMe}
+      - STREAM_ENDPOINT_URL=${HULY_STREAM_ENDPOINT_URL:-datalake://datalake:4030}
+      - STREAM_INSECURE=${HULY_STREAM_INSECURE:-true}
+      - STREAM_QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+      - STREAM_REGION=${HULY_STREAM_REGION:-cockroach}
+      - AWS_ACCESS_KEY_ID=${HULY_STREAM_ACCESS_KEY:-ChangeMe}
+      - AWS_SECRET_ACCESS_KEY=${HULY_STREAM_SECRET_KEY:-ChangeMe}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_STREAM_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_STREAM_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_STREAM_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${HULY_STREAM_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_STREAM_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_STREAM_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_STREAM_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HULY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-huly}-stream.loadbalancer.server.port=1080"
+        - "traefik.http.routers.${APP_NAME:-huly}-stream.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-stream.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_stream`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-stream.service=${APP_NAME:-huly}-stream"
+        - "traefik.http.routers.${APP_NAME:-huly}-stream.middlewares=${APP_NAME:-huly}-stream-strip"
+        - "traefik.http.routers.${APP_NAME:-huly}-stream.priority=100"
+        - "traefik.http.routers.${APP_NAME:-huly}-stream.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-stream.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.middlewares.${APP_NAME:-huly}-stream-strip.stripprefix.prefixes=/_stream"
+        - "traefik.http.routers.${APP_NAME:-huly}-recording.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-recording.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/recording`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-recording.service=${APP_NAME:-huly}-stream"
+        - "traefik.http.routers.${APP_NAME:-huly}-recording.priority=100"
+        - "traefik.http.routers.${APP_NAME:-huly}-recording.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-recording.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+    labels:
+      - "traefik.enable=${HULY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-huly}-stream.loadbalancer.server.port=1080"
+      - "traefik.http.routers.${APP_NAME:-huly}-stream.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-stream.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_stream`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-stream.service=${APP_NAME:-huly}-stream"
+      - "traefik.http.routers.${APP_NAME:-huly}-stream.middlewares=${APP_NAME:-huly}-stream-strip"
+      - "traefik.http.routers.${APP_NAME:-huly}-stream.priority=100"
+      - "traefik.http.routers.${APP_NAME:-huly}-stream.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-stream.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.middlewares.${APP_NAME:-huly}-stream-strip.stripprefix.prefixes=/_stream"
+      - "traefik.http.routers.${APP_NAME:-huly}-recording.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-recording.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/recording`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-recording.service=${APP_NAME:-huly}-stream"
+      - "traefik.http.routers.${APP_NAME:-huly}-recording.priority=100"
+      - "traefik.http.routers.${APP_NAME:-huly}-recording.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-recording.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"

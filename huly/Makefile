@@ -1,6 +1,6 @@
 ## —— 🐝 Huly commands ———————————————————————————————————
 HULY_STACK_NAME := huly
-HULY_SERVICES_SHORT := front account transactor collaborator workspace fulltext stats rekoni kvs
+HULY_SERVICES_SHORT := front account transactor collaborator workspace fulltext stats rekoni kvs stream datalake media
 HULY_ENV := $(HULY_STACK_NAME)/.env
 HULY_ENV_EXAMPLE := $(HULY_STACK_NAME)/.env.example
 HULY_SECRET_VARS := HULY_SECRET

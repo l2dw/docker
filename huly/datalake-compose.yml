@@ -1,0 +1,59 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  datalake:
+    image: ${HULY_DATALAKE_IMAGE:-docker.io/hardcoreeng/datalake:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_DATALAKE_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - PORT=${HULY_DATALAKE_PORT:-4030}
+      - SECRET=${HULY_SECRET:-ChangeMe}
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - DB_URL=${HULY_CR_DB_URL:-postgres://huly:ChangeMe@postgresql:26257/huly}
+      - BUCKETS=${HULY_DATALAKE_BUCKETS:-huly,eu|http://minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - REGION=${HULY_DATALAKE_REGION:-cockroach}
+      - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_DATALAKE_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_DATALAKE_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_DATALAKE_MEMORY_LIMIT:-512M}
+      placement:
+        constraints:
+          - ${HULY_DATALAKE_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_DATALAKE_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_DATALAKE_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_DATALAKE_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${HULY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-huly}-datalake.loadbalancer.server.port=${HULY_DATALAKE_PORT:-4030}"
+        - "traefik.http.routers.${APP_NAME:-huly}-datalake.entrypoints=${HULY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-huly}-datalake.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_datalake`)"
+        - "traefik.http.routers.${APP_NAME:-huly}-datalake.service=${APP_NAME:-huly}-datalake"
+        - "traefik.http.routers.${APP_NAME:-huly}-datalake.middlewares=${APP_NAME:-huly}-datalake-strip"
+        - "traefik.http.routers.${APP_NAME:-huly}-datalake.priority=100"
+        - "traefik.http.routers.${APP_NAME:-huly}-datalake.tls=${HULY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-huly}-datalake.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.middlewares.${APP_NAME:-huly}-datalake-strip.stripprefix.prefixes=/_datalake"
+    labels:
+      - "traefik.enable=${HULY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-huly}-datalake.loadbalancer.server.port=${HULY_DATALAKE_PORT:-4030}"
+      - "traefik.http.routers.${APP_NAME:-huly}-datalake.entrypoints=${HULY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-huly}-datalake.rule=Host(`${HULY_DOMAIN:-huly.example.com}`) && PathPrefix(`/_datalake`)"
+      - "traefik.http.routers.${APP_NAME:-huly}-datalake.service=${APP_NAME:-huly}-datalake"
+      - "traefik.http.routers.${APP_NAME:-huly}-datalake.middlewares=${APP_NAME:-huly}-datalake-strip"
+      - "traefik.http.routers.${APP_NAME:-huly}-datalake.priority=100"
+      - "traefik.http.routers.${APP_NAME:-huly}-datalake.tls=${HULY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-huly}-datalake.tls.certresolver=${HULY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.middlewares.${APP_NAME:-huly}-datalake-strip.stripprefix.prefixes=/_datalake"

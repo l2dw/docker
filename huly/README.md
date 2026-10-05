@@ -29,11 +29,25 @@ make huly-stack-up          # Swarm
 | `collaborator` | Collaboration WS | `/_collaborator` (strip) |
 | `stats` | Stats | `/_stats` (strip) |
 | `rekoni` | Recognition | `/_rekoni` (strip) |
+| `stream` | Screen recording (TUS) | `/_stream` (strip), `/recording` |
+| `datalake` | Blob API for media | `/_datalake` (strip) |
+| `media` | Transcode worker | internal |
 | `workspace` / `fulltext` / `kvs` | Workers | internal |
 
-Per-service files: `front-compose.yml`, `account-compose.yml`, … (same definitions + labels where applicable).
+Per-service files: `front-compose.yml`, `account-compose.yml`, `stream-compose.yml`, … (same definitions + labels where applicable).
 
 Nginx from upstream is **not** included — Traefik path routers replace `.huly.nginx`.
+
+### Uploads vs screen recording
+
+| Feature | Front env | Backend | Notes |
+|---------|-----------|---------|--------|
+| Attachments | `UPLOAD_URL=/files` | S3/MinIO via `HULY_STORAGE_CONFIG` | Normal file upload |
+| Screen recording | `STREAM_URL=…/recording` | `stream` → `datalake://` | TUS; not MinIO `/files` |
+| Blob playback | `FILES_URL` / `DATALAKE_URL` | `datalake` | Prefer `datalake://` for stream endpoint |
+| Huly Love | `LOVE_ENDPOINT=…/_love` | Love service | Video calls — not screen capture |
+
+`STREAM_URL` must end with `/recording` (TUS returns relative `/recording/<id>`). Use `HULY_STREAM_ENDPOINT_URL=datalake://datalake:4030` — `s3://` alone often does not persist blobs for playback. Datalake `BUCKETS` location must be one of: `eu`, `weur`, `eeur`, `wnam`, `enam`, `apac`.
 
 ## External dependencies
 
@@ -43,7 +57,7 @@ Provision these **before** first deploy. Hostnames must resolve from the Huly st
 |------------|------------|--------|
 | **CockroachDB** (Postgres wire) | `HULY_CR_DB_URL` | e.g. `postgres://huly:pass@postgresql:26257/huly` |
 | **Kafka / Redpanda** | `HULY_QUEUE_CONFIG` | `host:9092` (no URI scheme) |
-| **S3 / MinIO** | `HULY_STORAGE_CONFIG` | `minio\|host:9000?accessKey=…&secretKey=…` |
+| **S3 / MinIO** | `HULY_STORAGE_CONFIG`, `HULY_DATALAKE_BUCKETS` | Use `minio\|` (not `s3\|`); include `rootBucket=huly` |
 | **Elasticsearch 7.x** | `HULY_ELASTIC_URL`, `HULY_FULLTEXT_DB_URL` | Ingest-attachment plugin for fulltext |
 
 Example `.env` fragment:
@@ -51,10 +65,43 @@ Example `.env` fragment:
 ```env
 HULY_CR_DB_URL=postgres://huly:ChangeMe@postgresql:26257/huly
 HULY_QUEUE_CONFIG=kafka:9092
-HULY_STORAGE_CONFIG=minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe
+HULY_STORAGE_CONFIG=minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe&rootBucket=huly
+HULY_STREAM_URL=https://huly.example.com/recording
+HULY_STREAM_ENDPOINT_URL=datalake://datalake:4030
+HULY_DATALAKE_BUCKETS=huly,eu|http://minio:9000?accessKey=ChangeMe&secretKey=ChangeMe
 HULY_ELASTIC_URL=http://elasticsearch:9200
 HULY_FULLTEXT_DB_URL=http://elasticsearch:9200
 ```
+
+### Create Huly database on CockroachDB
+
+Cockroach is **external** to this stack. Create the SQL user + database once, then point `HULY_CR_DB_URL` at it.
+
+Replace the container name filter with your Swarm/Compose service (Dokploy often looks like `*_cockroach`):
+
+```sh
+# Interactive SQL shell (TLS certs volume)
+docker exec -it "$(docker ps -q -f name=cockroach)" \
+  /cockroach/cockroach sql --certs-dir=/cockroach/certs --host=cockroach:26257 -u root
+
+# One-shot: user + database + grants
+docker exec "$(docker ps -q -f name=cockroach)" \
+  /cockroach/cockroach sql --certs-dir=/cockroach/certs --host=cockroach:26257 -u root -e "
+CREATE USER IF NOT EXISTS huly WITH PASSWORD 'ChangeMe';
+CREATE DATABASE IF NOT EXISTS huly;
+GRANT ALL ON DATABASE huly TO huly;
+"
+```
+
+If the stack runs **insecure** / `--accept-sql-without-tls`, drop `--certs-dir=…` and use `--insecure` instead.
+
+Then set:
+
+```env
+HULY_CR_DB_URL=postgres://huly:ChangeMe@cockroach:26257/huly
+```
+
+Host `cockroach` must resolve on the shared overlay (`DEFAULT_NETWORK_NAME=dokploy-network`). Adjust hostname if your Cockroach service/alias differs.
 
 ## Base path
 
@@ -67,7 +114,10 @@ HULY_FULLTEXT_DB_URL=http://elasticsearch:9200
 | `HULY_SECRET` | Shared app secret (`make huly-setup` generates if `ChangeMe`) |
 | `HULY_CR_DB_URL` | External Cockroach/Postgres URL |
 | `HULY_QUEUE_CONFIG` | External Kafka broker |
-| `HULY_STORAGE_CONFIG` | External object storage |
+| `HULY_STORAGE_CONFIG` | External object storage (`minio\|…&rootBucket=huly`) |
+| `HULY_STREAM_URL` | Public TUS base (`…/recording`) for screen capture |
+| `HULY_STREAM_ENDPOINT_URL` | Prefer `datalake://datalake:4030` |
+| `HULY_DATALAKE_URL` / `HULY_FILES_URL` | Public datalake + blob URL template |
 | `HULY_ELASTIC_URL` / `HULY_FULLTEXT_DB_URL` | External Elasticsearch |
 | `HULY_HTTP_SCHEME` / `HULY_WS_SCHEME` | `https` / `wss` (or `http` / `ws`) |
 | `HULY_INIT_REPO_DIR` | Set `/no-init-scripts` to skip default workspace content |

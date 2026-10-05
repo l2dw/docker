@@ -23,9 +23,12 @@ services:
       - TELEGRAM_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_telegram
       - STATS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_stats
       - UPLOAD_URL=${HULY_UPLOAD_URL:-/files}
+      - STREAM_URL=${HULY_STREAM_URL:-https://huly.example.com/recording}
+      - FILES_URL=${HULY_FILES_URL:-https://huly.example.com/_datalake/blob/:workspace/:blobId/:filename}
+      - DATALAKE_URL=${HULY_DATALAKE_URL:-https://huly.example.com/_datalake}
       - ELASTIC_URL=${HULY_ELASTIC_URL:-http://elasticsearch:9200}
       - COLLABORATOR_URL=${HULY_WS_SCHEME:-wss}://${HULY_DOMAIN:-huly.example.com}/_collaborator
-      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe}
+      - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe&rootBucket=huly}
       - TITLE=${HULY_TITLE:-Huly Self Host}
       - DEFAULT_LANGUAGE=${HULY_DEFAULT_LANGUAGE:-en}
       - LAST_NAME_FIRST=${HULY_LAST_NAME_FIRST:-true}
