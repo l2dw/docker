@@ -136,6 +136,28 @@ HULY_OPENID_DISPLAY_NAME=SSO
 
 `HULY_OPENID_DISPLAY_NAME` is optional (login button label). Scope is hardcoded upstream to `openid profile email`.
 
+### SSO-only UI (hide password login)
+
+On **`front`** only:
+
+```env
+HULY_HIDE_LOCAL_LOGIN=true
+```
+
+Hides the email/password form so users see the OIDC button. This does **not** fully disable the password login API.
+
+### Lock down public sign-up
+
+By default anyone can register. With SSO, set on **both** `account` and `front`:
+
+```env
+HULY_DISABLE_SIGNUP=true
+```
+
+Then only workspace **invite links** can add users. Create the first admin **before** enabling this (or while it is still `false`). Redeploy / recreate those two services after changing the env.
+
+**Caveat:** `DISABLE_SIGNUP=true` on `account` can block auto-provisioning of new OIDC users. If first SSO login fails to create an account, leave `HULY_DISABLE_SIGNUP=false` on account (or both) and rely on `HIDE_LOCAL_LOGIN=true` + IdP access control.
+
 IdP redirect / callback URI:
 
 ```text
@@ -163,6 +185,8 @@ Notes: IdP JWT must be **unencrypted** (Authentik: disable token encryption). Up
 | `HULY_DATALAKE_URL` / `HULY_FILES_URL` | Public datalake + blob URL template |
 | `HULY_MAIL_*` / `HULY_SMTP_*` | Mail service + SMTP (`MAIL_URL` → account/transactor) |
 | `HULY_OPENID_CLIENT_ID` / `_SECRET` / `_ISSUER` / `_DISPLAY_NAME` | OIDC SSO on account (empty = off) |
+| `HULY_DISABLE_SIGNUP` | `true` = invite-only (account + front); may block OIDC auto-provision |
+| `HULY_HIDE_LOCAL_LOGIN` | `true` on front = hide password form (SSO button only) |
 | `HULY_ELASTIC_URL` / `HULY_FULLTEXT_DB_URL` | External Elasticsearch |
 | `HULY_HTTP_SCHEME` / `HULY_WS_SCHEME` | `https` / `wss` (or `http` / `ws`) |
 | `HULY_INIT_REPO_DIR` | Set `/no-init-scripts` to skip default workspace content |

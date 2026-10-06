@@ -118,6 +118,7 @@ services:
       - OPENID_CLIENT_SECRET=${HULY_OPENID_CLIENT_SECRET:-}
       - OPENID_ISSUER=${HULY_OPENID_ISSUER:-}
       - OPENID_DISPLAY_NAME=${HULY_OPENID_DISPLAY_NAME:-}
+      - DISABLE_SIGNUP=${HULY_DISABLE_SIGNUP:-false}
     networks:
       - default
     deploy:
@@ -198,6 +199,8 @@ services:
       - LAST_NAME_FIRST=${HULY_LAST_NAME_FIRST:-true}
       - DESKTOP_UPDATES_CHANNEL=${HULY_DESKTOP_CHANNEL:-0.7.426}
       - DISABLED_FEATURES=${HULY_DISABLED_FEATURES:-auto-translate,mailboxes}
+      - DISABLE_SIGNUP=${HULY_DISABLE_SIGNUP:-false}
+      - HIDE_LOCAL_LOGIN=${HULY_HIDE_LOCAL_LOGIN:-false}
     networks:
       - default
     deploy:

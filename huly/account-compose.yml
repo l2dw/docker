@@ -28,6 +28,7 @@ services:
       - OPENID_CLIENT_SECRET=${HULY_OPENID_CLIENT_SECRET:-}
       - OPENID_ISSUER=${HULY_OPENID_ISSUER:-}
       - OPENID_DISPLAY_NAME=${HULY_OPENID_DISPLAY_NAME:-}
+      - DISABLE_SIGNUP=${HULY_DISABLE_SIGNUP:-false}
     networks:
       - default
     deploy:
