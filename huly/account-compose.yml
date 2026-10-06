@@ -23,6 +23,11 @@ services:
       - MODEL_ENABLED=${HULY_MODEL_ENABLED:-*}
       - ACCOUNTS_URL=${HULY_HTTP_SCHEME:-https}://${HULY_DOMAIN:-huly.example.com}/_accounts
       - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+      - MAIL_URL=${HULY_MAIL_URL:-http://mail:8097}
+      - OPENID_CLIENT_ID=${HULY_OPENID_CLIENT_ID:-}
+      - OPENID_CLIENT_SECRET=${HULY_OPENID_CLIENT_SECRET:-}
+      - OPENID_ISSUER=${HULY_OPENID_ISSUER:-}
+      - OPENID_DISPLAY_NAME=${HULY_OPENID_DISPLAY_NAME:-}
     networks:
       - default
     deploy:

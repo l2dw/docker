@@ -32,6 +32,7 @@ make huly-stack-up          # Swarm
 | `stream` | Screen recording (TUS) | `/_stream` (strip), `/recording` |
 | `datalake` | Blob API for media | `/_datalake` (strip) |
 | `media` | Transcode worker | internal |
+| `mail` | SMTP / OTP emails | internal (`MAIL_URL`) |
 | `workspace` / `fulltext` / `kvs` | Workers | internal |
 
 Per-service files: `front-compose.yml`, `account-compose.yml`, `stream-compose.yml`, … (same definitions + labels where applicable).
@@ -103,6 +104,48 @@ HULY_CR_DB_URL=postgres://huly:ChangeMe@cockroach:26257/huly
 
 Host `cockroach` must resolve on the shared overlay (`DEFAULT_NETWORK_NAME=dokploy-network`). Adjust hostname if your Cockroach service/alias differs.
 
+## SMTP / mail (`MAIL_URL`)
+
+The stack includes **`mail`** (`hardcoreeng/mail`). `account` and `transactor` set `MAIL_URL=${HULY_MAIL_URL:-http://mail:8097}`.
+
+Configure SMTP in `.env`:
+
+```env
+HULY_MAIL_SOURCE=noreply@huly.example.com
+HULY_SMTP_HOST=smtp.example.com
+HULY_SMTP_PORT=587
+HULY_SMTP_USERNAME=ChangeMe
+HULY_SMTP_PASSWORD=ChangeMe
+HULY_MAIL_URL=http://mail:8097
+```
+
+Prefer port **587** (STARTTLS). Do **not** enable SMTP and Amazon SES at the same time (SES keys are commented in `.env.example`). UI: **Settings → Notifications** (per user). Not the same as `GMAIL_URL` (Gmail inbox integration).
+
+Debug: [smtp-troubleshooting.md](https://github.com/hcengineering/huly-selfhost/blob/main/guides/smtp-troubleshooting.md).
+
+## SSO (OpenID Connect)
+
+Env vars on **`account`** (empty `CLIENT_ID` / `SECRET` / `ISSUER` = OIDC disabled):
+
+```env
+HULY_OPENID_CLIENT_ID=...
+HULY_OPENID_CLIENT_SECRET=...
+HULY_OPENID_ISSUER=https://idp.example.com/application/o/huly/
+HULY_OPENID_DISPLAY_NAME=SSO
+```
+
+`HULY_OPENID_DISPLAY_NAME` is optional (login button label). Scope is hardcoded upstream to `openid profile email`.
+
+IdP redirect / callback URI:
+
+```text
+https://huly.example.com/_accounts/auth/openid/callback
+```
+
+(`front` already has public `ACCOUNTS_URL=…/_accounts`. Traefik strips `/_accounts`.)
+
+Notes: IdP JWT must be **unencrypted** (Authentik: disable token encryption). Upstream: [OIDC](https://github.com/hcengineering/huly-selfhost#configure-openid-connect-oidc).
+
 ## Base path
 
 **Subpath is not supported.** Keep `HULY_BASE_PATH=/` and a dedicated subdomain (`HULY_DOMAIN`). Upstream paths (`/_accounts`, `/_transactor`, …) are absolute.
@@ -118,6 +161,8 @@ Host `cockroach` must resolve on the shared overlay (`DEFAULT_NETWORK_NAME=dokpl
 | `HULY_STREAM_URL` | Public TUS base (`…/recording`) for screen capture |
 | `HULY_STREAM_ENDPOINT_URL` | Prefer `datalake://datalake:4030` |
 | `HULY_DATALAKE_URL` / `HULY_FILES_URL` | Public datalake + blob URL template |
+| `HULY_MAIL_*` / `HULY_SMTP_*` | Mail service + SMTP (`MAIL_URL` → account/transactor) |
+| `HULY_OPENID_CLIENT_ID` / `_SECRET` / `_ISSUER` / `_DISPLAY_NAME` | OIDC SSO on account (empty = off) |
 | `HULY_ELASTIC_URL` / `HULY_FULLTEXT_DB_URL` | External Elasticsearch |
 | `HULY_HTTP_SCHEME` / `HULY_WS_SCHEME` | `https` / `wss` (or `http` / `ws`) |
 | `HULY_INIT_REPO_DIR` | Set `/no-init-scripts` to skip default workspace content |

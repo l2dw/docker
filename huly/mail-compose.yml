@@ -1,0 +1,35 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-huly-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  mail:
+    image: ${HULY_MAIL_IMAGE:-docker.io/hardcoreeng/mail:v0.7.426}
+    restart: ${HULY_RESTART:-unless-stopped}
+    privileged: ${HULY_PRIVILEGED:-false}
+    env_file:
+      - ${HULY_MAIL_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - PORT=${HULY_MAIL_PORT:-8097}
+      - SOURCE=${HULY_MAIL_SOURCE:-noreply@huly.example.com}
+      - SMTP_HOST=${HULY_SMTP_HOST:-}
+      - SMTP_PORT=${HULY_SMTP_PORT:-587}
+      - SMTP_USERNAME=${HULY_SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${HULY_SMTP_PASSWORD:-}
+    networks:
+      - default
+    deploy:
+      mode: ${HULY_MAIL_DEPLOY_MODE:-replicated}
+      replicas: ${HULY_MAIL_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${HULY_MAIL_MEMORY_LIMIT:-256M}
+      placement:
+        constraints:
+          - ${HULY_MAIL_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${HULY_MAIL_RESTART_POLICY_CONDITION:-any}
+        delay: ${HULY_MAIL_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${HULY_MAIL_RESTART_POLICY_MAX_ATTEMPTS:-3}

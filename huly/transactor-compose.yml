@@ -22,6 +22,7 @@ services:
       - STATS_URL=http://stats:4900
       - LAST_NAME_FIRST=${HULY_LAST_NAME_FIRST:-true}
       - QUEUE_CONFIG=${HULY_QUEUE_CONFIG:-kafka:9092}
+      - MAIL_URL=${HULY_MAIL_URL:-http://mail:8097}
     networks:
       - default
     deploy:
