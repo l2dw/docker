@@ -51,7 +51,7 @@ services:
         - "homepage.group=${HOMEPAGE_HOMEPAGE_GROUP:-Infrastructure}"
         - "homepage.name=${HOMEPAGE_HOMEPAGE_NAME:-Homepage}"
         - "homepage.icon=${HOMEPAGE_HOMEPAGE_ICON:-homepage.png}"
-        - "homepage.href=${HOMEPAGE_APP_URL:-http://homepage.example.com/}"
+        - "homepage.href=${HOMEPAGE_HOMEPAGE_URL:-}"
         - "homepage.description=${HOMEPAGE_HOMEPAGE_DESCRIPTION:-Application dashboard}"
         - "homepage.siteMonitor=${HOMEPAGE_HOMEPAGE_SITEMONITOR:-http://homepage:3000}"
     labels:
@@ -66,6 +66,6 @@ services:
       - "homepage.group=${HOMEPAGE_HOMEPAGE_GROUP:-Infrastructure}"
       - "homepage.name=${HOMEPAGE_HOMEPAGE_NAME:-Homepage}"
       - "homepage.icon=${HOMEPAGE_HOMEPAGE_ICON:-homepage.png}"
-      - "homepage.href=${HOMEPAGE_APP_URL:-http://homepage.example.com/}"
+      - "homepage.href=${HOMEPAGE_HOMEPAGE_URL:-}"
       - "homepage.description=${HOMEPAGE_HOMEPAGE_DESCRIPTION:-Application dashboard}"
       - "homepage.siteMonitor=${HOMEPAGE_HOMEPAGE_SITEMONITOR:-http://homepage:3000}"

@@ -149,6 +149,7 @@ make homepage-compose-logs
 |----------|--------|
 | `APP_NAME` | Traefik router scope (default `homepage`) |
 | `HOMEPAGE_DOMAIN` / `HOMEPAGE_ALLOWED_HOSTS` / `HOMEPAGE_APP_URL` | Public host (warns if `example.com`) |
+| `HOMEPAGE_HOMEPAGE_URL` | Homepage discovery `href` (empty by default; set public URL later) |
 | `DEFAULT_NETWORK_NAME` / `DEFAULT_NETWORK_EXTERNAL` | Default `homepage-network` / `false`; `dokploy-network` ⇒ `true` |
 | `HOMEPAGE_CONFIG_VOLUME_*` | Volume name/driver/opts/path + container `*_DIR` (`/app/config`) |
 | `HOMEPAGE_ENV_FILE` | Compose dotenv (default `.env.example`) |

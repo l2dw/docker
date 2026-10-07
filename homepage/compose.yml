@@ -39,3 +39,17 @@ services:
         condition: ${HOMEPAGE_RESTART_POLICY_CONDITION:-any}
         delay: ${HOMEPAGE_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${HOMEPAGE_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${HOMEPAGE_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${HOMEPAGE_HOMEPAGE_NAME:-Homepage}"
+        - "homepage.icon=${HOMEPAGE_HOMEPAGE_ICON:-homepage.png}"
+        - "homepage.href=${HOMEPAGE_HOMEPAGE_URL:-}"
+        - "homepage.description=${HOMEPAGE_HOMEPAGE_DESCRIPTION:-Application dashboard}"
+        - "homepage.siteMonitor=${HOMEPAGE_HOMEPAGE_SITEMONITOR:-http://homepage:3000}"
+    labels:
+      - "homepage.group=${HOMEPAGE_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${HOMEPAGE_HOMEPAGE_NAME:-Homepage}"
+      - "homepage.icon=${HOMEPAGE_HOMEPAGE_ICON:-homepage.png}"
+      - "homepage.href=${HOMEPAGE_HOMEPAGE_URL:-}"
+      - "homepage.description=${HOMEPAGE_HOMEPAGE_DESCRIPTION:-Application dashboard}"
+      - "homepage.siteMonitor=${HOMEPAGE_HOMEPAGE_SITEMONITOR:-http://homepage:3000}"
