@@ -313,7 +313,8 @@ services:
       - "--entrypoints.web.address=:80"
       # Keep WEB middlewares empty: ACME HTTP-01 uses acme-http@internal on `web`.
       # Unqualified `waf` resolves as waf@internal there and fails.
-      # WAF optional on websecure (default waf@docker). Use ${VAR-default} so empty disables.
+      # WAF optional on websecure: set DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES=waf@docker (or empty to disable).
+      # No compose-level default — empty must stay empty so WAF can be turned off.
       - "--entrypoints.web.http.middlewares=${DOKPLOY_TRAEFIK_WEB_MIDDLEWARES:-}"
       - "--entrypoints.web.forwardedHeaders.trustedIPs=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32,::1/128}"
       - "--entrypoints.web.forwardedHeaders.insecure=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE:-false}"
@@ -321,7 +322,7 @@ services:
       - "--entrypoints.web.transport.respondingTimeouts.writeTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_WRITE_TIMEOUT:-600s}"
       - "--entrypoints.web.transport.respondingTimeouts.idleTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_IDLE_TIMEOUT:-180s}"
       - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.websecure.http.middlewares=${DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES-waf@docker}"
+      - "--entrypoints.websecure.http.middlewares=${DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES:-}"
       - "--entrypoints.websecure.forwardedHeaders.trustedIPs=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32,::1/128}"
       - "--entrypoints.websecure.forwardedHeaders.insecure=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE:-false}"
       - "--entrypoints.websecure.transport.respondingTimeouts.readTimeout=${DOKPLOY_TRAEFIK_TRANSPORT_READ_TIMEOUT:-600s}"
@@ -443,7 +444,6 @@ services:
       - "traefik.http.middlewares.forward-https-headers.headers.customrequestheaders.X-Forwarded-Port=443"
       # htpasswd hashes use $ → double each when passed through Compose/Swarm interpolation (cenadmin:$$apr1$$...)
       - "traefik.http.middlewares.basic-auth.basicAuth.users=${DOKPLOY_TRAEFIK_BASIC_AUTH_CREDENTIALS}"
-      # WAF (ModSecurity CRS plugin) — also in etc/traefik/rules/middlewares.yml as waf@file
       - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.modSecurityUrl=${DOKPLOY_WAF_MODSECURITY_URL:-http://dokploy-waf:8080}"
       - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.maxBodySize=${DOKPLOY_WAF_MAX_BODY_SIZE:-10485760}"
       - "traefik.http.middlewares.waf.plugin.traefik-modsecurity-plugin.timeoutMillis=${DOKPLOY_WAF_TIMEOUT_MILLIS:-2000}"

@@ -124,7 +124,7 @@ Configuration is via `command:` in [`docker-compose.yml`](docker-compose.yml) (n
 | Variable | Default |
 |----------|---------|
 | `DOKPLOY_TRAEFIK_WEB_MIDDLEWARES` | *(empty)* — ACME HTTP-01 on `web` |
-| `DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES` | `waf@docker` (optional — empty disables; or `waf@swarm` / `waf@file`) |
+| `DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES` | `waf@docker` in `.env.example` (optional — empty disables; or `waf@swarm` / `waf@file`; no compose fallback) |
 | `DOKPLOY_WAF_MODSECURITY_URL` | `http://dokploy-waf:8080` |
 | `DOKPLOY_WAF_BACKEND` | `http://dokploy-waf-dummy:80` |
 
