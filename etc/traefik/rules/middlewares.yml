@@ -11,7 +11,7 @@ http:
         scheme: https
         permanent: true
     # Traefik → ModSecurity CRS (service `waf` / alias `dokploy-waf`). Also on Traefik labels.
-    # Entrypoints: use fully qualified `waf@file` on websecure only (leave web empty for ACME HTTP-01).
+    # Entrypoints: optional WAF on websecure only (default waf@docker; or waf@file / waf@swarm). Leave web empty for ACME HTTP-01.
     # CRS apache listens on 8080. Its BACKEND must be dokploy-waf-dummy (or another real upstream)
     # — empty/localhost:80 inside the WAF container causes Traefik 503.
     waf:

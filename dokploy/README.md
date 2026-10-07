@@ -124,15 +124,15 @@ Configuration is via `command:` in [`docker-compose.yml`](docker-compose.yml) (n
 | Variable | Default |
 |----------|---------|
 | `DOKPLOY_TRAEFIK_WEB_MIDDLEWARES` | *(empty)* — ACME HTTP-01 on `web` |
-| `DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES` | `waf@file` |
+| `DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES` | `waf@docker` (optional — empty disables; or `waf@swarm` / `waf@file`) |
 | `DOKPLOY_WAF_MODSECURITY_URL` | `http://dokploy-waf:8080` |
 | `DOKPLOY_WAF_BACKEND` | `http://dokploy-waf-dummy:80` |
 
-Entrypoint middlewares need a **provider suffix** (`waf@file`, `waf@swarm`, `waf@docker`). Bare `waf` on `web` makes Traefik look for `waf@internal` on `acme-http@internal` → `middleware "waf@internal" does not exist`. Keep WAF off `web`; put it on `websecure` only.
+Entrypoint middlewares need a **provider suffix** (`waf@docker`, `waf@swarm`, `waf@file`). Bare `waf` on `web` makes Traefik look for `waf@internal` on `acme-http@internal` → `middleware "waf@internal" does not exist`. Keep WAF off `web`; optional on `websecure` only.
 
 ```sh
 DOKPLOY_TRAEFIK_WEB_MIDDLEWARES=
-DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES=waf@file
+DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES=waf@docker   # empty to disable WAF
 DOKPLOY_WAF_MODSECURITY_URL=http://dokploy-waf:8080
 DOKPLOY_WAF_BACKEND=http://dokploy-waf-dummy:80
 ```
