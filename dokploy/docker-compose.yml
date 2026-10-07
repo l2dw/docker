@@ -311,6 +311,8 @@ services:
       - "--api.insecure=${DOKPLOY_TRAEFIK_API_INSECURE:-false}"
       - "--api.basePath=${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
       - "--entrypoints.web.address=:80"
+      # Keep WEB middlewares empty: ACME HTTP-01 uses acme-http@internal on `web`.
+      # Unqualified `waf` resolves as waf@internal there and fails. Prefer waf@file on websecure.
       - "--entrypoints.web.http.middlewares=${DOKPLOY_TRAEFIK_WEB_MIDDLEWARES:-}"
       - "--entrypoints.web.forwardedHeaders.trustedIPs=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32,::1/128}"
       - "--entrypoints.web.forwardedHeaders.insecure=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE:-false}"
