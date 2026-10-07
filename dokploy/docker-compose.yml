@@ -313,8 +313,8 @@ services:
       - "--entrypoints.web.address=:80"
       # Keep WEB middlewares empty: ACME HTTP-01 uses acme-http@internal on `web`.
       # Unqualified `waf` resolves as waf@internal there and fails.
-      # WAF optional on websecure: set DOKPLOY_TRAEFIK_WEBSECURE_MIDDLEWARES=waf@docker (or empty to disable).
-      # No compose-level default — empty must stay empty so WAF can be turned off.
+      # WAF optional on websecure: leave empty to disable, or set waf@docker / waf@swarm / waf@file.
+      # No compose-level default — empty must stay empty.
       - "--entrypoints.web.http.middlewares=${DOKPLOY_TRAEFIK_WEB_MIDDLEWARES:-}"
       - "--entrypoints.web.forwardedHeaders.trustedIPs=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_TRUSTED_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32,::1/128}"
       - "--entrypoints.web.forwardedHeaders.insecure=${DOKPLOY_TRAEFIK_FORWARDED_HEADERS_INSECURE:-false}"
