@@ -4,18 +4,38 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-true}
 
 volumes:
-  dokploy-data:
+  data:
     name: ${DOKPLOY_DATA_VOLUME_NAME:-dokploy-data}
     external: ${DOKPLOY_DATA_VOLUME_EXTERNAL:-false}
-  dokploy-logs:
+    driver: ${DOKPLOY_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_DATA_VOLUME_TYPE:-}
+      o: ${DOKPLOY_DATA_VOLUME_OPTS:-}
+      device: ${DOKPLOY_DATA_VOLUME_PATH:-}
+  logs:
     name: ${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}
     external: ${DOKPLOY_LOGS_VOLUME_EXTERNAL:-false}
-  dokploy-docker:
+    driver: ${DOKPLOY_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_LOGS_VOLUME_TYPE:-}
+      o: ${DOKPLOY_LOGS_VOLUME_OPTS:-}
+      device: ${DOKPLOY_LOGS_VOLUME_PATH:-}
+  docker:
     name: ${DOKPLOY_DOCKER_VOLUME_NAME:-dokploy-docker}
     external: ${DOKPLOY_DOCKER_VOLUME_EXTERNAL:-false}
-  dokploy-traefik_certificates:
+    driver: ${DOKPLOY_DOCKER_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_DOCKER_VOLUME_TYPE:-}
+      o: ${DOKPLOY_DOCKER_VOLUME_OPTS:-}
+      device: ${DOKPLOY_DOCKER_VOLUME_PATH:-}
+  traefik-certificates:
     name: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME:-dokploy-traefik_certificates}
     external: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_EXTERNAL:-false}
+    driver: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_TYPE:-}
+      o: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_OPTS:-}
+      device: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_PATH:-}
 
 services:
   ## dokploy console only — expects postgresql/redis (and Traefik) already on the overlay
@@ -41,10 +61,10 @@ services:
       - BETTER_AUTH_TRUSTED_ORIGINS=${DOKPLOY_BETTER_AUTH_TRUSTED_ORIGINS}
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
-      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/var/log/dokploy
-      - ${DOKPLOY_DOCKER_DIR:-dokploy-docker}:/root/.docker
-      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/dokploy/traefik/dynamic/certificates:z
+      - data:${DOKPLOY_DATA_VOLUME_DIR:-/etc/dokploy}:z
+      - logs:${DOKPLOY_LOGS_VOLUME_DIR:-/var/log/dokploy}:z
+      - docker:${DOKPLOY_DOCKER_VOLUME_DIR:-/root/.docker}:z
+      - traefik-certificates:/etc/dokploy/traefik/dynamic/certificates:z
     deploy:
       mode: ${DOKPLOY_DOKPLOY_DEPLOY_MODE:-replicated}
       replicas: ${DOKPLOY_DOKPLOY_DEPLOY_REPLICAS:-1}

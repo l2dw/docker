@@ -34,10 +34,9 @@ Required runtime variables include `DOKPLOY_DATABASE_URL`,
 `DOKPLOY_BETTER_AUTH_SECRET`, and `DOKPLOY_ADVERTISE_ADDR`. The setup target
 rejects empty or placeholder values for the secrets and database URL.
 
-The Docker client configuration is persisted through `DOKPLOY_DOCKER_DIR`,
-`DOKPLOY_DOCKER_VOLUME_NAME`, and `DOKPLOY_DOCKER_VOLUME_EXTERNAL`. PostgreSQL
-and Redis container mount paths are configurable with the respective
-`*_PGDATA_PATH`, `*_LOGS_PATH`, and `*_DATA_PATH` variables.
+Volumes use short Compose keys (`postgresql-data`, `data`, `traefik-certificates`, …)
+with `*_VOLUME_{NAME,EXTERNAL,DRIVER,TYPE,OPTS,PATH,DIR}`. `DIR` is the **container**
+path; bind mounts use `TYPE=none` `OPTS=bind` `PATH=<host dir>` (setup `mkdir`s `PATH`).
 
 `docker stack deploy` does **not** support nested interpolation (`${A:-${B:-x}}`). Each key uses a single-level default.
 
@@ -67,8 +66,10 @@ To reuse `/infra/postgresql-16` data under Swarm:
 
 ```env
 DOKPLOY_POSTGRES_IMAGE=bitnami/postgresql:16
-DOKPLOY_POSTGRES_DATA_DIR=/appdata/postgresql-16/data
-DOKPLOY_POSTGRES_PGDATA_PATH=/bitnami/postgresql/data
+DOKPLOY_POSTGRES_DATA_VOLUME_TYPE=none
+DOKPLOY_POSTGRES_DATA_VOLUME_OPTS=bind
+DOKPLOY_POSTGRES_DATA_VOLUME_PATH=/appdata/postgresql-16/data
+DOKPLOY_POSTGRES_DATA_VOLUME_DIR=/bitnami/postgresql/data
 DOKPLOY_POSTGRES_USER=root          # match Bitnami POSTGRESQL_USERNAME
 DOKPLOY_POSTGRES_DB=root
 DOKPLOY_POSTGRES_PASSWORD=…         # POSTGRESQL_PASSWORD
@@ -134,7 +135,7 @@ DOKPLOY_WAF_BACKEND=http://dokploy-waf-dummy:80
 
 **`waf-dummy`** (`traefik/whoami`) is the CRS Apache upstream (`BACKEND`). Without a reachable backend, ModSecurity proxies to `localhost:80` inside the WAF container and Traefik’s plugin returns **503**. Keep `DOKPLOY_WAF_BACKEND` on `dokploy-waf-dummy` (or another real HTTP service on the overlay).
 
-Certificates bind path: set `DOKPLOY_TRAEFIK_CERTIFICATES_DIR` when using a host directory instead of the named volume (Traefik + certs-dumper + Dokploy console mount).
+Certificates bind: set `DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_TYPE=none`, `OPTS=bind`, and `PATH=<host dir>` (shared by Traefik, certs-dumper, and the Dokploy console at different container paths).
 
 `stack-deploy` resolves compose under `$(INFRA_DIR)/$(STACK_NAME)/` and sources that project’s `.env` before deploy.
 
@@ -155,6 +156,22 @@ Versioned under [`etc/waf/rules/`](../etc/waf/rules/). Delivered as **Swarm conf
 
 After editing rule files, bump `DOKPLOY_WAF_*_CRS_CONFIG_NAME` and redeploy.
 
+## Networks
+
+Default: `DEFAULT_NETWORK_NAME=dokploy-network` + `DEFAULT_NETWORK_EXTERNAL=true` (this stack **owns** the shared overlay). `make dokploy-setup` upserts the pair and creates the network when missing (`overlay` Swarm / `bridge` Compose).
+
+## Volumes
+
+| Compose key | Default Docker name | Default container `DIR` |
+|-------------|---------------------|-------------------------|
+| `postgresql-data` / `postgresql-logs` | `dokploy-postgresql_*` | `/var/lib/postgresql/data` · `/var/log/postgresql` |
+| `redis-data` / `redis-logs` | `dokploy-redis_*` | `/data` · `/var/log/redis` |
+| `data` / `logs` / `docker` | `dokploy-data` / `dokploy-logs` / `dokploy-docker` | `/etc/dokploy` · `/var/log/dokploy` · `/root/.docker` |
+| `traefik-logs` / `traefik-certificates` / `traefik-rules` | `dokploy-traefik_*` | `/var/log/traefik` · `/etc/traefik/certificates` · `/etc/traefik/rules` |
+| `waf-logs` | `dokploy-waf_logs` | `/var/log/apache2` |
+
+Recipes (`*_VOLUME_*`): **local named** (default, empty TYPE/OPTS/PATH) · **bind** (`TYPE=none` `OPTS=bind` `PATH=/appdata/…`) · **NFS** · **external** (`EXTERNAL=true`, pre-create). `traefik-certificates` is shared (Dokploy / Traefik / certs-dumper mount different container paths).
+
 ## Base path
 
 `DOKPLOY_BASE_PATH` is **Traefik PathPrefix only** for the console router (default `/` = Host-only). It is **not** passed into the Dokploy container: upstream Dokploy uses `/etc/dokploy` as its filesystem root, not a URL subpath.
@@ -170,4 +187,4 @@ Homepage discovery `href` uses empty defaults — set `DOKPLOY_HOMEPAGE_URL` / `
 3. HTTPS `404 page not found` but HTTP works: console stuck on `entrypoints=web` — set `DOKPLOY_ENTRYPOINTS=websecure` + `DOKPLOY_TLS_ENABLED=true` (not only `DOKPLOY_TRAEFIK_*`).
 4. `wait-for-postgres` timeout: check `DOKPLOY_DATABASE_URL` host (`dokploy-postgresql` with vip; `tasks.dokploy_postgresql` with dnsrr) and URL-encoding of passwords with `@`.
 5. certs-dumper exit 1 / `apk … jq`: set `DOKPLOY_CERTS_DUMPER_ENV_FILE=.env` and campus proxy **IP** in `HTTP_PROXY` / `http_proxy` (see commented block in `.env.example`, e.g. `10.139.33.12:80`).
-6. Never start `/infra/postgresql-16` and `dokploy_postgresql` together on the same `DOKPLOY_POSTGRES_DATA_DIR`.
+6. Never start `/infra/postgresql-16` and `dokploy_postgresql` together on the same PGDATA (`DOKPLOY_POSTGRES_DATA_VOLUME_PATH`).

@@ -4,42 +4,102 @@ networks:
     external: ${DEFAULT_NETWORK_EXTERNAL:-true}
 
 volumes:
-  dokploy-postgresql_data:
+  postgresql-data:
     name: ${DOKPLOY_POSTGRES_DATA_VOLUME_NAME:-dokploy-postgresql_data}
     external: ${DOKPLOY_POSTGRES_DATA_VOLUME_EXTERNAL:-false}
-  dokploy-postgresql_logs:
+    driver: ${DOKPLOY_POSTGRES_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_POSTGRES_DATA_VOLUME_TYPE:-}
+      o: ${DOKPLOY_POSTGRES_DATA_VOLUME_OPTS:-}
+      device: ${DOKPLOY_POSTGRES_DATA_VOLUME_PATH:-}
+  postgresql-logs:
     name: ${DOKPLOY_POSTGRES_LOGS_VOLUME_NAME:-dokploy-postgresql_logs}
     external: ${DOKPLOY_POSTGRES_LOGS_VOLUME_EXTERNAL:-false}
-  dokploy-redis_data:
+    driver: ${DOKPLOY_POSTGRES_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_POSTGRES_LOGS_VOLUME_TYPE:-}
+      o: ${DOKPLOY_POSTGRES_LOGS_VOLUME_OPTS:-}
+      device: ${DOKPLOY_POSTGRES_LOGS_VOLUME_PATH:-}
+  redis-data:
     name: ${DOKPLOY_REDIS_DATA_VOLUME_NAME:-dokploy-redis_data}
     external: ${DOKPLOY_REDIS_DATA_VOLUME_EXTERNAL:-false}
-  dokploy-redis_logs:
+    driver: ${DOKPLOY_REDIS_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_REDIS_DATA_VOLUME_TYPE:-}
+      o: ${DOKPLOY_REDIS_DATA_VOLUME_OPTS:-}
+      device: ${DOKPLOY_REDIS_DATA_VOLUME_PATH:-}
+  redis-logs:
     name: ${DOKPLOY_REDIS_LOGS_VOLUME_NAME:-dokploy-redis_logs}
     external: ${DOKPLOY_REDIS_LOGS_VOLUME_EXTERNAL:-false}
-  dokploy-data:
+    driver: ${DOKPLOY_REDIS_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_REDIS_LOGS_VOLUME_TYPE:-}
+      o: ${DOKPLOY_REDIS_LOGS_VOLUME_OPTS:-}
+      device: ${DOKPLOY_REDIS_LOGS_VOLUME_PATH:-}
+  data:
     name: ${DOKPLOY_DATA_VOLUME_NAME:-dokploy-data}
     external: ${DOKPLOY_DATA_VOLUME_EXTERNAL:-false}
-  dokploy-logs:
+    driver: ${DOKPLOY_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_DATA_VOLUME_TYPE:-}
+      o: ${DOKPLOY_DATA_VOLUME_OPTS:-}
+      device: ${DOKPLOY_DATA_VOLUME_PATH:-}
+  logs:
     name: ${DOKPLOY_LOGS_VOLUME_NAME:-dokploy-logs}
     external: ${DOKPLOY_LOGS_VOLUME_EXTERNAL:-false}
-  dokploy-docker:
+    driver: ${DOKPLOY_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_LOGS_VOLUME_TYPE:-}
+      o: ${DOKPLOY_LOGS_VOLUME_OPTS:-}
+      device: ${DOKPLOY_LOGS_VOLUME_PATH:-}
+  docker:
     name: ${DOKPLOY_DOCKER_VOLUME_NAME:-dokploy-docker}
     external: ${DOKPLOY_DOCKER_VOLUME_EXTERNAL:-false}
-  dokploy-traefik_config:
+    driver: ${DOKPLOY_DOCKER_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_DOCKER_VOLUME_TYPE:-}
+      o: ${DOKPLOY_DOCKER_VOLUME_OPTS:-}
+      device: ${DOKPLOY_DOCKER_VOLUME_PATH:-}
+  traefik-config:
     name: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_NAME:-dokploy-traefik_config}
     external: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_EXTERNAL:-false}
-  dokploy-traefik_logs:
+    driver: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_TYPE:-}
+      o: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_OPTS:-}
+      device: ${DOKPLOY_TRAEFIK_CONFIG_VOLUME_PATH:-}
+  traefik-logs:
     name: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_NAME:-dokploy-traefik_logs}
     external: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_EXTERNAL:-false}
-  dokploy-traefik_certificates:
+    driver: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_TYPE:-}
+      o: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_OPTS:-}
+      device: ${DOKPLOY_TRAEFIK_LOGS_VOLUME_PATH:-}
+  traefik-certificates:
     name: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_NAME:-dokploy-traefik_certificates}
     external: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_EXTERNAL:-false}
-  dokploy-traefik_rules:
+    driver: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_TYPE:-}
+      o: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_OPTS:-}
+      device: ${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_PATH:-}
+  traefik-rules:
     name: ${DOKPLOY_TRAEFIK_RULES_VOLUME_NAME:-dokploy-traefik_rules}
     external: ${DOKPLOY_TRAEFIK_RULES_VOLUME_EXTERNAL:-false}
-  dokploy-waf_logs:
+    driver: ${DOKPLOY_TRAEFIK_RULES_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_TRAEFIK_RULES_VOLUME_TYPE:-}
+      o: ${DOKPLOY_TRAEFIK_RULES_VOLUME_OPTS:-}
+      device: ${DOKPLOY_TRAEFIK_RULES_VOLUME_PATH:-}
+  waf-logs:
     name: ${DOKPLOY_WAF_LOGS_VOLUME_NAME:-dokploy-waf_logs}
     external: ${DOKPLOY_WAF_LOGS_VOLUME_EXTERNAL:-false}
+    driver: ${DOKPLOY_WAF_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DOKPLOY_WAF_LOGS_VOLUME_TYPE:-}
+      o: ${DOKPLOY_WAF_LOGS_VOLUME_OPTS:-}
+      device: ${DOKPLOY_WAF_LOGS_VOLUME_PATH:-}
 
 # Swarm configs — content from repo; distributed to nodes (no host bind required).
 # To roll content: bump DOKPLOY_*_CONFIG_NAME then stack deploy (configs are immutable).
@@ -73,9 +133,9 @@ services:
       - POSTGRESQL_TIMEZONE=${TZ:-America/Toronto}
       - TZ=${TZ:-America/Toronto}
     volumes:
-      # Official: /var/lib/postgresql/data · Bitnami: /bitnami/postgresql/data
-      - ${DOKPLOY_POSTGRES_DATA_DIR:-dokploy-postgresql_data}:${DOKPLOY_POSTGRES_PGDATA_PATH:-/var/lib/postgresql/data}
-      - ${DOKPLOY_POSTGRES_LOGS_DIR:-dokploy-postgresql_logs}:${DOKPLOY_POSTGRES_LOGS_PATH:-/var/log/postgresql}
+      # Official: /var/lib/postgresql/data · Bitnami: set DOKPLOY_POSTGRES_DATA_VOLUME_DIR=/bitnami/postgresql/data
+      - postgresql-data:${DOKPLOY_POSTGRES_DATA_VOLUME_DIR:-/var/lib/postgresql/data}:z
+      - postgresql-logs:${DOKPLOY_POSTGRES_LOGS_VOLUME_DIR:-/var/log/postgresql}:z
     networks:
       default:
         aliases:
@@ -118,8 +178,8 @@ services:
       retries: 10
       start_period: 10s
     volumes:
-      - ${DOKPLOY_REDIS_DATA_DIR:-dokploy-redis_data}:${DOKPLOY_REDIS_DATA_PATH:-/data}
-      - ${DOKPLOY_REDIS_LOGS_DIR:-dokploy-redis_logs}:${DOKPLOY_REDIS_LOGS_PATH:-/var/log/redis}
+      - redis-data:${DOKPLOY_REDIS_DATA_VOLUME_DIR:-/data}:z
+      - redis-logs:${DOKPLOY_REDIS_LOGS_VOLUME_DIR:-/var/log/redis}:z
     networks:
       default:
         aliases:
@@ -164,10 +224,11 @@ services:
       - BETTER_AUTH_TRUSTED_ORIGINS=${DOKPLOY_BETTER_AUTH_TRUSTED_ORIGINS}
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      - ${DOKPLOY_DATA_DIR:-dokploy-data}:/etc/dokploy
-      - ${DOKPLOY_LOGS_DIR:-dokploy-logs}:/var/log/dokploy
-      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/dokploy/traefik/dynamic/certificates:z
-      - ${DOKPLOY_DOCKER_DIR:-dokploy-docker}:/root/.docker
+      - data:${DOKPLOY_DATA_VOLUME_DIR:-/etc/dokploy}:z
+      - logs:${DOKPLOY_LOGS_VOLUME_DIR:-/var/log/dokploy}:z
+      # Shared certs volume; container path differs from Traefik/certs-dumper
+      - traefik-certificates:/etc/dokploy/traefik/dynamic/certificates:z
+      - docker:${DOKPLOY_DOCKER_VOLUME_DIR:-/root/.docker}:z
     depends_on:
       - postgresql
       - redis
@@ -239,9 +300,9 @@ services:
         protocol: tcp
         mode: ${DOKPLOY_TRAEFIK_PORT_MODE:-host}
     volumes:
-      - ${DOKPLOY_TRAEFIK_LOGS_DIR:-dokploy-traefik_logs}:/var/log/traefik
-      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/traefik/certificates:z
-      - ${DOKPLOY_TRAEFIK_RULES_DIR:-dokploy-traefik_rules}:/etc/traefik/rules
+      - traefik-logs:${DOKPLOY_TRAEFIK_LOGS_VOLUME_DIR:-/var/log/traefik}:z
+      - traefik-certificates:${DOKPLOY_TRAEFIK_CERTIFICATES_VOLUME_DIR:-/etc/traefik/certificates}:z
+      - traefik-rules:${DOKPLOY_TRAEFIK_RULES_VOLUME_DIR:-/etc/traefik/rules}:z
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     command:
       - "--global.sendAnonymousUsage=false"
@@ -441,7 +502,8 @@ services:
     depends_on:
       - traefik
     volumes:
-      - ${DOKPLOY_TRAEFIK_CERTIFICATES_DIR:-dokploy-traefik_certificates}:/etc/certificates:z
+      # Shared certs volume; container path differs from Traefik/Dokploy
+      - traefik-certificates:/etc/certificates:z
 
   # Upstream for ModSecurity CRS Apache. Without a reachable BACKEND, the WAF
   # proxies to localhost:80 inside its container and Traefik gets 503.
@@ -482,7 +544,7 @@ services:
       - BACKEND=${DOKPLOY_WAF_BACKEND:-http://dokploy-waf-dummy:80}
       - TZ=${TZ:-America/Toronto}
     volumes:
-      - ${DOKPLOY_WAF_LOGS_DIR:-dokploy-waf_logs}:/var/log/apache2:z
+      - waf-logs:${DOKPLOY_WAF_LOGS_VOLUME_DIR:-/var/log/apache2}:z
     configs:
       # Overlay custom CRS exclusions only (do not replace the whole rules/ dir — that hides upstream CRS).
       - source: dokploy_waf_before_crs
