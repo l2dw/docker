@@ -29,11 +29,12 @@ services:
     env_file:
       - ${DOKPLOY_ENV_FILE:-.env.example}
     environment:
-      - ADVERTISE_ADDR=${ADVERTISE_ADDR}
+      - ADVERTISE_ADDR=${DOKPLOY_ADVERTISE_ADDR}
       - DATABASE_URL=${DOKPLOY_DATABASE_URL:-postgres://dokploy:ChangeMe@dokploy-postgresql:5432/dokploy}
       - REDIS_URL=${DOKPLOY_REDIS_URL:-redis://dokploy-redis:6379}
       - TZ=${TZ:-America/Toronto}
-      - BASE_PATH=${DOKPLOY_BASE_PATH:-}
+      # Do not set vendor BASE_PATH here — Dokploy uses /etc/dokploy as FS root.
+      # DOKPLOY_BASE_PATH is Traefik PathPrefix only (see labels).
       # Must match Traefik router Host rules for login/session.
       - ALLOWED_ORIGINS=${DOKPLOY_ALLOWED_ORIGINS}
       - BETTER_AUTH_SECRET=${DOKPLOY_BETTER_AUTH_SECRET}
@@ -60,3 +61,33 @@ services:
       resources:
         limits:
           memory: ${DOKPLOY_MEMORY_LIMIT:-1G}
+      labels:
+        - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-dokploy}-console.loadbalancer.server.port=3000"
+        - "traefik.http.routers.${APP_NAME:-dokploy}-console.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-dokploy}-console.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-dokploy}-console.service=${APP_NAME:-dokploy}-console"
+        - "traefik.http.routers.${APP_NAME:-dokploy}-console.middlewares=${DOKPLOY_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-dokploy}-console.tls=${DOKPLOY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-dokploy}-console.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
+        - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
+        - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}"
+        - "homepage.href=${DOKPLOY_HOMEPAGE_URL:-}"
+        - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
+        - "homepage.siteMonitor=${DOKPLOY_HOMEPAGE_SITEMONITOR:-http://dokploy:3000}"
+    labels:
+      - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-dokploy}-console.loadbalancer.server.port=3000"
+      - "traefik.http.routers.${APP_NAME:-dokploy}-console.entrypoints=${DOKPLOY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-dokploy}-console.rule=Host(`${DOKPLOY_DOMAIN:-dokploy.home}`) && PathPrefix(`${DOKPLOY_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-dokploy}-console.service=${APP_NAME:-dokploy}-console"
+      - "traefik.http.routers.${APP_NAME:-dokploy}-console.middlewares=${DOKPLOY_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-dokploy}-console.tls=${DOKPLOY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-dokploy}-console.tls.certresolver=${DOKPLOY_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
+      - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
+      - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}"
+      - "homepage.href=${DOKPLOY_HOMEPAGE_URL:-}"
+      - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
+      - "homepage.siteMonitor=${DOKPLOY_HOMEPAGE_SITEMONITOR:-http://dokploy:3000}"

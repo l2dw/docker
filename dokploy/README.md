@@ -9,7 +9,7 @@ This is the shared overlay host (`dokploy-network`), not an app stack that joins
 | File | Role |
 |------|------|
 | [`docker-compose.yml`](docker-compose.yml) | Full stack (Make / Swarm). Traefik + Homepage labels on `dokploy` and `traefik`. |
-| [`dokploy-compose.yml`](dokploy-compose.yml) | Console service only (`dokploy`) + same Traefik/Homepage labels. Expects Postgres/Redis (and Traefik) already on the overlay. |
+| [`dokploy-compose.yml`](dokploy-compose.yml) | Console service only (`dokploy`) with the same Traefik + Homepage labels as the full stack. Expects Postgres/Redis (and Traefik) already on the overlay. |
 | [`compose.yml`](compose.yml) | Symlink → `dokploy-compose.yml` |
 
 Root symlinks (on this branch): `README.md`, `compose.yml`, `docker-compose.yml` → `dokploy/…`.
@@ -157,7 +157,11 @@ After editing rule files, bump `DOKPLOY_WAF_*_CRS_CONFIG_NAME` and redeploy.
 
 ## Base path
 
-Dokploy console: `DOKPLOY_BASE_PATH=/` (Host-only by default). Traefik dashboard: `DOKPLOY_TRAEFIK_BASE_PATH=/traefik`.
+`DOKPLOY_BASE_PATH` is **Traefik PathPrefix only** for the console router (default `/` = Host-only). It is **not** passed into the Dokploy container: upstream Dokploy uses `/etc/dokploy` as its filesystem root, not a URL subpath.
+
+Traefik dashboard PathPrefix: `DOKPLOY_TRAEFIK_BASE_PATH=/traefik`.
+
+Homepage discovery `href` uses empty defaults — set `DOKPLOY_HOMEPAGE_URL` / `DOKPLOY_TRAEFIK_HOMEPAGE_URL` when you want public links in Homepage.
 
 ## Troubleshoot
 

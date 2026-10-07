@@ -156,7 +156,8 @@ services:
       - DATABASE_URL=${DOKPLOY_DATABASE_URL}
       - REDIS_URL=${DOKPLOY_REDIS_URL:-redis://dokploy-redis:6379}
       - TZ=${TZ:-America/Toronto}
-      - BASE_PATH=${DOKPLOY_BASE_PATH:-}
+      # Do not set vendor BASE_PATH here — Dokploy uses /etc/dokploy as FS root.
+      # DOKPLOY_BASE_PATH is Traefik PathPrefix only (see labels).
       # Must match Traefik router Host rules for login/session.
       - ALLOWED_ORIGINS=${DOKPLOY_ALLOWED_ORIGINS}
       - BETTER_AUTH_SECRET=${DOKPLOY_BETTER_AUTH_SECRET}
@@ -199,7 +200,7 @@ services:
         - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
         - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
         - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}"
-        - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_BASE_PATH:-/}"
+        - "homepage.href=${DOKPLOY_HOMEPAGE_URL:-}"
         - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
         - "homepage.siteMonitor=${DOKPLOY_HOMEPAGE_SITEMONITOR:-http://dokploy:3000}"
     labels:
@@ -215,7 +216,7 @@ services:
       - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
       - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Dokploy}"
       - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-dokploy.png}"
-      - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_BASE_PATH:-/}"
+      - "homepage.href=${DOKPLOY_HOMEPAGE_URL:-}"
       - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Dokploy is a platform for deploying and managing applications.}"
       - "homepage.siteMonitor=${DOKPLOY_HOMEPAGE_SITEMONITOR:-http://dokploy:3000}"
 
@@ -359,14 +360,14 @@ services:
         - "traefik.http.routers.${APP_NAME:-dokploy}-traefik.service=api@internal"
         - "traefik.http.routers.${APP_NAME:-dokploy}-traefik.middlewares=${DOKPLOY_TRAEFIK_MIDDLEWARES:-}"
         ## Homepage configuration
-        - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
-        - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Traefik}"
-        - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-traefik.png}"
-        - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
-        - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Traefik is a modern HTTP reverse proxy and load balancer.}"
-        - "homepage.siteMonitor=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+        - "homepage.group=${DOKPLOY_TRAEFIK_HOMEPAGE_GROUP:-Infra}"
+        - "homepage.name=${DOKPLOY_TRAEFIK_HOMEPAGE_NAME:-Traefik}"
+        - "homepage.icon=${DOKPLOY_TRAEFIK_HOMEPAGE_ICON:-traefik.png}"
+        - "homepage.href=${DOKPLOY_TRAEFIK_HOMEPAGE_URL:-}"
+        - "homepage.description=${DOKPLOY_TRAEFIK_HOMEPAGE_DESCRIPTION:-Traefik is a modern HTTP reverse proxy and load balancer.}"
+        - "homepage.siteMonitor=${DOKPLOY_TRAEFIK_HOMEPAGE_SITEMONITOR:-http://dokploy-traefik:8080}"
         - "homepage.widget.type=traefik"
-        - "homepage.widget.url=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+        - "homepage.widget.url=${DOKPLOY_TRAEFIK_HOMEPAGE_WIDGET_URL:-http://dokploy-traefik:8080}"
     labels:
       - "traefik.enable=${DOKPLOY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
       ## Middleware configuration
@@ -392,14 +393,14 @@ services:
       - "traefik.http.routers.${APP_NAME:-dokploy}-traefik.service=api@internal"
       - "traefik.http.routers.${APP_NAME:-dokploy}-traefik.middlewares=${DOKPLOY_TRAEFIK_MIDDLEWARES:-}"
       ## Homepage configuration
-      - "homepage.group=${DOKPLOY_HOMEPAGE_GROUP:-Infra}"
-      - "homepage.name=${DOKPLOY_HOMEPAGE_NAME:-Traefik}"
-      - "homepage.icon=${DOKPLOY_HOMEPAGE_ICON:-traefik.png}"
-      - "homepage.href=http://${DOKPLOY_DOMAIN:-dokploy.home}${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
-      - "homepage.description=${DOKPLOY_HOMEPAGE_DESCRIPTION:-Traefik is a modern HTTP reverse proxy and load balancer.}"
-      - "homepage.siteMonitor=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+      - "homepage.group=${DOKPLOY_TRAEFIK_HOMEPAGE_GROUP:-Infra}"
+      - "homepage.name=${DOKPLOY_TRAEFIK_HOMEPAGE_NAME:-Traefik}"
+      - "homepage.icon=${DOKPLOY_TRAEFIK_HOMEPAGE_ICON:-traefik.png}"
+      - "homepage.href=${DOKPLOY_TRAEFIK_HOMEPAGE_URL:-}"
+      - "homepage.description=${DOKPLOY_TRAEFIK_HOMEPAGE_DESCRIPTION:-Traefik is a modern HTTP reverse proxy and load balancer.}"
+      - "homepage.siteMonitor=${DOKPLOY_TRAEFIK_HOMEPAGE_SITEMONITOR:-http://dokploy-traefik:8080}"
       - "homepage.widget.type=traefik"
-      - "homepage.widget.url=http://dokploy-traefik${DOKPLOY_TRAEFIK_BASE_PATH:-/traefik}"
+      - "homepage.widget.url=${DOKPLOY_TRAEFIK_HOMEPAGE_WIDGET_URL:-http://dokploy-traefik:8080}"
 
   certs-dumper:
     image: ${DOKPLOY_CERTS_DUMPER_IMAGE:-docker.io/ldez/traefik-certs-dumper:v2.8.3}
