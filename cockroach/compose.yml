@@ -45,8 +45,7 @@ services:
       - data:${COCKROACH_DATA_VOLUME_DIR:-/cockroach/cockroach-data}:z
       - certs:${COCKROACH_CERTS_VOLUME_DIR:-/cockroach/certs}:z
     healthcheck:
-      test:
-        - ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
