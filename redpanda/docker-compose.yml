@@ -51,15 +51,7 @@ services:
     volumes:
       - data:${REDPANDA_DATA_VOLUME_DIR:-/var/lib/redpanda/data}:z
     healthcheck:
-      test:
-        - CMD
-        - rpk
-        - cluster
-        - info
-        - -X
-        - user=${REDPANDA_ADMIN_USER:-superadmin}
-        - -X
-        - pass=${REDPANDA_ADMIN_PASSWORD:-ChangeMe}
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9644/v1/status/ready || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
