@@ -28,6 +28,9 @@ services:
       - TZ=${TZ:-America/Montreal}
       - BAO_API_ADDR=${OPENBAO_API_ADDR:-http://openbao.example.com}
       - BAO_LOCAL_CONFIG=${OPENBAO_LOCAL_CONFIG}
+      - BAO_ADDR=${BAO_ADDR:-}
+      - BAO_TOKEN=${BAO_TOKEN:-}
+      - BAO_SKIP_VERIFY=${BAO_SKIP_VERIFY:-true}
     volumes:
       - data:${OPENBAO_DATA_VOLUME_DIR:-/openbao/file}:z
     healthcheck:
