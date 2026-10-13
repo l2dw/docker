@@ -1,15 +1,15 @@
 # meilisearch
 
-[Meilisearch](https://www.meilisearch.com) — search engine on **7700**. Joins `dokploy-network`. Traefik/Homepage labels live only in `docker-compose.yml`.
+[Meilisearch](https://www.meilisearch.com) — search engine on **7700**. Traefik labels live only in `docker-compose.yml`; **Homepage labels are on both** compose files.
 
 HTTP **7700 is not published on the host** — Traefik routes `Host(MEILISEARCH_DOMAIN)`. Overlay **alias** `${MEILISEARCH_NETWORK_ALIAS:-meilisearch}` remains for other stacks (e.g. Karakeep `KARAKEEP_MEILI_ADDR=http://meilisearch:7700`).
 
-`.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${MEILISEARCH_ENV_FILE:-.env.example}`; production: `MEILISEARCH_ENV_FILE=.env`. `environment:` wins on key conflicts.
+`.env` is **not** read by `docker stack deploy` alone — use Make. Compose `env_file` loads `${MEILISEARCH_ENV_FILE:-.env.example}`; production: `MEILISEARCH_ENV_FILE=.env`. `environment:` wins on key conflicts. `APP_NAME` scopes Traefik router/service names (`APP_NAME=meilisearch` in `.env.example`; Dokploy may override).
 
 ```sh
 make meilisearch-setup \
   MEILISEARCH_DOMAIN=meilisearch.example.com \
-  MEILISEARCH_APP_URL=http://meilisearch.example.com/meilisearch
+  MEILISEARCH_APP_URL=http://meilisearch.example.com/
 make meilisearch-stack-up
 # or
 make meilisearch-compose-up
@@ -19,15 +19,71 @@ On the `meilisearch` branch, root `README.md` / `compose.yml` / `docker-compose.
 
 ## Base path
 
-Meilisearch has **no vendor `BASE_PATH`**. The HTTP API lives at the container root (`/health`, `/indexes`, …). Traefik exposes it under **`MEILISEARCH_BASE_PATH=/meilisearch`**: `Host` + `PathPrefix` and middleware **`stripprefix-meilisearch`** (strips that prefix before the backend). Public URL: `http://meilisearch.example.com/meilisearch`.
+Meilisearch has **no vendor `BASE_PATH`**. The HTTP API lives at the container root (`/health`, `/indexes`, …). Default is **Host-only**: `MEILISEARCH_BASE_PATH=/` and empty `MEILISEARCH_MIDDLEWARES`.
 
-Overlay clients (Karakeep) stay on `http://meilisearch:7700` — **no** prefix. Do **not** strip `/` (it breaks paths). For a dedicated subdomain with no prefix: `MEILISEARCH_BASE_PATH=/` and `MEILISEARCH_MIDDLEWARES=` (empty). The mini-dashboard may still request absolute `/…` URLs and miss the prefix; the JSON API via the stripped path is the intended use.
+Optional subpath (Traefik `PathPrefix` + strip — API only; mini-dashboard may request absolute `/…` and miss the prefix):
 
-## Credentials and volumes
+```env
+MEILISEARCH_BASE_PATH=/meilisearch
+MEILISEARCH_APP_URL=http://meilisearch.example.com/meilisearch
+MEILISEARCH_MIDDLEWARES=meilisearch-strip
+```
+
+`MEILISEARCH_MIDDLEWARES` must match `${APP_NAME}-strip` (default `meilisearch-strip`). Do **not** strip `/` (it breaks paths). Overlay clients (Karakeep) stay on `http://meilisearch:7700` — **no** prefix.
+
+## Credentials
 
 `make meilisearch-setup` generates `MEILISEARCH_MASTER_KEY` if empty (alphanumeric; mapped to `MEILI_MASTER_KEY`). Production (`MEILI_ENV=production`) requires this key. Copy the same value into apps (e.g. `KARAKEEP_MEILI_MASTER_KEY`).
 
-Named volume: `/meili_data`.
+## env_file
+
+`MEILISEARCH_ENV_FILE` (default `.env.example`). Production → `.env`. `environment:` overrides. Swarm: Make-exported root `.env` (Compose `env_file` is unreliable under `stack deploy`).
+
+## Networks
+
+| Goal | `DEFAULT_NETWORK_NAME` | `EXTERNAL` |
+|------|------------------------|------------|
+| Stack-local (default) | `meilisearch-network` | `false` |
+| Shared Traefik / apps (e.g. Karakeep) | `dokploy-network` | `true` |
+
+`make meilisearch-setup` upserts `DEFAULT_NETWORK_EXTERNAL` (`true` **only** if name is `dokploy-network`) and creates the network when external is false.
+
+```sh
+docker network create meilisearch-network --driver overlay   # Swarm
+docker network create meilisearch-network --driver bridge    # Compose
+# Join shared:
+# DEFAULT_NETWORK_NAME=dokploy-network
+# DEFAULT_NETWORK_EXTERNAL=true
+```
+
+## Volumes
+
+| Compose key | Container path | Default name |
+|-------------|----------------|--------------|
+| `data` | `/meili_data` | `meilisearch_data` |
+
+| Mode | `EXTERNAL` | `TYPE` | `OPTS` | `PATH` |
+|------|------------|--------|--------|--------|
+| Local named (default) | `false` | empty | empty | empty |
+| Bind | `false` | `none` | `bind` | `/appdata/meilisearch` |
+| NFS | `false` | `nfs` | `addr=host,rw,nfsvers=4` | `:/exports/meilisearch` |
+| External | `true` | — | — | — |
+
+```env
+# Local named
+MEILISEARCH_DATA_VOLUME_TYPE=
+MEILISEARCH_DATA_VOLUME_OPTS=
+MEILISEARCH_DATA_VOLUME_PATH=
+
+# Bind
+MEILISEARCH_DATA_VOLUME_TYPE=none
+MEILISEARCH_DATA_VOLUME_OPTS=bind
+MEILISEARCH_DATA_VOLUME_PATH=/appdata/meilisearch
+```
+
+```sh
+docker volume create meilisearch_data
+```
 
 ## Makefile
 
@@ -49,10 +105,11 @@ make meilisearch-compose-logs
 | Variable | Notes |
 |----------|--------|
 | `MEILISEARCH_DOMAIN` | Traefik Host() (warns if `example.com`) |
-| `MEILISEARCH_BASE_PATH` | Traefik PathPrefix + stripPrefix (default `/meilisearch`) |
-| `MEILISEARCH_APP_URL` | Public URL including base path (Homepage) |
+| `MEILISEARCH_APP_URL` | Public URL (setup notify) |
+| `MEILISEARCH_HOMEPAGE_URL` | Homepage href — leave empty until set |
 | `MEILISEARCH_MASTER_KEY` | Generated by setup if empty |
 | `MEILISEARCH_ENV_FILE` | Compose dotenv (default `.env.example`) |
-| `MEILISEARCH_NETWORK_ALIAS` | Overlay DNS name (default `meilisearch`) |
+| `MEILISEARCH_NETWORK_ALIAS` | Overlay DNS alias (default `meilisearch`) |
+| `APP_NAME` | Traefik router/service prefix |
 
 Do not commit `meilisearch/.env` or real secrets.

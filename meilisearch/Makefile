@@ -5,10 +5,11 @@ MEILISEARCH_ENV := $(MEILISEARCH_STACK_NAME)/.env
 MEILISEARCH_ENV_EXAMPLE := $(MEILISEARCH_STACK_NAME)/.env.example
 MEILISEARCH_SECRET_VARS := MEILISEARCH_MASTER_KEY
 MEILISEARCH_NOTIFY_VARS := MEILISEARCH_DOMAIN MEILISEARCH_APP_URL
+NETWORK_DRIVER ?= overlay
 
 meilisearch-pull-images: ## Pull images for the meilisearch stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(MEILISEARCH_STACK_NAME)
-meilisearch-setup: ## Ensure meilisearch/.env, generate master key, warn on example.com
+meilisearch-setup: ## Ensure meilisearch/.env, generate master key, sync DEFAULT_NETWORK_EXTERNAL
 	@set -e; \
 	envf='$(MEILISEARCH_ENV)'; \
 	exf='$(MEILISEARCH_ENV_EXAMPLE)'; \
@@ -69,14 +70,26 @@ meilisearch-setup: ## Ensure meilisearch/.env, generate master key, warn on exam
 	done; \
 	net=$$(file_get "$$envf" DEFAULT_NETWORK_NAME); \
 	[ -n "$$net" ] || net=$$(file_get "$$root" DEFAULT_NETWORK_NAME); \
-	[ -n "$$net" ] || net='dokploy-network'; \
+	[ -n "$$net" ] || net='meilisearch-network'; \
 	case "$$net" in \
 		dokploy-network) ext=true ;; \
 		*) ext=false ;; \
 	esac; \
+	upsert "$$envf" DEFAULT_NETWORK_NAME "$$net"; \
 	upsert "$$envf" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
-	if [ -n "$$root" ]; then upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; fi; \
+	if [ -n "$$root" ]; then \
+		upsert "$$root" DEFAULT_NETWORK_NAME "$$net"; \
+		upsert "$$root" DEFAULT_NETWORK_EXTERNAL "$$ext"; \
+	fi; \
 	echo "DEFAULT_NETWORK_NAME=$$net → DEFAULT_NETWORK_EXTERNAL=$$ext"; \
+	case "$$ext" in \
+		true) ;; \
+		*) \
+			if ! $(DOCKER) network ls --format '{{.Name}}' | grep -qx "$$net"; then \
+				$(DOCKER) network create "$$net" --driver $(NETWORK_DRIVER); \
+				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
+			fi ;; \
+	esac; \
 	if [ "$$missing" -ne 0 ]; then exit 1; fi; \
 	echo "Meilisearch env OK ($$envf)."
 .meilisearch-setup: meilisearch-setup

@@ -3,10 +3,6 @@
 !/.gitkeep
 !**/.*.example
 _trash/
-# Version Cursor project skills (**/.* would otherwise ignore .cursor/)
-!.cursor/
-!.cursor/skills/
-!.cursor/skills/**
 **/*.override.*
 **/*.password
 **/*.backup
