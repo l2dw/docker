@@ -316,3 +316,6 @@ commit-changes: ## Commit changes to the infrastructure
 	git add .
 	git commit -m "Update infrastructure: $(DATETIME)"
 	git push origin
+
+# Per-project targets (e.g. dsh-stack-up)
+-include dsh/Makefile

@@ -1,0 +1,82 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-dsh-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${DSH_DATA_VOLUME_NAME:-dsh_data}
+    external: ${DSH_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${DSH_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${DSH_DATA_VOLUME_TYPE:-}
+      o: ${DSH_DATA_VOLUME_OPTS:-}
+      device: ${DSH_DATA_VOLUME_PATH:-}
+
+services:
+  dsh:
+    image: ${DSH_IMAGE:-ghcr.io/xidong-ai/deepseek-harness-web-docker:latest}
+    restart: ${DSH_RESTART:-unless-stopped}
+    privileged: ${DSH_PRIVILEGED:-false}
+    env_file:
+      - ${DSH_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - HOME=${DSH_HOME:-/home/node}
+      - DEEPSEEK_API_KEY=${DSH_DEEPSEEK_API_KEY:-ChangeMe}
+      - DSH_TRUSTED_HOSTS=${DSH_TRUSTED_HOSTS:-localhost,127.0.0.1}
+      - DSH_PUBLIC_URL=${DSH_PUBLIC_URL:-http://dsh.example.com/}
+    volumes:
+      - data:${DSH_DATA_VOLUME_DIR:-/home/node}:z
+    ports:
+      - published: ${DSH_PUBLISHED_PORT:-3080}
+        target: ${DSH_PORT:-3080}
+        mode: ${DSH_PORT_MODE:-ingress}
+        protocol: ${DSH_PORT_PROTOCOL:-tcp}
+    networks:
+      default:
+        aliases:
+          - ${DSH_NETWORK_ALIAS:-deepseek-harness}
+    deploy:
+      mode: ${DSH_DEPLOY_MODE:-replicated}
+      replicas: ${DSH_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${DSH_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${DSH_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${DSH_RESTART_POLICY_CONDITION:-any}
+        delay: ${DSH_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${DSH_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${DSH_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-dsh}.loadbalancer.server.port=${DSH_PORT:-3080}"
+        - "traefik.http.routers.${APP_NAME:-dsh}.entrypoints=${DSH_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-dsh}.rule=Host(`${DSH_DOMAIN:-dsh.example.com}`) && PathPrefix(`${DSH_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-dsh}.service=${APP_NAME:-dsh}"
+        - "traefik.http.routers.${APP_NAME:-dsh}.middlewares=${DSH_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-dsh}.tls=${DSH_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-dsh}.tls.certresolver=${DSH_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${DSH_HOMEPAGE_GROUP:-AI}"
+        - "homepage.name=${DSH_HOMEPAGE_NAME:-DeepSeek Harness}"
+        - "homepage.icon=${DSH_HOMEPAGE_ICON:-deepseek.png}"
+        - "homepage.href=${DSH_HOMEPAGE_URL:-}"
+        - "homepage.description=${DSH_HOMEPAGE_DESCRIPTION:-DeepSeek Harness Web UI}"
+        - "homepage.siteMonitor=${DSH_HOMEPAGE_SITEMONITOR:-http://dsh:3080}"
+    labels:
+      - "traefik.enable=${DSH_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-dsh}.loadbalancer.server.port=${DSH_PORT:-3080}"
+      - "traefik.http.routers.${APP_NAME:-dsh}.entrypoints=${DSH_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-dsh}.rule=Host(`${DSH_DOMAIN:-dsh.example.com}`) && PathPrefix(`${DSH_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-dsh}.service=${APP_NAME:-dsh}"
+      - "traefik.http.routers.${APP_NAME:-dsh}.middlewares=${DSH_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-dsh}.tls=${DSH_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-dsh}.tls.certresolver=${DSH_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${DSH_HOMEPAGE_GROUP:-AI}"
+      - "homepage.name=${DSH_HOMEPAGE_NAME:-DeepSeek Harness}"
+      - "homepage.icon=${DSH_HOMEPAGE_ICON:-deepseek.png}"
+      - "homepage.href=${DSH_HOMEPAGE_URL:-}"
+      - "homepage.description=${DSH_HOMEPAGE_DESCRIPTION:-DeepSeek Harness Web UI}"
+      - "homepage.siteMonitor=${DSH_HOMEPAGE_SITEMONITOR:-http://dsh:3080}"
