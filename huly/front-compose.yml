@@ -26,7 +26,7 @@ services:
       - STREAM_URL=${HULY_STREAM_URL:-https://huly.example.com/recording}
       - FILES_URL=${HULY_FILES_URL:-https://huly.example.com/_datalake/blob/:workspace/:blobId/:filename}
       - DATALAKE_URL=${HULY_DATALAKE_URL:-https://huly.example.com/_datalake}
-      - PREVIEW_URL=${HULY_PREVIEW_URL:-${HULY_DATALAKE_URL:-https://huly.example.com/_datalake}}
+      - PREVIEW_URL=${HULY_PREVIEW_URL:-https://huly.example.com/_datalake}
       - ELASTIC_URL=${HULY_ELASTIC_URL:-http://elasticsearch:9200}
       - COLLABORATOR_URL=${HULY_WS_SCHEME:-wss}://${HULY_DOMAIN:-huly.example.com}/_collaborator
       - STORAGE_CONFIG=${HULY_STORAGE_CONFIG:-minio|minio:9000?accessKey=ChangeMe&secretKey=ChangeMe&rootBucket=huly}
