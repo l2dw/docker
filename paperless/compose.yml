@@ -43,6 +43,8 @@ services:
       - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:-admin}
       - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:-}
       - PAPERLESS_OCR_LANGUAGE=${PAPERLESS_OCR_LANGUAGE:-fra+eng}
+      - PAPERLESS_TASK_WORKERS=${PAPERLESS_TASK_WORKERS:-1}
+      - PAPERLESS_THREADS_PER_WORKER=${PAPERLESS_THREADS_PER_WORKER:-1}
     volumes:
       - ${PAPERLESS_DATA_BIND:-paperless-data}:/usr/src/paperless/data
       - ${PAPERLESS_MEDIA_BIND:-paperless-media}:/usr/src/paperless/media
@@ -70,4 +72,4 @@ services:
         failure_action: rollback
       resources:
         limits:
-          memory: ${PAPERLESS_MEMORY_LIMIT:-1G}
+          memory: ${PAPERLESS_MEMORY_LIMIT:-2G}
