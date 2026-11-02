@@ -149,7 +149,7 @@ services:
         constraints:
           - ${DOKPLOY_POSTGRES_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
-        condition: on-failure
+        condition: ${DOKPLOY_RESTART_POLICY_CONDITION:-any}
         delay: 5s
       update_config:
         # bind-mounted PGDATA: start-first runs two tasks on the same path and corrupts/shuts down postgres
@@ -192,7 +192,7 @@ services:
         constraints:
           - ${DOKPLOY_REDIS_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
-        condition: on-failure
+        condition: ${DOKPLOY_RESTART_POLICY_CONDITION:-any}
         delay: 5s
       update_config:
         order: stop-first
@@ -239,7 +239,7 @@ services:
         constraints:
           - ${DOKPLOY_DOKPLOY_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
-        condition: on-failure
+        condition: ${DOKPLOY_RESTART_POLICY_CONDITION:-any}
         delay: 5s
       update_config:
         # start-first + host ports = two tasks compete for the same PublishedPort on one node
@@ -390,7 +390,7 @@ services:
         constraints:
           - ${DOKPLOY_TRAEFIK_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
-        condition: on-failure
+        condition: ${DOKPLOY_RESTART_POLICY_CONDITION:-any}
         delay: 5s
       update_config:
         order: stop-first
