@@ -36,14 +36,28 @@ Compose keys `conf` and `work` → `/opt/adguardhome/conf` and `/opt/adguardhome
 
 | Mode | `*_VOLUME_EXTERNAL` | `DRIVER` | `TYPE` | `OPTS` | `PATH` |
 |------|---------------------|----------|--------|--------|--------|
-| Local named (default) | `false` | `local` | empty | empty | empty |
-| Bind | `false` | `local` | `none` | `bind` | e.g. `/appdata/adguard/conf` |
+| Local named | `false` | `local` | empty | empty | empty |
+| Bind (default in `.env.example`) | `false` | `local` | `none` | `bind` | `/appdata/adguard/conf`, `/appdata/adguard/work` |
 | NFS | `false` | `local` | `nfs` | `addr=host,rw,nfsvers=4` | e.g. `:/exports/adguard/conf` |
 | External | `true` | — | — | — | — |
 
+Bind paths must exist on the node before deploy (`mkdir -p /appdata/adguard/{conf,work}`). On Docker Desktop (macOS), use a path under a shared folder (e.g. `/Users/<user>/workspace/appdata/adguard/conf`).
+
+### Reuse existing data
+
+To migrate an existing install, stop it, back up, then move `conf/` and `work/` into the bind paths:
+
+```sh
+tar -czf /appdata/backups/adguard-$(date +%F).tgz -C <old-dir> conf work
+mkdir -p /appdata/adguard
+mv <old-dir>/conf <old-dir>/work /appdata/adguard/
+```
+
+Then set `ADGUARD_PORT` to the `http.address` port found in `conf/AdGuardHome.yaml` (and `ADGUARD_HOMEPAGE_SITEMONITOR=http://adguard:<port>`). The setup wizard on `ADGUARD_PORT_SETUP` is not needed when `AdGuardHome.yaml` already exists.
+
 ## DNS ports
 
-DNS (53/tcp+udp) and the first-run wizard (3053/tcp) publish in **host** mode by default — required for LAN DNS. Pin on a Swarm **manager** (`ADGUARD_PLACEMENT_CONSTRAINTS=node.role==manager`). After setup, the web UI listens on **80** inside the container (Traefik routes it; do not publish 80 on the host unless needed).
+DNS (53/tcp+udp) and the first-run wizard (3053/tcp) publish in **host** mode by default — required for LAN DNS. Swarm cannot bind a published port to `127.0.0.1` only: the port listens on all host interfaces. Pin on a Swarm **manager** (`ADGUARD_PLACEMENT_CONSTRAINTS=node.role==manager`). After setup, the web UI listens on `ADGUARD_PORT` (wizard default **80**) inside the container (Traefik routes it; do not publish 80 on the host unless needed).
 
 First boot: open `http://<host>:${ADGUARD_PORT_SETUP:-3053}` for the wizard. Then use Traefik at `ADGUARD_APP_URL`.
 
