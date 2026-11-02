@@ -222,6 +222,11 @@ services:
       - ALLOWED_ORIGINS=${DOKPLOY_ALLOWED_ORIGINS}
       - BETTER_AUTH_SECRET=${DOKPLOY_BETTER_AUTH_SECRET}
       - BETTER_AUTH_TRUSTED_ORIGINS=${DOKPLOY_BETTER_AUTH_TRUSTED_ORIGINS}
+      # TLS sortant de Dokploy (Node) : Vault Provider, Git, registres, webhooks.
+      # Préférer une CA supplémentaire (fichier PEM dans le volume data) ;
+      # NODE_TLS_REJECT_UNAUTHORIZED=0 désactive TOUTE vérification (défaut 1).
+      - NODE_EXTRA_CA_CERTS=${DOKPLOY_NODE_EXTRA_CA_CERTS:-}
+      - NODE_TLS_REJECT_UNAUTHORIZED=${DOKPLOY_NODE_TLS_REJECT_UNAUTHORIZED:-1}
     volumes:
       - ${DOCKER_RUNTIME_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - data:${DOKPLOY_DATA_VOLUME_DIR:-/etc/dokploy}:z

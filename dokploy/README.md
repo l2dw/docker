@@ -184,6 +184,17 @@ Traefik dashboard PathPrefix: `DOKPLOY_TRAEFIK_BASE_PATH=/traefik`.
 
 Homepage discovery `href` uses empty defaults — set `DOKPLOY_HOMEPAGE_URL` / `DOKPLOY_TRAEFIK_HOMEPAGE_URL` when you want public links in Homepage.
 
+## Outbound TLS (Vault Provider, Git, registries)
+
+Dokploy is a Node app: outbound HTTPS (Vault/OpenBao provider, Git, registries, webhooks) uses Node's trust store. With a self-signed endpoint, Vault Provider **Test Connection** fails with `fetch failed` (`DEPTH_ZERO_SELF_SIGNED_CERT`).
+
+| Variable | Maps to | Default | Use |
+|----------|---------|---------|-----|
+| `DOKPLOY_NODE_EXTRA_CA_CERTS` | `NODE_EXTRA_CA_CERTS` | empty | **Preferred.** PEM path inside the `data` volume, e.g. `/etc/dokploy/ca/<infra>-ca.pem` (copy it into the running container once: `docker cp ca.pem <container>:/etc/dokploy/ca/`). |
+| `DOKPLOY_NODE_TLS_REJECT_UNAUTHORIZED` | `NODE_TLS_REJECT_UNAUTHORIZED` | `1` | `0` disables **all** certificate verification for Dokploy (Git, registries, webhooks, Vault). Dev infra with a self-signed CA only. |
+
+Apply without changing the image: `docker service update --env-add NODE_TLS_REJECT_UNAUTHORIZED=0 dokploy_dokploy` (and set the variable in `dokploy/.env` so the next `make dokploy-stack-up` keeps it). Rollback: `docker service update --env-rm NODE_TLS_REJECT_UNAUTHORIZED dokploy_dokploy`.
+
 ## Troubleshoot
 
 1. Swarm service `0/1`: `make dokploy-debug` / `dokploy-debug-logs`.
