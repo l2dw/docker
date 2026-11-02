@@ -8,7 +8,7 @@ compose="${COMPOSE_FILE:-}"
 override="${COMPOSE_OVERRIDE:-}"
 
 if [ -z "$compose" ]; then
-	if [ -f "$prj/stack-compose.yml" ]; then
+	if [ -f "$prj/stack-compose.yml" ] || [ -L "$prj/stack-compose.yml" ]; then
 		compose="$prj/stack-compose.yml"
 	elif [ -f "$prj/docker-compose.yml" ] || [ -L "$prj/docker-compose.yml" ]; then
 		compose="$prj/docker-compose.yml"
@@ -24,7 +24,7 @@ if [ -z "$override" ]; then
 fi
 
 env_file=""
-if [ -f "$prj/.env" ]; then
+if [ -f "$prj/.env" ] || [ -L "$prj/.env" ]; then
 	env_file="$prj/.env"
 fi
 

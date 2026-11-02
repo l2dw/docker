@@ -1,0 +1,50 @@
+[alias]
+    co = checkout
+    cob = checkout -b
+    coo = !git fetch && git checkout
+    br = branch
+    brd = branch -d
+    brD = branch -D
+    merged = branch --merged
+    st = status
+    aa = add -A .
+    com = commit -a -m
+    aacm = !git add -A . && git commit -m
+    cp = cherry-pick
+    amend = commit --amend
+    devel = !git checkout devel && git pull origin devel
+    staging = !git checkout staging && git pull origin staging
+    master = !git checkout master && git pull origin
+    po = push origin
+    pop = push origin prod
+    pod = push origin devel
+    pos = push origin staging
+    pom = push origin master
+    plo = pull origin
+    plop = pull origin prod
+    plod = pull origin devel
+    plos = pull origin staging
+    plom = pull origin master
+    ploh = pull origin HEAD
+    pogm = !git push origin gh-pages && git checkout master && git pull origin master && git rebase gh-pages && git push origin master && git checkout gh-pages
+    pomg = !git push origin master && git checkout gh-pages && git pull origin gh-pages && git rebase master && git push origin gh-pages && git checkout master
+    unstage = reset --hard HEAD^
+    last = log -1 HEAD
+    ls = log --pretty=format:"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate
+    ll = log --pretty=format:"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --numstat
+    f = "!git ls-files | grep -i"
+    gr = grep -Ii
+    la = "!git config -l | grep alias | cut -c 7-"
+    #
+    pa = push atelier-cen
+    pap = push atelier-cen prod
+    pad = push atelier-cen devel
+    pas = push atelier-cen staging
+    pam = push atelier-cen master
+    pah = push atelier-cen HEAD
+    pla = pull atelier-cen
+    plap = pull atelier-cen prod
+    plad = pull atelier-cen devel
+    plas = pull atelier-cen staging
+    plam = pull atelier-cen master
+    plah = pull atelier-cen HEAD
