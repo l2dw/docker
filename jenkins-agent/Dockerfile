@@ -31,8 +31,9 @@ ENV DOCKER_VERSION=${DOCKER_VERSION}
 RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz \
     | tar xz -C /tmp && mv /tmp/docker/docker /usr/local/bin/docker && chmod +x /usr/local/bin/docker && rm -rf /tmp/docker
 
-# MinIO client
-RUN curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc \
+# MinIO client (dl.min.io ne sert plus le binaire — HTTP 410 ; release GitHub épinglée)
+ARG MC_RELEASE=RELEASE.2025-08-13T08-35-41Z
+RUN curl -fsSL https://github.com/minio/mc/releases/download/${MC_RELEASE}/mc.linux-amd64.${MC_RELEASE} \
     -o /usr/local/bin/mc && chmod +x /usr/local/bin/mc
 
 # Create group if it doesn't exist
