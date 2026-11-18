@@ -6,7 +6,6 @@ networks:
 volumes:
   config:
     name: ${HOMEPAGE_CONFIG_VOLUME_NAME:-homepage_config}
-    external: ${HOMEPAGE_CONFIG_VOLUME_EXTERNAL:-false}
     driver: ${HOMEPAGE_CONFIG_VOLUME_DRIVER:-local}
     driver_opts:
       type: ${HOMEPAGE_CONFIG_VOLUME_TYPE:-}
@@ -38,7 +37,7 @@ services:
       restart_policy:
         condition: ${HOMEPAGE_RESTART_POLICY_CONDITION:-any}
         delay: ${HOMEPAGE_RESTART_POLICY_DELAY:-5s}
-        max_attempts: ${HOMEPAGE_RESTART_POLICY_MAX_ATTEMPTS:-3}
+        max_attempts: ${HOMEPAGE_RESTART_POLICY_MAX_ATTEMPTS:-0}
       labels:
         - "traefik.enable=${HOMEPAGE_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
         - "traefik.http.services.${APP_NAME:-homepage}.loadbalancer.server.port=${HOMEPAGE_PORT:-3000}"

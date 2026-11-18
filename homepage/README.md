@@ -58,7 +58,6 @@ Compose key **`config`** mounts at `${HOMEPAGE_CONFIG_VOLUME_DIR:-/app/config}`:
 volumes:
   config:
     name: ${HOMEPAGE_CONFIG_VOLUME_NAME:-homepage_config}
-    external: ${HOMEPAGE_CONFIG_VOLUME_EXTERNAL:-false}
     driver: ${HOMEPAGE_CONFIG_VOLUME_DRIVER:-local}
     driver_opts:
       type: ${HOMEPAGE_CONFIG_VOLUME_TYPE:-}
@@ -72,19 +71,18 @@ services:
 
 ### Recipes (`HOMEPAGE_CONFIG_VOLUME_*`)
 
-| Mode | `EXTERNAL` | `DRIVER` | `TYPE` | `OPTS` | `PATH` |
-|------|------------|----------|--------|--------|--------|
-| **Local named** | `false` | `local` | empty | empty | empty |
-| **Bind** (default in `.env.example`) | `false` | `local` | `none` | `bind` | host path e.g. `/appdata/homepage/config` |
-| **NFS** | `false` | `local` | `nfs` | `addr=<nfs-host>,rw,nfsvers=4` | export e.g. `:/exports/homepage` |
-| **External** (pre-created) | `true` | — | — | — | — ; `NAME` must already exist |
+| Mode | `DRIVER` | `TYPE` | `OPTS` | `PATH` |
+|------|----------|--------|--------|--------|
+| **Local named** | `local` | empty | empty | empty |
+| **Bind** (default in `.env.example`) | `local` | `none` | `bind` | host path e.g. `/appdata/homepage/config` |
+| **NFS** | `local` | `nfs` | `addr=<nfs-host>,rw,nfsvers=4` | export e.g. `:/exports/homepage` |
+| **Existing volume** | same as when it was created | | | | set `NAME` to the existing volume |
 
 **.env examples:**
 
 ```env
 # Bind (default for this stack)
 HOMEPAGE_CONFIG_VOLUME_NAME=homepage_config
-HOMEPAGE_CONFIG_VOLUME_EXTERNAL=false
 HOMEPAGE_CONFIG_VOLUME_DRIVER=local
 HOMEPAGE_CONFIG_VOLUME_TYPE=none
 HOMEPAGE_CONFIG_VOLUME_OPTS=bind
@@ -101,14 +99,15 @@ HOMEPAGE_CONFIG_VOLUME_TYPE=nfs
 HOMEPAGE_CONFIG_VOLUME_OPTS=addr=nfs.example.com,rw,nfsvers=4
 HOMEPAGE_CONFIG_VOLUME_PATH=:/exports/homepage
 
-# Attach an existing volume
+# Attach an existing volume (reused as-is; keep the driver options it was created with)
 HOMEPAGE_CONFIG_VOLUME_NAME=shared_homepage_config
-HOMEPAGE_CONFIG_VOLUME_EXTERNAL=true
 ```
 
 ### Create volumes outside Compose
 
-When `EXTERNAL=true`, create the volume **before** deploy. Optional for NFS one-shots:
+The stack has no `external:` key: Compose rejects `external` together with `driver`/`driver_opts`
+(`conflicting parameters "external" and "driver" specified`). A volume that already exists under
+`NAME` is reused as-is. Pre-creating it is optional (e.g. NFS one-shots):
 
 ```sh
 # Local named
@@ -126,7 +125,7 @@ docker volume create \
 mkdir -p /appdata/homepage/config
 ```
 
-Non-external volumes are created by Compose/Swarm on deploy; setup does **not** pre-create volumes unless you opt in.
+Missing volumes are created by Compose/Swarm on deploy; setup does **not** pre-create volumes unless you opt in.
 
 ## Makefile
 
@@ -151,6 +150,7 @@ make homepage-compose-logs
 | `HOMEPAGE_DOMAIN` / `HOMEPAGE_ALLOWED_HOSTS` / `HOMEPAGE_APP_URL` | Public host (warns if `example.com`) |
 | `HOMEPAGE_HOMEPAGE_URL` | Homepage discovery `href` (empty by default; set public URL later) |
 | `DEFAULT_NETWORK_NAME` / `DEFAULT_NETWORK_EXTERNAL` | Default `homepage-network` / `false`; `dokploy-network` ⇒ `true` |
+| `HOMEPAGE_RESTART_POLICY_*` | `CONDITION=any`, `MAX_ATTEMPTS=0` (unlimited). In plain `docker compose` mode (e.g. Dokploy `docker-compose`), `deploy.restart_policy` becomes the container restart policy: a `MAX_ATTEMPTS` > 0 requires `CONDITION=on-failure` |
 | `HOMEPAGE_CONFIG_VOLUME_*` | Volume name/driver/opts/path + container `*_DIR` (`/app/config`) |
 | `HOMEPAGE_ENV_FILE` | Compose dotenv (default `.env.example`) |
 | `HOMEPAGE_PORT` | Container listen port (default `3000`, Traefik LB) |
