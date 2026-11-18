@@ -1,0 +1,82 @@
+# tempo stack — keep compose.yml (no Traefik) and docker-compose.yml in sync.
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-tempo-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${TEMPO_DATA_VOLUME_NAME:-tempo_data}
+    external: ${TEMPO_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${TEMPO_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${TEMPO_DATA_VOLUME_TYPE:-}
+      o: ${TEMPO_DATA_VOLUME_OPTS:-}
+      device: ${TEMPO_DATA_VOLUME_PATH:-}
+
+# App config delivered as a Swarm/Compose config (immutable: bump _vN after editing).
+# Values inside are ${VAR} placeholders expanded from the container environment.
+configs:
+  tempo_config:
+    name: ${TEMPO_CONFIG_NAME:-tempo_config_v1}
+    file: ./config/tempo.yaml
+
+services:
+  tempo:
+    image: ${TEMPO_IMAGE:-docker.io/grafana/tempo:3.1.1}
+    restart: ${TEMPO_RESTART:-unless-stopped}
+    privileged: ${TEMPO_PRIVILEGED:-false}
+    command:
+      - -config.file=/etc/tempo/tempo.yaml
+      - -config.expand-env=true
+    env_file:
+      - ${TEMPO_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - TEMPO_HTTP_PORT=${TEMPO_HTTP_PORT:-3200}
+      - TEMPO_GRPC_PORT=${TEMPO_GRPC_PORT:-9095}
+      - TEMPO_OTLP_GRPC_PORT=${TEMPO_OTLP_GRPC_PORT:-4317}
+      - TEMPO_OTLP_HTTP_PORT=${TEMPO_OTLP_HTTP_PORT:-4318}
+      - TEMPO_LOG_LEVEL=${TEMPO_LOG_LEVEL:-info}
+      - TEMPO_RETENTION=${TEMPO_RETENTION:-336h}
+      - TEMPO_STORAGE_BACKEND=${TEMPO_STORAGE_BACKEND:-local}
+      - TEMPO_DATA_DIR=${TEMPO_DATA_DIR:-/var/tempo}
+      - TEMPO_S3_ENDPOINT=${TEMPO_S3_ENDPOINT:-s3:9000}
+      - TEMPO_S3_BUCKET=${TEMPO_S3_BUCKET:-tempo}
+      - TEMPO_S3_REGION=${TEMPO_S3_REGION:-us-east-1}
+      - TEMPO_S3_ACCESS_KEY=${TEMPO_S3_ACCESS_KEY:-}
+      - TEMPO_S3_SECRET_KEY=${TEMPO_S3_SECRET_KEY:-}
+      - TEMPO_S3_INSECURE=${TEMPO_S3_INSECURE:-true}
+      - TEMPO_S3_FORCE_PATH_STYLE=${TEMPO_S3_FORCE_PATH_STYLE:-true}
+    configs:
+      - source: tempo_config
+        target: /etc/tempo/tempo.yaml
+    volumes:
+      - data:${TEMPO_DATA_VOLUME_DIR:-/var/tempo}:z
+    deploy:
+      mode: ${TEMPO_DEPLOY_MODE:-replicated}
+      replicas: ${TEMPO_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${TEMPO_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${TEMPO_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${TEMPO_RESTART_POLICY_CONDITION:-any}
+        delay: ${TEMPO_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${TEMPO_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${TEMPO_HOMEPAGE_GROUP:-Observability}"
+        - "homepage.name=${TEMPO_HOMEPAGE_NAME:-Tempo}"
+        - "homepage.icon=${TEMPO_HOMEPAGE_ICON:-tempo.png}"
+        - "homepage.href=${TEMPO_HOMEPAGE_URL:-}"
+        - "homepage.description=${TEMPO_HOMEPAGE_DESCRIPTION:-Traces (OTLP) backend}"
+        - "homepage.siteMonitor=${TEMPO_HOMEPAGE_SITEMONITOR:-http://tempo:3200/ready}"
+    labels:
+      - "homepage.group=${TEMPO_HOMEPAGE_GROUP:-Observability}"
+      - "homepage.name=${TEMPO_HOMEPAGE_NAME:-Tempo}"
+      - "homepage.icon=${TEMPO_HOMEPAGE_ICON:-tempo.png}"
+      - "homepage.href=${TEMPO_HOMEPAGE_URL:-}"
+      - "homepage.description=${TEMPO_HOMEPAGE_DESCRIPTION:-Traces (OTLP) backend}"
+      - "homepage.siteMonitor=${TEMPO_HOMEPAGE_SITEMONITOR:-http://tempo:3200/ready}"
