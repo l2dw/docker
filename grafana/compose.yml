@@ -19,6 +19,9 @@ configs:
   grafana_datasources:
     name: ${GRAFANA_DATASOURCES_CONFIG_NAME:-grafana_datasources_v1}
     file: ./config/provisioning/datasources/prometheus.yml
+  grafana_datasources_tracing:
+    name: ${GRAFANA_DATASOURCES_TRACING_CONFIG_NAME:-grafana_datasources_tracing_v1}
+    file: ./config/provisioning/datasources/tempo-loki.yml
   grafana_dashboard_provider:
     name: ${GRAFANA_DASHBOARD_PROVIDER_CONFIG_NAME:-grafana_dashboard_provider_v1}
     file: ./config/provisioning/dashboards/default.yml
@@ -64,6 +67,8 @@ services:
       - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
       - GF_NEWS_NEWS_FEED_ENABLED=false
       - GRAFANA_PROMETHEUS_URL=${GRAFANA_PROMETHEUS_URL:-http://prometheus:9090/prometheus}
+      - GRAFANA_TEMPO_URL=${GRAFANA_TEMPO_URL:-http://tempo:3200}
+      - GRAFANA_LOKI_URL=${GRAFANA_LOKI_URL:-http://loki:3100}
       # Generic OAuth / OIDC (Keycloak…). Disabled by default; endpoints derived from the issuer.
       - GF_AUTH_GENERIC_OAUTH_ENABLED=${GRAFANA_OAUTH_ENABLED:-false}
       - GF_AUTH_GENERIC_OAUTH_NAME=${GRAFANA_OAUTH_NAME:-SSO}
@@ -85,6 +90,8 @@ services:
     configs:
       - source: grafana_datasources
         target: /etc/grafana/provisioning/datasources/prometheus.yml
+      - source: grafana_datasources_tracing
+        target: /etc/grafana/provisioning/datasources/tempo-loki.yml
       - source: grafana_dashboard_provider
         target: /etc/grafana/provisioning/dashboards/default.yml
       - source: grafana_dashboard_node_exporter_full

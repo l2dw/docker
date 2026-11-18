@@ -1,0 +1,34 @@
+# Grafana datasources Tempo (traces) + Loki (logs) — URLs from env (GRAFANA_TEMPO_URL, GRAFANA_LOKI_URL).
+# Delivered as a Swarm/Compose config (GRAFANA_DATASOURCES_TRACING_CONFIG_NAME, immutable: bump _vN after editing).
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: ${GRAFANA_TEMPO_URL}
+    editable: false
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        spanStartTimeShift: "-5m"
+        spanEndTimeShift: "5m"
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: ${GRAFANA_LOKI_URL}
+    editable: false
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          datasourceUid: tempo
+          matcherType: label
+          matcherRegex: trace_id
+          url: "$${__value.raw}"

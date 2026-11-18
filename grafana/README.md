@@ -28,6 +28,7 @@ make grafana-compose-up     # Compose
 | `docker-compose.yml` | Service `grafana`, Traefik + Homepage (Make / Swarm) |
 | `compose.yml` | Même service sans Traefik, Homepage conservé (domaines Dokploy) |
 | `config/provisioning/datasources/prometheus.yml` | Datasource `Prometheus` (uid `prometheus`, URL `${GRAFANA_PROMETHEUS_URL}`) |
+| `config/provisioning/datasources/tempo-loki.yml` | Datasources `Tempo` (uid `tempo`, `${GRAFANA_TEMPO_URL}`) et `Loki` (uid `loki`, `${GRAFANA_LOKI_URL}`), corrélation trace ↔ logs |
 | `config/provisioning/dashboards/default.yml` | Provider fichier → dossier `Infrastructure` |
 | `config/dashboards/*.json` | Dashboards |
 
