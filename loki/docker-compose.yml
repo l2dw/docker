@@ -1,0 +1,81 @@
+# loki stack — keep compose.yml (no Traefik) and docker-compose.yml in sync.
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-loki-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${LOKI_DATA_VOLUME_NAME:-loki_data}
+    external: ${LOKI_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${LOKI_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${LOKI_DATA_VOLUME_TYPE:-}
+      o: ${LOKI_DATA_VOLUME_OPTS:-}
+      device: ${LOKI_DATA_VOLUME_PATH:-}
+
+# App config delivered as a Swarm/Compose config (immutable: bump _vN after editing).
+# Values inside are ${VAR} placeholders expanded from the container environment.
+configs:
+  loki_config:
+    name: ${LOKI_CONFIG_NAME:-loki_config_v1}
+    file: ./config/loki.yaml
+
+services:
+  loki:
+    image: ${LOKI_IMAGE:-docker.io/grafana/loki:3.7.10}
+    restart: ${LOKI_RESTART:-unless-stopped}
+    privileged: ${LOKI_PRIVILEGED:-false}
+    command:
+      - -config.file=/etc/loki/loki.yaml
+      - -config.expand-env=true
+    env_file:
+      - ${LOKI_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - LOKI_HTTP_PORT=${LOKI_HTTP_PORT:-3100}
+      - LOKI_GRPC_PORT=${LOKI_GRPC_PORT:-9096}
+      - LOKI_LOG_LEVEL=${LOKI_LOG_LEVEL:-info}
+      - LOKI_RETENTION=${LOKI_RETENTION:-720h}
+      - LOKI_STORAGE_BACKEND=${LOKI_STORAGE_BACKEND:-filesystem}
+      - LOKI_SCHEMA_FROM=${LOKI_SCHEMA_FROM:-2026-01-01}
+      - LOKI_DATA_DIR=${LOKI_DATA_DIR:-/loki}
+      - LOKI_S3_ENDPOINT=${LOKI_S3_ENDPOINT:-s3:9000}
+      - LOKI_S3_BUCKET=${LOKI_S3_BUCKET:-loki}
+      - LOKI_S3_REGION=${LOKI_S3_REGION:-us-east-1}
+      - LOKI_S3_ACCESS_KEY=${LOKI_S3_ACCESS_KEY:-}
+      - LOKI_S3_SECRET_KEY=${LOKI_S3_SECRET_KEY:-}
+      - LOKI_S3_INSECURE=${LOKI_S3_INSECURE:-true}
+      - LOKI_S3_FORCE_PATH_STYLE=${LOKI_S3_FORCE_PATH_STYLE:-true}
+    configs:
+      - source: loki_config
+        target: /etc/loki/loki.yaml
+    volumes:
+      - data:${LOKI_DATA_VOLUME_DIR:-/loki}:z
+    deploy:
+      mode: ${LOKI_DEPLOY_MODE:-replicated}
+      replicas: ${LOKI_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${LOKI_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${LOKI_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${LOKI_RESTART_POLICY_CONDITION:-any}
+        delay: ${LOKI_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${LOKI_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${LOKI_HOMEPAGE_GROUP:-Observability}"
+        - "homepage.name=${LOKI_HOMEPAGE_NAME:-Loki}"
+        - "homepage.icon=${LOKI_HOMEPAGE_ICON:-loki.png}"
+        - "homepage.href=${LOKI_HOMEPAGE_URL:-}"
+        - "homepage.description=${LOKI_HOMEPAGE_DESCRIPTION:-Logs backend (OTLP native)}"
+        - "homepage.siteMonitor=${LOKI_HOMEPAGE_SITEMONITOR:-http://loki:3100/ready}"
+    labels:
+      - "homepage.group=${LOKI_HOMEPAGE_GROUP:-Observability}"
+      - "homepage.name=${LOKI_HOMEPAGE_NAME:-Loki}"
+      - "homepage.icon=${LOKI_HOMEPAGE_ICON:-loki.png}"
+      - "homepage.href=${LOKI_HOMEPAGE_URL:-}"
+      - "homepage.description=${LOKI_HOMEPAGE_DESCRIPTION:-Logs backend (OTLP native)}"
+      - "homepage.siteMonitor=${LOKI_HOMEPAGE_SITEMONITOR:-http://loki:3100/ready}"
