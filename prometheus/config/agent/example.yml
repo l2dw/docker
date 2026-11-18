@@ -1,0 +1,40 @@
+# Prometheus agent configuration — example (copy to <host>.yml and adapt)
+# Delivered as a Compose/Swarm config (PROMETHEUS_AGENT_CONFIG_NAME, immutable:
+# bump the _vN suffix after editing). Scrapes the local exporters of this host
+# and pushes everything to the central Prometheus (remote_write receiver).
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  external_labels:
+    cluster: example-host
+
+scrape_configs:
+  - job_name: prometheus-agent
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  - job_name: node-exporter
+    dns_sd_configs:
+      - names:
+          - prometheus-node-exporter
+        type: A
+        port: 9100
+        refresh_interval: 30s
+
+  - job_name: cadvisor
+    scrape_timeout: 25s
+    dns_sd_configs:
+      - names:
+          - prometheus-cadvisor
+        type: A
+        port: 8080
+        refresh_interval: 30s
+
+remote_write:
+  - url: https://prometheus.example.com/prometheus/api/v1/write
+    basic_auth:
+      username: example-host
+      password_file: /run/secrets/prometheus_remote_write_password
+    # tls_config:
+    #   insecure_skip_verify: true   # only for an internal self-signed certificate

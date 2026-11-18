@@ -35,6 +35,8 @@ Debug : `make prometheus-debug`, `make prometheus-debug-logs`, `make prometheus-
 | `cadvisor-compose.yml` | Service `prometheus-cadvisor` seul |
 | `blackbox-exporter-compose.yml` | Service `prometheus-blackbox-exporter` seul |
 | `config/prometheus.yml` | Jobs de scrape |
+| `agent-compose.yml` | Mode **agent** : `prometheus-agent` + node-exporter + cAdvisor, push vers un Prometheus central |
+| `config/agent/*.yml` | Config agent par hôte (`example.yml`, `devel08-cen.yml`) |
 | `config/blackbox.yml` | Modules blackbox (`http_2xx`, `http_2xx_insecure`, `tcp_connect`, `icmp`) |
 
 ## Configuration Prometheus
@@ -49,6 +51,22 @@ Jobs fournis :
 - `blackbox-http` — sondes HTTP ; ajouter les URLs dans `static_configs.targets`.
 
 Le label `instance` des exporters est l'IP de la tâche ; le nom d'hôte est disponible via `node_uname_info{nodename=…}`.
+
+## Mode agent (hôte non joignable en pull)
+
+Quand le Prometheus central ne peut pas joindre un hôte (réseau filtré dans ce sens), déployer `agent-compose.yml` sur cet hôte : un Prometheus `--agent` (sans TSDB ni UI) scrape node-exporter et cAdvisor en local et pousse les séries par `remote_write`, avec le label externe `cluster=<hôte>`.
+
+1. Central : `PROMETHEUS_REMOTE_WRITE_RECEIVER_FLAG=--web.enable-remote-write-receiver` et une route `<APP_URL>/api/v1/write` protégée par une **authentification dédiée** (sans accès UI).
+2. Hôte : copier `config/agent/example.yml` en `config/agent/<hôte>.yml` (URL, `username`, `cluster`), `PROMETHEUS_AGENT_CONFIG_FILE=./config/agent/<hôte>.yml`.
+3. Hôte : créer le secret Docker externe du mot de passe, sans l'écrire sur disque :
+
+```sh
+<source du secret> | docker secret create prometheus_remote_write_password -
+```
+
+4. Déployer `agent-compose.yml` (Swarm). Rotation : nouveau secret (nom versionné via `PROMETHEUS_AGENT_REMOTE_WRITE_SECRET_NAME`) puis redéploiement.
+
+Côté central, les séries de l'hôte se filtrent par `{cluster="<hôte>"}`.
 
 ## Base path
 
