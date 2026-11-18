@@ -42,7 +42,7 @@ services:
       - ${S3_MIRROR_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Montreal}
-      - S3_MIRROR_MODE=${S3_MIRROR_MODE:-copy}
+      - S3_MIRROR_MODE=${S3_MIRROR_MODE:-sync}
       - S3_MIRROR_INTERVAL=${S3_MIRROR_INTERVAL:-3600}
       - S3_MIRROR_EXCLUDE=${S3_MIRROR_EXCLUDE:-}
       - S3_MIRROR_MAX_DELETE=${S3_MIRROR_MAX_DELETE:-10}

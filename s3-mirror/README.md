@@ -11,8 +11,8 @@ Couples: folder → bucket, bucket → folder, **bucket → bucket**.
 
 | `S3_MIRROR_MODE` | Behaviour |
 |------------------|-----------|
-| `copy` (default) | `rclone copy`: new/changed files are copied, **nothing is ever deleted on DST** |
-| `sync` | `rclone sync`: DST becomes identical to SRC. Deletions propagate, capped per pass by `S3_MIRROR_MAX_DELETE` (default 10). Enable **bucket versioning** to keep deleted files |
+| `sync` (default) | `rclone sync`: DST becomes identical to SRC. Deletions propagate, capped per pass by `S3_MIRROR_MAX_DELETE` (default 10). Enable **bucket versioning** to keep deleted files |
+| `copy` | `rclone copy`: new/changed files are copied, **nothing is ever deleted on DST** |
 
 The loop runs one pass every `S3_MIRROR_INTERVAL` seconds (default 3600, min 10). Files are compared by checksum. `S3_MIRROR_EXCLUDE` takes comma-separated rclone patterns (e.g. `logs/**,*.tmp`); `S3_MIRROR_RCLONE_OPTS` adds extra flags.
 
@@ -26,7 +26,7 @@ The loop runs one pass every `S3_MIRROR_INTERVAL` seconds (default 3600, min 10)
 
 Image: official `docker.io/rclone/rclone` (pinned tag, **no build**). The script [`bin/entrypoint.sh`](bin/entrypoint.sh) is delivered as a Compose/Swarm **config** (`S3_MIRROR_ENTRYPOINT_CONFIG_NAME`; configs are immutable — bump the `_vN` suffix after editing the script).
 
-> Replaces the former `mc mirror --watch` engine (`Dockerfile` downloading `mc`): `dl.min.io` now answers HTTP 410 and `minio/mc` images are no longer pullable. The `bi` mode was dropped (use two instances with `copy` if really needed). `S3_MIRROR_MC_OPTS` → `S3_MIRROR_RCLONE_OPTS`; `uni` → `copy`/`sync`.
+> Replaces the former `mc mirror --watch` engine (`Dockerfile` downloading `mc`): `dl.min.io` now answers HTTP 410 and `minio/mc` images are no longer pullable. The `bi` mode was dropped (use two instances with `copy` if really needed). `S3_MIRROR_MC_OPTS` → `S3_MIRROR_RCLONE_OPTS`; `uni` → `sync` (default) or `copy`.
 
 **Base path:** N/A (no HTTP app). `S3_MIRROR_BASE_PATH=/`. Traefik omitted. `compose.yml` and `docker-compose.yml` are identical.
 
@@ -85,7 +85,7 @@ S3_MIRROR_DST_ENDPOINT=http://rustfs:9000
 S3_MIRROR_DST_BUCKET=appdata
 S3_MIRROR_DST_PREFIX=homepage/config
 S3_MIRROR_EXCLUDE=logs/**
-S3_MIRROR_MODE=sync
+# S3_MIRROR_MODE=sync is the default
 ```
 
 **Bucket → folder (restore / pull):**
@@ -98,6 +98,7 @@ S3_MIRROR_DST_TYPE=path
 S3_MIRROR_DST_VOLUME_TYPE=none
 S3_MIRROR_DST_VOLUME_OPTS=bind
 S3_MIRROR_DST_VOLUME_PATH=/appdata/homepage/config
+# copy: sync would delete local files that are missing from the bucket
 S3_MIRROR_MODE=copy
 ```
 
