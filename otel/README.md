@@ -4,7 +4,7 @@ OpenTelemetry Collector **contrib 0.165.0** : point d'entrée OTLP unique (trace
 
 | Signal | Réception | Destination (variable) | Défaut |
 |---|---|---|---|
-| Traces | OTLP gRPC 4317 / HTTP 4318 | `OTEL_TRACES_ENDPOINT` (OTLP gRPC) | `tempo:4317` |
+| Traces | OTLP gRPC 4317 / HTTP 4318 | `OTEL_TRACES_ENDPOINT` (OTLP HTTP) | `http://tempo:4318` |
 | Logs | OTLP | `OTEL_LOGS_ENDPOINT` (OTLP HTTP) | `http://loki:3100/otlp` |
 | Métriques | OTLP + scrape interne | `OTEL_METRICS_ENDPOINT` (Prometheus remote write) | `http://prometheus:9090/api/v1/write` |
 
@@ -12,7 +12,7 @@ OpenTelemetry Collector **contrib 0.165.0** : point d'entrée OTLP unique (trace
 
 `config/config.yaml` ne contient que des `${env:VAR:-défaut}` : backends, URL, chemins, cluster, environnement se changent par variables (Dokploy), sans modifier le fichier. Principales variables :
 
-- `OTEL_TRACES_ENDPOINT`, `OTEL_TRACES_INSECURE`, `OTEL_LOGS_ENDPOINT`, `OTEL_METRICS_ENDPOINT` : backends ;
+- `OTEL_TRACES_ENDPOINT`, `OTEL_LOGS_ENDPOINT`, `OTEL_METRICS_ENDPOINT` : backends ;
 - `OTEL_HTTP_BASE_PATH` : sous-chemin de réception OTLP HTTP (ex. `/otel` → `/otel/v1/traces`) ; vide = `/v1/*`. gRPC ne supporte pas de chemin ;
 - `OTEL_CLUSTER` (label `cluster` des métriques), `OTEL_ENVIRONMENT` (`deployment.environment`) ;
 - `OTEL_SCRAPE_TEMPO`, `OTEL_SCRAPE_LOKI` : `/metrics` des backends (avec celles du collecteur, port `OTEL_TELEMETRY_PORT`) renvoyées vers Prometheus ;

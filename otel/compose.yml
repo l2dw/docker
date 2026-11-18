@@ -18,7 +18,7 @@ volumes:
 # Values inside are ${VAR} placeholders expanded from the container environment.
 configs:
   otel_config:
-    name: ${OPENTELEMETRY_CONFIG_NAME:-otel_config_v1}
+    name: ${OPENTELEMETRY_CONFIG_NAME:-otel_config_v2}
     file: ./config/config.yaml
 
 services:
@@ -39,8 +39,7 @@ services:
       - OTEL_TELEMETRY_PORT=${OTEL_TELEMETRY_PORT:-8888}
       - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-default}
       - OTEL_CLUSTER=${OTEL_CLUSTER:-default}
-      - OTEL_TRACES_ENDPOINT=${OTEL_TRACES_ENDPOINT:-tempo:4317}
-      - OTEL_TRACES_INSECURE=${OTEL_TRACES_INSECURE:-true}
+      - OTEL_TRACES_ENDPOINT=${OTEL_TRACES_ENDPOINT:-http://tempo:4318}
       - OTEL_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT:-http://loki:3100/otlp}
       - OTEL_METRICS_ENDPOINT=${OTEL_METRICS_ENDPOINT:-http://prometheus:9090/api/v1/write}
       - OTEL_SCRAPE_TEMPO=${OTEL_SCRAPE_TEMPO:-tempo:3200}
