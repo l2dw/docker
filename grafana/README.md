@@ -9,7 +9,7 @@
 | Blackbox Exporter (HTTP prober) | 13659 rév. 1 | blackbox-exporter |
 | Prometheus 2.0 Overview | 3662 rév. 2 | Prometheus |
 
-Les dashboards sont stockés dans `config/dashboards/` (JSON compacté, `${DS_*}` remplacé par l'uid `prometheus`, `id` nul, `uid` fixe `cen-*`). Stack compagnon : `prometheus` (branche `prometheus`) ; filtrer un hôte distant par le label `cluster`.
+Les dashboards sont stockés dans `config/dashboards/` (JSON compacté, `${DS_*}` remplacé par l'uid `prometheus`, `id` nul, `uid` fixe `cen-*`). Stack compagnon : `prometheus` (branche `prometheus`). Node Exporter Full et cadvisor ont une variable **Cluster** (`label_values(…, cluster)`) appliquée à toutes les requêtes : le serveur central étiquette ses cibles `cluster=<serveur>` et les agents distants ajoutent leur label externe `cluster`.
 
 ## Démarrage
 

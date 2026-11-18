@@ -23,10 +23,10 @@ configs:
     name: ${GRAFANA_DASHBOARD_PROVIDER_CONFIG_NAME:-grafana_dashboard_provider_v1}
     file: ./config/provisioning/dashboards/default.yml
   grafana_dashboard_node_exporter_full:
-    name: ${GRAFANA_DASHBOARD_NODE_EXPORTER_FULL_CONFIG_NAME:-grafana_dashboard_node_exporter_full_v1}
+    name: ${GRAFANA_DASHBOARD_NODE_EXPORTER_FULL_CONFIG_NAME:-grafana_dashboard_node_exporter_full_v2}
     file: ./config/dashboards/node-exporter-full.json
   grafana_dashboard_cadvisor:
-    name: ${GRAFANA_DASHBOARD_CADVISOR_CONFIG_NAME:-grafana_dashboard_cadvisor_v1}
+    name: ${GRAFANA_DASHBOARD_CADVISOR_CONFIG_NAME:-grafana_dashboard_cadvisor_v2}
     file: ./config/dashboards/cadvisor.json
   grafana_dashboard_blackbox_http:
     name: ${GRAFANA_DASHBOARD_BLACKBOX_HTTP_CONFIG_NAME:-grafana_dashboard_blackbox_http_v1}
