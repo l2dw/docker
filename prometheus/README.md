@@ -68,6 +68,10 @@ Quand le Prometheus central ne peut pas joindre un hôte (réseau filtré dans c
 
 Côté central, les séries de l'hôte se filtrent par `{cluster="<hôte>"}`.
 
+`agent-compose.yml` inclut aussi `prometheus-blackbox-exporter` : sondes HTTP **depuis l'hôte** (job `blackbox-http` de `config/agent/<hôte>.yml`, module `http_alive`). Pour sonder des conteneurs d'autres stacks par leur nom interne, joindre leur réseau (`DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true`) ; préférer les URL internes quand l'hôte ne peut pas joindre sa propre URL publique (hairpin).
+
+Modules blackbox : `http_2xx`, `http_2xx_insecure` (certificat autosigné), `http_alive` (2xx/3xx/401/403/404 = vivant, sans suivre les redirections), `tcp_connect`, `icmp`.
+
 ## Base path
 
 Prometheus supporte un sous-chemin (`--web.external-url`, `--web.route-prefix`).

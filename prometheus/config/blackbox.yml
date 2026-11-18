@@ -16,6 +16,15 @@ modules:
       preferred_ip_protocol: ip4
       tls_config:
         insecure_skip_verify: true
+  # Process answers HTTP (2xx/3xx/401/403/404), redirects not followed:
+  # liveness of APIs behind auth or apps whose redirect points to a public URL.
+  http_alive:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      follow_redirects: false
+      valid_status_codes: [200, 201, 204, 301, 302, 303, 307, 308, 401, 403, 404]
   tcp_connect:
     prober: tcp
     timeout: 5s

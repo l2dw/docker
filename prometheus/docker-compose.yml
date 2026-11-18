@@ -19,7 +19,7 @@ configs:
     name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v2}
     file: ${PROMETHEUS_CONFIG_FILE:-./config/prometheus.yml}
   blackbox_config:
-    name: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_NAME:-prometheus_blackbox_config_v1}
+    name: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_NAME:-prometheus_blackbox_config_v2}
     file: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_FILE:-./config/blackbox.yml}
 
 services:

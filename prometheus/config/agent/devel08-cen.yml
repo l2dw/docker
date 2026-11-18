@@ -31,6 +31,34 @@ scrape_configs:
         port: 8080
         refresh_interval: 30s
 
+  # Blackbox exporter own metrics.
+  - job_name: blackbox-exporter
+    static_configs:
+      - targets:
+          - prometheus-blackbox-exporter:9115
+
+  # HTTP liveness probes (module http_alive: 2xx/3xx/401/403/404 = up, no redirect).
+  # Internal URLs (dokploy-network): the public URL answers 403 from inside devel08.
+  - job_name: blackbox-http
+    metrics_path: /probe
+    params:
+      module:
+        - http_alive
+    static_configs:
+      - targets:
+          - http://workspace-rie-fullstack-pgeebf-app-1:3000/rie/rie-fullstack
+          - http://workspace-rie-fullstack-pgeebf-app-1:4000/rie/rie-fullstack/api
+          - http://workspace-rie-fullstack-pgeebf-app-1:4010/rie/rie-fullstack/auth
+          - http://workspace-rie-fullstack-pgeebf-app-1:3300/rie/rie-fullstack/booking
+          - http://workspace-rie-fullstack-pgeebf-app-1:4020/
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: prometheus-blackbox-exporter:9115
+
 remote_write:
   - url: https://devel-cen.cen.umontreal.ca/prometheus/api/v1/write
     basic_auth:
