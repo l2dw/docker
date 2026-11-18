@@ -1,0 +1,75 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-s3-mirror-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${S3_MIRROR_DATA_VOLUME_NAME:-s3-mirror_data}
+    external: ${S3_MIRROR_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${S3_MIRROR_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${S3_MIRROR_DATA_VOLUME_TYPE:-}
+      o: ${S3_MIRROR_DATA_VOLUME_OPTS:-}
+      device: ${S3_MIRROR_DATA_VOLUME_PATH:-}
+
+services:
+  s3-mirror:
+    image: ${S3_MIRROR_IMAGE:-s3-mirror:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: ${S3_MIRROR_RESTART:-unless-stopped}
+    privileged: ${S3_MIRROR_PRIVILEGED:-false}
+    env_file:
+      - ${S3_MIRROR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - S3_MIRROR_MODE=${S3_MIRROR_MODE:-uni}
+      - S3_MIRROR_MC_OPTS=${S3_MIRROR_MC_OPTS:-}
+      - S3_MIRROR_DATA_VOLUME_DIR=${S3_MIRROR_DATA_VOLUME_DIR:-/data}
+      - S3_MIRROR_SRC_TYPE=${S3_MIRROR_SRC_TYPE:-s3}
+      - S3_MIRROR_SRC_ENDPOINT=${S3_MIRROR_SRC_ENDPOINT:-}
+      - S3_MIRROR_SRC_ACCESS_KEY=${S3_MIRROR_SRC_ACCESS_KEY:-}
+      - S3_MIRROR_SRC_SECRET_KEY=${S3_MIRROR_SRC_SECRET_KEY:-}
+      - S3_MIRROR_SRC_BUCKET=${S3_MIRROR_SRC_BUCKET:-}
+      - S3_MIRROR_SRC_PREFIX=${S3_MIRROR_SRC_PREFIX:-}
+      - S3_MIRROR_SRC_PATH=${S3_MIRROR_SRC_PATH:-}
+      - S3_MIRROR_SRC_MC_ALIAS_OPTS=${S3_MIRROR_SRC_MC_ALIAS_OPTS:-}
+      - S3_MIRROR_DST_TYPE=${S3_MIRROR_DST_TYPE:-path}
+      - S3_MIRROR_DST_ENDPOINT=${S3_MIRROR_DST_ENDPOINT:-}
+      - S3_MIRROR_DST_ACCESS_KEY=${S3_MIRROR_DST_ACCESS_KEY:-}
+      - S3_MIRROR_DST_SECRET_KEY=${S3_MIRROR_DST_SECRET_KEY:-}
+      - S3_MIRROR_DST_BUCKET=${S3_MIRROR_DST_BUCKET:-}
+      - S3_MIRROR_DST_PREFIX=${S3_MIRROR_DST_PREFIX:-}
+      - S3_MIRROR_DST_PATH=${S3_MIRROR_DST_PATH:-}
+      - S3_MIRROR_DST_MC_ALIAS_OPTS=${S3_MIRROR_DST_MC_ALIAS_OPTS:-}
+    volumes:
+      - data:${S3_MIRROR_DATA_VOLUME_DIR:-/data}:z
+    deploy:
+      mode: ${S3_MIRROR_DEPLOY_MODE:-replicated}
+      replicas: ${S3_MIRROR_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${S3_MIRROR_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${S3_MIRROR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${S3_MIRROR_RESTART_POLICY_CONDITION:-any}
+        delay: ${S3_MIRROR_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${S3_MIRROR_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${S3_MIRROR_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.name=${S3_MIRROR_HOMEPAGE_NAME:-s3-mirror}"
+        - "homepage.icon=${S3_MIRROR_HOMEPAGE_ICON:-minio.png}"
+        - "homepage.href=${S3_MIRROR_HOMEPAGE_URL:-}"
+        - "homepage.description=${S3_MIRROR_HOMEPAGE_DESCRIPTION:-Permanent mc mirror (S3 path or bucket)}"
+        - "homepage.siteMonitor=${S3_MIRROR_HOMEPAGE_SITEMONITOR:-http://s3-mirror:9000}"
+    labels:
+      - "homepage.group=${S3_MIRROR_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.name=${S3_MIRROR_HOMEPAGE_NAME:-s3-mirror}"
+      - "homepage.icon=${S3_MIRROR_HOMEPAGE_ICON:-minio.png}"
+      - "homepage.href=${S3_MIRROR_HOMEPAGE_URL:-}"
+      - "homepage.description=${S3_MIRROR_HOMEPAGE_DESCRIPTION:-Permanent mc mirror (S3 path or bucket)}"
+      - "homepage.siteMonitor=${S3_MIRROR_HOMEPAGE_SITEMONITOR:-http://s3-mirror:9000}"
