@@ -1,17 +1,10 @@
+# otel stack — keep compose.yml (no Traefik) and docker-compose.yml in sync.
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-otel-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
 volumes:
-  config:
-    name: ${OPENTELEMETRY_CONFIG_VOLUME_NAME:-otel_config}
-    external: ${OPENTELEMETRY_CONFIG_VOLUME_EXTERNAL:-false}
-    driver: ${OPENTELEMETRY_CONFIG_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${OPENTELEMETRY_CONFIG_VOLUME_TYPE:-}
-      o: ${OPENTELEMETRY_CONFIG_VOLUME_OPTS:-}
-      device: ${OPENTELEMETRY_CONFIG_VOLUME_PATH:-}
   data:
     name: ${OPENTELEMETRY_DATA_VOLUME_NAME:-otel_data}
     external: ${OPENTELEMETRY_DATA_VOLUME_EXTERNAL:-false}
@@ -21,37 +14,45 @@ volumes:
       o: ${OPENTELEMETRY_DATA_VOLUME_OPTS:-}
       device: ${OPENTELEMETRY_DATA_VOLUME_PATH:-}
 
+# App config delivered as a Swarm/Compose config (immutable: bump _vN after editing).
+# Values inside are ${VAR} placeholders expanded from the container environment.
+configs:
+  otel_config:
+    name: ${OPENTELEMETRY_CONFIG_NAME:-otel_config_v1}
+    file: ./config/config.yaml
+
 services:
   otel:
-    image: ${OPENTELEMETRY_IMAGE:-docker.io/otel/opentelemetry-collector-contrib:0.128.0}
+    image: ${OPENTELEMETRY_IMAGE:-docker.io/otel/opentelemetry-collector-contrib:0.165.0}
     restart: ${OPENTELEMETRY_RESTART:-unless-stopped}
     privileged: ${OPENTELEMETRY_PRIVILEGED:-false}
     command:
-      - --config=${OPENTELEMETRY_CONFIG_FILE:-/etc/otelcol-contrib/config.yaml}
+      - --config=/etc/otelcol-contrib/config.yaml
     env_file:
       - ${OPENTELEMETRY_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Toronto}
+      - OTEL_OTLP_GRPC_PORT=${OTEL_OTLP_GRPC_PORT:-4317}
+      - OTEL_OTLP_HTTP_PORT=${OTEL_OTLP_HTTP_PORT:-4318}
+      - OTEL_HTTP_BASE_PATH=${OTEL_HTTP_BASE_PATH:-}
+      - OTEL_HEALTH_PORT=${OTEL_HEALTH_PORT:-13133}
+      - OTEL_TELEMETRY_PORT=${OTEL_TELEMETRY_PORT:-8888}
+      - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-default}
+      - OTEL_CLUSTER=${OTEL_CLUSTER:-default}
+      - OTEL_TRACES_ENDPOINT=${OTEL_TRACES_ENDPOINT:-tempo:4317}
+      - OTEL_TRACES_INSECURE=${OTEL_TRACES_INSECURE:-true}
+      - OTEL_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT:-http://loki:3100/otlp}
+      - OTEL_METRICS_ENDPOINT=${OTEL_METRICS_ENDPOINT:-http://prometheus:9090/api/v1/write}
+      - OTEL_SCRAPE_TEMPO=${OTEL_SCRAPE_TEMPO:-tempo:3200}
+      - OTEL_SCRAPE_LOKI=${OTEL_SCRAPE_LOKI:-loki:3100}
+      - OTEL_MEMORY_LIMIT_PERCENTAGE=${OTEL_MEMORY_LIMIT_PERCENTAGE:-80}
+      - OTEL_MEMORY_SPIKE_PERCENTAGE=${OTEL_MEMORY_SPIKE_PERCENTAGE:-20}
+      - OTEL_DEBUG_VERBOSITY=${OTEL_DEBUG_VERBOSITY:-basic}
+    configs:
+      - source: otel_config
+        target: /etc/otelcol-contrib/config.yaml
     volumes:
-      - config:${OPENTELEMETRY_CONFIG_VOLUME_DIR:-/etc/otelcol-contrib}:z
       - data:${OPENTELEMETRY_DATA_VOLUME_DIR:-/var/lib/otelcol}:z
-    ports:
-      - published: ${OPENTELEMETRY_OTLP_GRPC_PUBLISHED_PORT:-4317}
-        target: ${OPENTELEMETRY_OTLP_GRPC_PORT:-4317}
-        mode: ${OPENTELEMETRY_OTLP_GRPC_PORT_MODE:-ingress}
-        protocol: ${OPENTELEMETRY_OTLP_GRPC_PORT_PROTOCOL:-tcp}
-      - published: ${OPENTELEMETRY_OTLP_HTTP_PUBLISHED_PORT:-4318}
-        target: ${OPENTELEMETRY_OTLP_HTTP_PORT:-4318}
-        mode: ${OPENTELEMETRY_OTLP_HTTP_PORT_MODE:-ingress}
-        protocol: ${OPENTELEMETRY_OTLP_HTTP_PORT_PROTOCOL:-tcp}
-      - published: ${OPENTELEMETRY_METRICS_PUBLISHED_PORT:-8888}
-        target: ${OPENTELEMETRY_METRICS_PORT:-8888}
-        mode: ${OPENTELEMETRY_METRICS_PORT_MODE:-ingress}
-        protocol: ${OPENTELEMETRY_METRICS_PORT_PROTOCOL:-tcp}
-      - published: ${OPENTELEMETRY_HEALTH_PUBLISHED_PORT:-13133}
-        target: ${OPENTELEMETRY_HEALTH_PORT:-13133}
-        mode: ${OPENTELEMETRY_HEALTH_PORT_MODE:-ingress}
-        protocol: ${OPENTELEMETRY_HEALTH_PORT_PROTOCOL:-tcp}
     deploy:
       mode: ${OPENTELEMETRY_DEPLOY_MODE:-replicated}
       replicas: ${OPENTELEMETRY_DEPLOY_REPLICAS:-1}
@@ -66,16 +67,32 @@ services:
         delay: ${OPENTELEMETRY_RESTART_POLICY_DELAY:-5s}
         max_attempts: ${OPENTELEMETRY_RESTART_POLICY_MAX_ATTEMPTS:-3}
       labels:
+        - "traefik.enable=${OPENTELEMETRY_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-otel}.loadbalancer.server.port=${OPENTELEMETRY_PORT:-4318}"
+        - "traefik.http.routers.${APP_NAME:-otel}.entrypoints=${OPENTELEMETRY_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-otel}.rule=Host(`${OPENTELEMETRY_DOMAIN:-otel.example.com}`) && PathPrefix(`${OPENTELEMETRY_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-otel}.service=${APP_NAME:-otel}"
+        - "traefik.http.routers.${APP_NAME:-otel}.middlewares=${OPENTELEMETRY_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-otel}.tls=${OPENTELEMETRY_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-otel}.tls.certresolver=${OPENTELEMETRY_TLS_CERTRESOLVER:-letsencrypt}"
         - "homepage.group=${OPENTELEMETRY_HOMEPAGE_GROUP:-Observability}"
         - "homepage.name=${OPENTELEMETRY_HOMEPAGE_NAME:-OpenTelemetry}"
-        - "homepage.icon=${OPENTELEMETRY_HOMEPAGE_ICON:-opentelemetry.png}"
+        - "homepage.icon=${OPENTELEMETRY_HOMEPAGE_ICON:-otel.png}"
         - "homepage.href=${OPENTELEMETRY_HOMEPAGE_URL:-}"
-        - "homepage.description=${OPENTELEMETRY_HOMEPAGE_DESCRIPTION:-OTLP collector (receive-only)}"
-        - "homepage.siteMonitor=${OPENTELEMETRY_HOMEPAGE_SITEMONITOR:-http://otel:13133}"
+        - "homepage.description=${OPENTELEMETRY_HOMEPAGE_DESCRIPTION:-OTLP collector}"
+        - "homepage.siteMonitor=${OPENTELEMETRY_HOMEPAGE_SITEMONITOR:-http://otel:13133/}"
     labels:
+      - "traefik.enable=${OPENTELEMETRY_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-otel}.loadbalancer.server.port=${OPENTELEMETRY_PORT:-4318}"
+      - "traefik.http.routers.${APP_NAME:-otel}.entrypoints=${OPENTELEMETRY_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-otel}.rule=Host(`${OPENTELEMETRY_DOMAIN:-otel.example.com}`) && PathPrefix(`${OPENTELEMETRY_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-otel}.service=${APP_NAME:-otel}"
+      - "traefik.http.routers.${APP_NAME:-otel}.middlewares=${OPENTELEMETRY_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-otel}.tls=${OPENTELEMETRY_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-otel}.tls.certresolver=${OPENTELEMETRY_TLS_CERTRESOLVER:-letsencrypt}"
       - "homepage.group=${OPENTELEMETRY_HOMEPAGE_GROUP:-Observability}"
       - "homepage.name=${OPENTELEMETRY_HOMEPAGE_NAME:-OpenTelemetry}"
-      - "homepage.icon=${OPENTELEMETRY_HOMEPAGE_ICON:-opentelemetry.png}"
+      - "homepage.icon=${OPENTELEMETRY_HOMEPAGE_ICON:-otel.png}"
       - "homepage.href=${OPENTELEMETRY_HOMEPAGE_URL:-}"
-      - "homepage.description=${OPENTELEMETRY_HOMEPAGE_DESCRIPTION:-OTLP collector (receive-only)}"
-      - "homepage.siteMonitor=${OPENTELEMETRY_HOMEPAGE_SITEMONITOR:-http://otel:13133}"
+      - "homepage.description=${OPENTELEMETRY_HOMEPAGE_DESCRIPTION:-OTLP collector}"
+      - "homepage.siteMonitor=${OPENTELEMETRY_HOMEPAGE_SITEMONITOR:-http://otel:13133/}"
