@@ -58,6 +58,14 @@ GRAFANA_ROOT_URL=${{vault.<infra>.grafana/config:ROOT_URL}}
 
 `GRAFANA_SECRET_KEY` chiffre les secrets stockés en base (datasources) : ne pas le changer après le premier démarrage.
 
+## Authentification OIDC (Keycloak)
+
+Désactivée par défaut. Activer avec `GRAFANA_OAUTH_ENABLED=true`, `GRAFANA_OAUTH_ISSUER=https://<keycloak>/realms/<realm>` (ou `…/auth/realms/<realm>`), `GRAFANA_OAUTH_CLIENT_ID`, `GRAFANA_OAUTH_CLIENT_SECRET` (secret). Les URL auth/token/userinfo sont dérivées de l'issuer ; PKCE activé.
+
+Client Keycloak : confidentiel, flux standard, PKCE S256, redirect `<GRAFANA_ROOT_URL>login/generic_oauth`, rôles client `admin` / `editor` / `viewer` mappés dans la claim `roles` (ID token + userinfo). Rôle Grafana : `GRAFANA_OAUTH_ROLE_ATTRIBUTE_PATH` (défaut : admin → Admin, editor → Editor, sinon Viewer). La connexion locale (admin) reste disponible (`GRAFANA_OAUTH_AUTO_LOGIN=false`).
+
+Si le conteneur ne résout pas l'issuer (DNS de l'hôte), `GRAFANA_EXTRA_HOST=<nom>:<ip>` ajoute une entrée `/etc/hosts` (contournement ; corriger le DNS de l'hôte de préférence).
+
 ## Base path
 
 Grafana supporte un sous-chemin : `GRAFANA_ROOT_URL=https://<domaine>/grafana/` + `GRAFANA_SERVE_FROM_SUB_PATH=true`, Traefik `PathPrefix(/grafana)` sans stripPrefix. Sous-domaine : `GRAFANA_BASE_PATH=/`, `GRAFANA_ROOT_URL=https://<domaine>/`, `GRAFANA_SERVE_FROM_SUB_PATH=false`.
