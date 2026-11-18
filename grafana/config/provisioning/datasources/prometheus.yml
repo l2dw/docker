@@ -1,0 +1,16 @@
+# Grafana datasource provisioning — grafana stack (docker-composer).
+# Delivered as a Swarm/Compose config (GRAFANA_DATASOURCES_CONFIG_NAME, immutable:
+# bump the _vN suffix after editing). ${VAR} is expanded by Grafana from the env.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: ${GRAFANA_PROMETHEUS_URL}
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 30s
