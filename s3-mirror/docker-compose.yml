@@ -1,75 +1,102 @@
+# s3-mirror stack — keep compose.yml and docker-compose.yml identical (no Traefik: no HTTP UI).
 networks:
   default:
     name: ${DEFAULT_NETWORK_NAME:-s3-mirror-network}
     external: ${DEFAULT_NETWORK_EXTERNAL:-false}
 
+# No `external:` key: Compose rejects it together with `driver`. An existing volume
+# with the same NAME is reused as-is.
 volumes:
-  data:
-    name: ${S3_MIRROR_DATA_VOLUME_NAME:-s3-mirror_data}
-    external: ${S3_MIRROR_DATA_VOLUME_EXTERNAL:-false}
-    driver: ${S3_MIRROR_DATA_VOLUME_DRIVER:-local}
+  src:
+    name: ${S3_MIRROR_SRC_VOLUME_NAME:-s3-mirror_src}
+    driver: ${S3_MIRROR_SRC_VOLUME_DRIVER:-local}
     driver_opts:
-      type: ${S3_MIRROR_DATA_VOLUME_TYPE:-}
-      o: ${S3_MIRROR_DATA_VOLUME_OPTS:-}
-      device: ${S3_MIRROR_DATA_VOLUME_PATH:-}
+      type: ${S3_MIRROR_SRC_VOLUME_TYPE:-}
+      o: ${S3_MIRROR_SRC_VOLUME_OPTS:-}
+      device: ${S3_MIRROR_SRC_VOLUME_PATH:-}
+  dst:
+    name: ${S3_MIRROR_DST_VOLUME_NAME:-s3-mirror_dst}
+    driver: ${S3_MIRROR_DST_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${S3_MIRROR_DST_VOLUME_TYPE:-}
+      o: ${S3_MIRROR_DST_VOLUME_OPTS:-}
+      device: ${S3_MIRROR_DST_VOLUME_PATH:-}
+
+# Entrypoint script delivered as a config (immutable: bump the _vN suffix after editing it).
+configs:
+  s3_mirror_entrypoint:
+    name: ${S3_MIRROR_ENTRYPOINT_CONFIG_NAME:-s3_mirror_entrypoint_v1}
+    file: ./bin/entrypoint.sh
 
 services:
   s3-mirror:
-    image: ${S3_MIRROR_IMAGE:-s3-mirror:local}
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${S3_MIRROR_IMAGE:-docker.io/rclone/rclone:1.68.2}
     restart: ${S3_MIRROR_RESTART:-unless-stopped}
     privileged: ${S3_MIRROR_PRIVILEGED:-false}
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    configs:
+      - source: s3_mirror_entrypoint
+        target: /entrypoint.sh
+        mode: 0444
     env_file:
       - ${S3_MIRROR_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Montreal}
-      - S3_MIRROR_MODE=${S3_MIRROR_MODE:-uni}
-      - S3_MIRROR_MC_OPTS=${S3_MIRROR_MC_OPTS:-}
-      - S3_MIRROR_DATA_VOLUME_DIR=${S3_MIRROR_DATA_VOLUME_DIR:-/data}
-      - S3_MIRROR_SRC_TYPE=${S3_MIRROR_SRC_TYPE:-s3}
+      - S3_MIRROR_MODE=${S3_MIRROR_MODE:-copy}
+      - S3_MIRROR_INTERVAL=${S3_MIRROR_INTERVAL:-3600}
+      - S3_MIRROR_EXCLUDE=${S3_MIRROR_EXCLUDE:-}
+      - S3_MIRROR_MAX_DELETE=${S3_MIRROR_MAX_DELETE:-10}
+      - S3_MIRROR_RCLONE_OPTS=${S3_MIRROR_RCLONE_OPTS:-}
+      - S3_MIRROR_S3_PROVIDER=${S3_MIRROR_S3_PROVIDER:-Other}
+      - S3_MIRROR_S3_FORCE_PATH_STYLE=${S3_MIRROR_S3_FORCE_PATH_STYLE:-true}
+      - S3_MIRROR_SRC_TYPE=${S3_MIRROR_SRC_TYPE:-}
       - S3_MIRROR_SRC_ENDPOINT=${S3_MIRROR_SRC_ENDPOINT:-}
       - S3_MIRROR_SRC_ACCESS_KEY=${S3_MIRROR_SRC_ACCESS_KEY:-}
       - S3_MIRROR_SRC_SECRET_KEY=${S3_MIRROR_SRC_SECRET_KEY:-}
       - S3_MIRROR_SRC_BUCKET=${S3_MIRROR_SRC_BUCKET:-}
       - S3_MIRROR_SRC_PREFIX=${S3_MIRROR_SRC_PREFIX:-}
       - S3_MIRROR_SRC_PATH=${S3_MIRROR_SRC_PATH:-}
-      - S3_MIRROR_SRC_MC_ALIAS_OPTS=${S3_MIRROR_SRC_MC_ALIAS_OPTS:-}
-      - S3_MIRROR_DST_TYPE=${S3_MIRROR_DST_TYPE:-path}
+      - S3_MIRROR_DST_TYPE=${S3_MIRROR_DST_TYPE:-}
       - S3_MIRROR_DST_ENDPOINT=${S3_MIRROR_DST_ENDPOINT:-}
       - S3_MIRROR_DST_ACCESS_KEY=${S3_MIRROR_DST_ACCESS_KEY:-}
       - S3_MIRROR_DST_SECRET_KEY=${S3_MIRROR_DST_SECRET_KEY:-}
       - S3_MIRROR_DST_BUCKET=${S3_MIRROR_DST_BUCKET:-}
       - S3_MIRROR_DST_PREFIX=${S3_MIRROR_DST_PREFIX:-}
       - S3_MIRROR_DST_PATH=${S3_MIRROR_DST_PATH:-}
-      - S3_MIRROR_DST_MC_ALIAS_OPTS=${S3_MIRROR_DST_MC_ALIAS_OPTS:-}
     volumes:
-      - data:${S3_MIRROR_DATA_VOLUME_DIR:-/data}:z
+      - src:${S3_MIRROR_SRC_VOLUME_DIR:-/src}:ro,z
+      - dst:${S3_MIRROR_DST_VOLUME_DIR:-/dst}:z
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/entrypoint.sh", "health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
     deploy:
       mode: ${S3_MIRROR_DEPLOY_MODE:-replicated}
       replicas: ${S3_MIRROR_DEPLOY_REPLICAS:-1}
       resources:
         limits:
-          memory: ${S3_MIRROR_MEMORY_LIMIT:-1G}
+          memory: ${S3_MIRROR_MEMORY_LIMIT:-256M}
       placement:
         constraints:
           - ${S3_MIRROR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
         condition: ${S3_MIRROR_RESTART_POLICY_CONDITION:-any}
         delay: ${S3_MIRROR_RESTART_POLICY_DELAY:-5s}
-        max_attempts: ${S3_MIRROR_RESTART_POLICY_MAX_ATTEMPTS:-3}
+        # 0 = unlimited. In plain `docker compose` mode a value > 0 needs CONDITION=on-failure.
+        max_attempts: ${S3_MIRROR_RESTART_POLICY_MAX_ATTEMPTS:-0}
       labels:
-        - "homepage.group=${S3_MIRROR_HOMEPAGE_GROUP:-Infrastructure}"
+        - "homepage.group=${S3_MIRROR_HOMEPAGE_GROUP:-Infra}"
         - "homepage.name=${S3_MIRROR_HOMEPAGE_NAME:-s3-mirror}"
-        - "homepage.icon=${S3_MIRROR_HOMEPAGE_ICON:-minio.png}"
+        - "homepage.icon=${S3_MIRROR_HOMEPAGE_ICON:-s3.png}"
         - "homepage.href=${S3_MIRROR_HOMEPAGE_URL:-}"
-        - "homepage.description=${S3_MIRROR_HOMEPAGE_DESCRIPTION:-Permanent mc mirror (S3 path or bucket)}"
-        - "homepage.siteMonitor=${S3_MIRROR_HOMEPAGE_SITEMONITOR:-http://s3-mirror:9000}"
+        - "homepage.description=${S3_MIRROR_HOMEPAGE_DESCRIPTION:-Periodic rclone mirror}"
+        - "homepage.siteMonitor=${S3_MIRROR_HOMEPAGE_SITEMONITOR:-}"
     labels:
-      - "homepage.group=${S3_MIRROR_HOMEPAGE_GROUP:-Infrastructure}"
+      - "homepage.group=${S3_MIRROR_HOMEPAGE_GROUP:-Infra}"
       - "homepage.name=${S3_MIRROR_HOMEPAGE_NAME:-s3-mirror}"
-      - "homepage.icon=${S3_MIRROR_HOMEPAGE_ICON:-minio.png}"
+      - "homepage.icon=${S3_MIRROR_HOMEPAGE_ICON:-s3.png}"
       - "homepage.href=${S3_MIRROR_HOMEPAGE_URL:-}"
-      - "homepage.description=${S3_MIRROR_HOMEPAGE_DESCRIPTION:-Permanent mc mirror (S3 path or bucket)}"
-      - "homepage.siteMonitor=${S3_MIRROR_HOMEPAGE_SITEMONITOR:-http://s3-mirror:9000}"
+      - "homepage.description=${S3_MIRROR_HOMEPAGE_DESCRIPTION:-Periodic rclone mirror}"
+      - "homepage.siteMonitor=${S3_MIRROR_HOMEPAGE_SITEMONITOR:-}"

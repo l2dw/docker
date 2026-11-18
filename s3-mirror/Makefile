@@ -5,11 +5,10 @@ S3_MIRROR_ENV := $(S3_MIRROR_STACK_NAME)/.env
 S3_MIRROR_ENV_EXAMPLE := $(S3_MIRROR_STACK_NAME)/.env.example
 NETWORK_DRIVER ?= overlay
 
-s3-mirror-pull-images: ## Pull / build images for the s3-mirror stack
+s3-mirror-pull-images: ## Pull images for the s3-mirror stack
 	$(MAKE) docker-pull-images PROJECT_NAME=$(S3_MIRROR_STACK_NAME)
-	@docker compose -f $(S3_MIRROR_STACK_NAME)/docker-compose.yml --env-file $(S3_MIRROR_ENV_EXAMPLE) build
 
-s3-mirror-setup: ## Ensure s3-mirror/.env, sync DEFAULT_NETWORK_EXTERNAL, build image if missing
+s3-mirror-setup: ## Ensure s3-mirror/.env and sync DEFAULT_NETWORK_EXTERNAL (true only for dokploy-network)
 	@set -e; \
 	envf='$(S3_MIRROR_ENV)'; \
 	exf='$(S3_MIRROR_ENV_EXAMPLE)'; \
@@ -49,12 +48,6 @@ s3-mirror-setup: ## Ensure s3-mirror/.env, sync DEFAULT_NETWORK_EXTERNAL, build 
 				echo "Created network $$net (driver=$(NETWORK_DRIVER))."; \
 			fi ;; \
 	esac; \
-	img=$$(file_get "$$envf" S3_MIRROR_IMAGE); \
-	[ -n "$$img" ] || img='s3-mirror:local'; \
-	if ! $(DOCKER) image inspect "$$img" >/dev/null 2>&1; then \
-		echo "Building $$img ..."; \
-		$(DOCKER) build -t "$$img" $(S3_MIRROR_STACK_NAME); \
-	fi; \
 	echo "s3-mirror env OK ($$envf)."
 .s3-mirror-setup: s3-mirror-setup
 
@@ -63,7 +56,7 @@ s3-mirror-stack-up: .s3-mirror-setup ## Deploy the s3-mirror stack
 s3-mirror-stack-down: ## Remove the s3-mirror stack
 	$(MAKE) stack-rm STACK_NAME=$(S3_MIRROR_STACK_NAME)
 s3-mirror-stack-recreate: s3-mirror-stack-down s3-mirror-stack-up ## Recreate the s3-mirror stack
-s3-mirror-stack-upgrade: ## Upgrade s3-mirror swarm images (build/pull + deploy)
+s3-mirror-stack-upgrade: ## Upgrade s3-mirror swarm images (pull + deploy)
 	$(MAKE) s3-mirror-pull-images
 	$(MAKE) stack-deploy STACK_NAME=$(S3_MIRROR_STACK_NAME)
 s3-mirror-stack-logs: ## Show logs of the s3-mirror stack
@@ -83,7 +76,7 @@ s3-mirror-debug-logs: ## Tail recent logs for each s3-mirror service
 s3-mirror-compose-up: .s3-mirror-setup ## Deploy s3-mirror (compose)
 	@envf='$(S3_MIRROR_ENV)'; \
 	[ -f "$$envf" ] || envf='$(S3_MIRROR_ENV_EXAMPLE)'; \
-	$(DOCKER) compose -f $(S3_MIRROR_STACK_NAME)/docker-compose.yml --env-file "$$envf" up -d --build
+	$(DOCKER) compose -f $(S3_MIRROR_STACK_NAME)/docker-compose.yml --env-file "$$envf" up -d
 s3-mirror-compose-down: ## Remove s3-mirror (compose)
 	@$(DOCKER) compose -f $(S3_MIRROR_STACK_NAME)/docker-compose.yml --env-file $(S3_MIRROR_ENV_EXAMPLE) down
 s3-mirror-compose-restart: ## Restart s3-mirror (compose)
