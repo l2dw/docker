@@ -1,0 +1,39 @@
+# prometheus stack — keep compose.yml (no Traefik), docker-compose.yml and *-compose.yml in sync.
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-prometheus-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+configs:
+  blackbox_config:
+    name: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_NAME:-prometheus_blackbox_config_v1}
+    file: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_FILE:-./config/blackbox.yml}
+
+services:
+  prometheus-blackbox-exporter:
+    image: ${PROMETHEUS_BLACKBOX_EXPORTER_IMAGE:-docker.io/prom/blackbox-exporter:v0.29.1}
+    restart: ${PROMETHEUS_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_BLACKBOX_EXPORTER_PRIVILEGED:-false}
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+      - --web.listen-address=:${PROMETHEUS_BLACKBOX_EXPORTER_PORT:-9115}
+    env_file:
+      - ${PROMETHEUS_BLACKBOX_EXPORTER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    configs:
+      - source: blackbox_config
+        target: /etc/blackbox_exporter/config.yml
+    deploy:
+      mode: ${PROMETHEUS_BLACKBOX_EXPORTER_DEPLOY_MODE:-replicated}
+      replicas: ${PROMETHEUS_BLACKBOX_EXPORTER_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_BLACKBOX_EXPORTER_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PROMETHEUS_BLACKBOX_EXPORTER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_RESTART_POLICY_MAX_ATTEMPTS:-3}

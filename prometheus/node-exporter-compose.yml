@@ -1,0 +1,38 @@
+# prometheus stack — keep compose.yml (no Traefik), docker-compose.yml and *-compose.yml in sync.
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-prometheus-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  prometheus-node-exporter:
+    image: ${PROMETHEUS_NODE_EXPORTER_IMAGE:-docker.io/prom/node-exporter:v1.12.1}
+    restart: ${PROMETHEUS_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_NODE_EXPORTER_PRIVILEGED:-false}
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --web.listen-address=:${PROMETHEUS_NODE_EXPORTER_PORT:-9100}
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+|var/lib/containers/.+)($$|/)
+    env_file:
+      - ${PROMETHEUS_NODE_EXPORTER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    deploy:
+      mode: ${PROMETHEUS_NODE_EXPORTER_DEPLOY_MODE:-global}
+      endpoint_mode: ${PROMETHEUS_NODE_EXPORTER_ENDPOINT_MODE:-dnsrr}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_NODE_EXPORTER_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PROMETHEUS_NODE_EXPORTER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_RESTART_POLICY_MAX_ATTEMPTS:-3}

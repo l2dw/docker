@@ -1,0 +1,64 @@
+# Prometheus configuration — prometheus stack (docker-composer).
+# Delivered as a Compose/Swarm config (PROMETHEUS_CONFIG_NAME). Swarm configs are
+# immutable: after editing this file, bump PROMETHEUS_CONFIG_NAME (…_v2) and redeploy.
+#
+# Exporters use endpoint_mode=dnsrr in Swarm, so the service name resolves to one
+# A record per task (one per node for global services). In Compose the same name
+# resolves to the container IP. dns_sd_configs therefore works for both targets.
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+
+# rule_files:
+#   - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # Prometheus itself. metrics_path must include PROMETHEUS_BASE_PATH
+  # (/prometheus by default; use /metrics when PROMETHEUS_BASE_PATH=/).
+  - job_name: prometheus
+    metrics_path: /prometheus/metrics
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  # Host metrics — one node-exporter task per Swarm node (mode global).
+  - job_name: node-exporter
+    dns_sd_configs:
+      - names:
+          - prometheus-node-exporter
+        type: A
+        port: 9100
+        refresh_interval: 30s
+
+  # Container metrics — one cAdvisor task per Swarm node (mode global).
+  - job_name: cadvisor
+    dns_sd_configs:
+      - names:
+          - prometheus-cadvisor
+        type: A
+        port: 8080
+        refresh_interval: 30s
+
+  # Blackbox exporter own metrics.
+  - job_name: blackbox-exporter
+    static_configs:
+      - targets:
+          - prometheus-blackbox-exporter:9115
+
+  # HTTP probes through the blackbox exporter. Add the URLs to monitor below.
+  - job_name: blackbox-http
+    metrics_path: /probe
+    params:
+      module:
+        - http_2xx
+    static_configs:
+      - targets:
+          - http://prometheus:9090/prometheus/-/healthy
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: prometheus-blackbox-exporter:9115

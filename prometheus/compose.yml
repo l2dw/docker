@@ -1,0 +1,166 @@
+# prometheus stack — keep compose.yml (no Traefik), docker-compose.yml and *-compose.yml in sync.
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-prometheus-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  data:
+    name: ${PROMETHEUS_DATA_VOLUME_NAME:-prometheus_data}
+    external: ${PROMETHEUS_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${PROMETHEUS_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${PROMETHEUS_DATA_VOLUME_TYPE:-}
+      o: ${PROMETHEUS_DATA_VOLUME_OPTS:-}
+      device: ${PROMETHEUS_DATA_VOLUME_PATH:-}
+
+configs:
+  prometheus_config:
+    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v1}
+    file: ${PROMETHEUS_CONFIG_FILE:-./config/prometheus.yml}
+  blackbox_config:
+    name: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_NAME:-prometheus_blackbox_config_v1}
+    file: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_FILE:-./config/blackbox.yml}
+
+services:
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-docker.io/prom/prometheus:v3.16.0}
+    restart: ${PROMETHEUS_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_PRIVILEGED:-false}
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=${PROMETHEUS_DATA_VOLUME_DIR:-/prometheus}
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-0}
+      - --web.listen-address=:${PROMETHEUS_PORT:-9090}
+      - --web.external-url=${PROMETHEUS_APP_URL:-http://prometheus.example.com/prometheus}
+      - --web.route-prefix=${PROMETHEUS_BASE_PATH:-/}
+      - --web.enable-lifecycle=${PROMETHEUS_WEB_ENABLE_LIFECYCLE:-false}
+    env_file:
+      - ${PROMETHEUS_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+    volumes:
+      - data:${PROMETHEUS_DATA_VOLUME_DIR:-/prometheus}:z
+    deploy:
+      mode: ${PROMETHEUS_DEPLOY_MODE:-replicated}
+      replicas: ${PROMETHEUS_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PROMETHEUS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${PROMETHEUS_HOMEPAGE_GROUP:-Observability}"
+        - "homepage.name=${PROMETHEUS_HOMEPAGE_NAME:-Prometheus}"
+        - "homepage.icon=${PROMETHEUS_HOMEPAGE_ICON:-prometheus.png}"
+        - "homepage.href=${PROMETHEUS_HOMEPAGE_URL:-}"
+        - "homepage.description=${PROMETHEUS_HOMEPAGE_DESCRIPTION:-Monitoring}"
+        - "homepage.siteMonitor=${PROMETHEUS_HOMEPAGE_SITEMONITOR:-http://prometheus:9090/prometheus/-/healthy}"
+    labels:
+      - "homepage.group=${PROMETHEUS_HOMEPAGE_GROUP:-Observability}"
+      - "homepage.name=${PROMETHEUS_HOMEPAGE_NAME:-Prometheus}"
+      - "homepage.icon=${PROMETHEUS_HOMEPAGE_ICON:-prometheus.png}"
+      - "homepage.href=${PROMETHEUS_HOMEPAGE_URL:-}"
+      - "homepage.description=${PROMETHEUS_HOMEPAGE_DESCRIPTION:-Monitoring}"
+      - "homepage.siteMonitor=${PROMETHEUS_HOMEPAGE_SITEMONITOR:-http://prometheus:9090/prometheus/-/healthy}"
+
+  prometheus-node-exporter:
+    image: ${PROMETHEUS_NODE_EXPORTER_IMAGE:-docker.io/prom/node-exporter:v1.12.1}
+    restart: ${PROMETHEUS_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_NODE_EXPORTER_PRIVILEGED:-false}
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --web.listen-address=:${PROMETHEUS_NODE_EXPORTER_PORT:-9100}
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+|var/lib/containers/.+)($$|/)
+    env_file:
+      - ${PROMETHEUS_NODE_EXPORTER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    deploy:
+      mode: ${PROMETHEUS_NODE_EXPORTER_DEPLOY_MODE:-global}
+      endpoint_mode: ${PROMETHEUS_NODE_EXPORTER_ENDPOINT_MODE:-dnsrr}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_NODE_EXPORTER_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PROMETHEUS_NODE_EXPORTER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  prometheus-cadvisor:
+    image: ${PROMETHEUS_CADVISOR_IMAGE:-ghcr.io/google/cadvisor:v0.61.0}
+    restart: ${PROMETHEUS_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_CADVISOR_PRIVILEGED:-false}
+    command:
+      - --port=${PROMETHEUS_CADVISOR_PORT:-8080}
+      - --docker_only=true
+      - --housekeeping_interval=${PROMETHEUS_CADVISOR_HOUSEKEEPING_INTERVAL:-30s}
+    env_file:
+      - ${PROMETHEUS_CADVISOR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - ${PROMETHEUS_CADVISOR_DOCKER_DIR:-/var/lib/docker}:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    deploy:
+      mode: ${PROMETHEUS_CADVISOR_DEPLOY_MODE:-global}
+      endpoint_mode: ${PROMETHEUS_CADVISOR_ENDPOINT_MODE:-dnsrr}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_CADVISOR_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PROMETHEUS_CADVISOR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  prometheus-blackbox-exporter:
+    image: ${PROMETHEUS_BLACKBOX_EXPORTER_IMAGE:-docker.io/prom/blackbox-exporter:v0.29.1}
+    restart: ${PROMETHEUS_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_BLACKBOX_EXPORTER_PRIVILEGED:-false}
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+      - --web.listen-address=:${PROMETHEUS_BLACKBOX_EXPORTER_PORT:-9115}
+    env_file:
+      - ${PROMETHEUS_BLACKBOX_EXPORTER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    configs:
+      - source: blackbox_config
+        target: /etc/blackbox_exporter/config.yml
+    deploy:
+      mode: ${PROMETHEUS_BLACKBOX_EXPORTER_DEPLOY_MODE:-replicated}
+      replicas: ${PROMETHEUS_BLACKBOX_EXPORTER_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_BLACKBOX_EXPORTER_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PROMETHEUS_BLACKBOX_EXPORTER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_RESTART_POLICY_MAX_ATTEMPTS:-3}

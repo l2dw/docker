@@ -1,0 +1,38 @@
+# prometheus stack — keep compose.yml (no Traefik), docker-compose.yml and *-compose.yml in sync.
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-prometheus-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+services:
+  prometheus-cadvisor:
+    image: ${PROMETHEUS_CADVISOR_IMAGE:-ghcr.io/google/cadvisor:v0.61.0}
+    restart: ${PROMETHEUS_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_CADVISOR_PRIVILEGED:-false}
+    command:
+      - --port=${PROMETHEUS_CADVISOR_PORT:-8080}
+      - --docker_only=true
+      - --housekeeping_interval=${PROMETHEUS_CADVISOR_HOUSEKEEPING_INTERVAL:-30s}
+    env_file:
+      - ${PROMETHEUS_CADVISOR_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - ${PROMETHEUS_CADVISOR_DOCKER_DIR:-/var/lib/docker}:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    deploy:
+      mode: ${PROMETHEUS_CADVISOR_DEPLOY_MODE:-global}
+      endpoint_mode: ${PROMETHEUS_CADVISOR_ENDPOINT_MODE:-dnsrr}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_CADVISOR_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${PROMETHEUS_CADVISOR_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_RESTART_POLICY_MAX_ATTEMPTS:-3}
