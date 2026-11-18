@@ -50,7 +50,9 @@ Jobs fournis :
 - `blackbox-exporter` — métriques propres ;
 - `blackbox-http` — sondes HTTP ; ajouter les URLs dans `static_configs.targets`.
 
-Le label `instance` des exporters est l'IP de la tâche ; le nom d'hôte est disponible via `node_uname_info{nodename=…}`.
+Le label `instance` des exporters est l'IP de la tâche. `PROMETHEUS_NODE_EXPORTER_HOSTNAME` / `PROMETHEUS_CADVISOR_HOSTNAME` = `{{.Node.Hostname}}` (Swarm) donnent au conteneur le nom du nœud : `node_uname_info{nodename}` devient le vrai nom d'hôte, stable entre redéploiements (laisser vide en Compose).
+
+Chaque job du serveur central ajoute `cluster=devel-cen` (à adapter : `replacement` dans `config/prometheus.yml`), comme le label externe `cluster` des agents : les dashboards filtrent tous les hôtes avec une seule variable `cluster`.
 
 ## Mode agent (hôte non joignable en pull)
 

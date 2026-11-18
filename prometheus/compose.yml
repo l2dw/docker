@@ -16,7 +16,7 @@ volumes:
 
 configs:
   prometheus_config:
-    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v2}
+    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v3}
     file: ${PROMETHEUS_CONFIG_FILE:-./config/prometheus.yml}
   blackbox_config:
     name: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_NAME:-prometheus_blackbox_config_v2}
@@ -75,6 +75,7 @@ services:
 
   prometheus-node-exporter:
     image: ${PROMETHEUS_NODE_EXPORTER_IMAGE:-docker.io/prom/node-exporter:v1.12.1}
+    hostname: ${PROMETHEUS_NODE_EXPORTER_HOSTNAME:-}
     restart: ${PROMETHEUS_RESTART:-unless-stopped}
     privileged: ${PROMETHEUS_NODE_EXPORTER_PRIVILEGED:-false}
     command:
@@ -107,6 +108,7 @@ services:
 
   prometheus-cadvisor:
     image: ${PROMETHEUS_CADVISOR_IMAGE:-ghcr.io/google/cadvisor:v0.61.0}
+    hostname: ${PROMETHEUS_CADVISOR_HOSTNAME:-}
     restart: ${PROMETHEUS_RESTART:-unless-stopped}
     privileged: ${PROMETHEUS_CADVISOR_PRIVILEGED:-false}
     command:
