@@ -33,6 +33,7 @@ scrape_configs:
 
   # Container metrics — one cAdvisor task per Swarm node (mode global).
   - job_name: cadvisor
+    scrape_timeout: 25s
     dns_sd_configs:
       - names:
           - prometheus-cadvisor

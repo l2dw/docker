@@ -73,6 +73,7 @@ Prometheus supporte un sous-chemin (`--web.external-url`, `--web.route-prefix`).
 - Prometheus n'a **pas d'authentification** intégrée : renseigner `PROMETHEUS_MIDDLEWARES` (basicauth / forwardauth Traefik) avant d'exposer un domaine public.
 - node-exporter et cAdvisor montent `/`, `/proc`, `/sys` et le répertoire Docker **en lecture seule**, sans `:z` (ne jamais réétiqueter SELinux sur `/`).
 - `PROMETHEUS_CADVISOR_PRIVILEGED=false` par défaut ; la doc cAdvisor recommande `true` en Compose (Swarm ignore `privileged`).
+- cAdvisor : `--store_container_labels=false` + liste blanche (`PROMETHEUS_CADVISOR_LABELS_ALLOWLIST`) et métriques réduites (`PROMETHEUS_CADVISOR_ENABLE_METRICS=cpu,memory,network,diskIO,oom_event`). Avec tous les labels Docker et les métriques `disk`, cAdvisor dépassait 1 Go et était tué par OOM sur un hôte d'environ 100 conteneurs (devel-cen).
 - Hôtes Podman : `PROMETHEUS_CADVISOR_DOCKER_DIR` doit pointer vers le stockage réel ; les métriques par conteneur peuvent être incomplètes.
 - Le module `icmp` du blackbox requiert `CAP_NET_RAW`, non ajouté par défaut.
 

@@ -16,7 +16,7 @@ volumes:
 
 configs:
   prometheus_config:
-    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v1}
+    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v2}
     file: ${PROMETHEUS_CONFIG_FILE:-./config/prometheus.yml}
 
 services:

@@ -13,6 +13,9 @@ services:
       - --port=${PROMETHEUS_CADVISOR_PORT:-8080}
       - --docker_only=true
       - --housekeeping_interval=${PROMETHEUS_CADVISOR_HOUSEKEEPING_INTERVAL:-30s}
+      - --store_container_labels=false
+      - --whitelisted_container_labels=${PROMETHEUS_CADVISOR_LABELS_ALLOWLIST:-com.docker.stack.namespace,com.docker.swarm.service.name,com.docker.compose.project,com.docker.compose.service}
+      - --enable_metrics=${PROMETHEUS_CADVISOR_ENABLE_METRICS:-cpu,memory,network,diskIO,oom_event}
     env_file:
       - ${PROMETHEUS_CADVISOR_ENV_FILE:-.env.example}
     environment:
