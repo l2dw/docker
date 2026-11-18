@@ -6,6 +6,8 @@ set -eu
 
 log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 
+umask "${S3_MIRROR_UMASK:-022}"   # 002 keeps group-write on files created in a shared bind directory
+
 INTERVAL="${S3_MIRROR_INTERVAL:-3600}"
 STATE=/tmp/last_ok
 
@@ -69,13 +71,26 @@ OPTS="${S3_MIRROR_RCLONE_OPTS:-}"
 MAXDEL="${S3_MIRROR_MAX_DELETE:-10}"
 
 run_once() {
-  set -- "$MODE" "$SRC_URI" "$DST_URI" --checksum --log-level INFO --stats-one-line
+  set -- "$MODE" "$SRC_URI" "$DST_URI" --log-level INFO --stats-one-line
+  # Default comparison = size + modification time. --checksum only on request: some S3 backends (RustFS) return
+  # a multipart-style ETag for streamed uploads, rclone then has no hash and silently falls back to size only.
+  [ "${S3_MIRROR_CHECKSUM:-false}" != "true" ] || set -- "$@" --checksum
   old_ifs=$IFS; IFS=','
   for p in $EXCLUDES; do [ -z "$p" ] || set -- "$@" --exclude "$p"; done
   IFS=$old_ifs
   if [ "$MODE" = "sync" ] && [ "$MAXDEL" -gt 0 ] 2>/dev/null; then set -- "$@" --max-delete "$MAXDEL"; fi
   # shellcheck disable=SC2086
   rclone "$@" $OPTS
+}
+
+# An s3 source that lists no file (empty bucket/prefix, wrong credentials, endpoint down) must never be
+# synced onto a destination: it would empty it. Same spirit as the local-source guard below.
+src_s3_has_files() {
+  set -- lsf "$SRC_URI" --files-only -R
+  old_ifs=$IFS; IFS=','
+  for p in $EXCLUDES; do [ -z "$p" ] || set -- "$@" --exclude "$p"; done
+  IFS=$old_ifs
+  [ -n "$(rclone "$@" 2>/dev/null | head -n 1)" ]
 }
 
 log "MODE=$MODE INTERVAL=${INTERVAL}s EXCLUDE='${EXCLUDES}' MAX_DELETE=$MAXDEL"
@@ -88,6 +103,8 @@ while true; do
   # Never run a sync from an empty/missing local source: it would empty the destination.
   if [ -n "${SRC_LOCAL:-}" ] && { [ ! -d "$SRC_LOCAL" ] || [ -z "$(ls -A "$SRC_LOCAL" 2>/dev/null)" ]; }; then
     log "ERROR: source path $SRC_LOCAL is missing or empty; pass skipped"
+  elif [ "${S3_MIRROR_SRC_TYPE:-}" = "s3" ] && [ "$MODE" = "sync" ] && ! src_s3_has_files; then
+    log "ERROR: s3 source $SRC_URI lists no file (empty or unreachable); pass skipped"
   elif run_once; then
     date +%s > "$STATE"
     log "pass OK"

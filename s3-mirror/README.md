@@ -14,13 +14,16 @@ Couples: folder → bucket, bucket → folder, **bucket → bucket**.
 | `sync` (default) | `rclone sync`: DST becomes identical to SRC. Deletions propagate, capped per pass by `S3_MIRROR_MAX_DELETE` (default 10). Enable **bucket versioning** to keep deleted files |
 | `copy` | `rclone copy`: new/changed files are copied, **nothing is ever deleted on DST** |
 
-The loop runs one pass every `S3_MIRROR_INTERVAL` seconds (default 3600, min 10). Files are compared by checksum. `S3_MIRROR_EXCLUDE` takes comma-separated rclone patterns (e.g. `logs/**,*.tmp`); `S3_MIRROR_RCLONE_OPTS` adds extra flags.
+The loop runs one pass every `S3_MIRROR_INTERVAL` seconds (default 3600, min 10). Files are compared by size and modification time (`S3_MIRROR_CHECKSUM=true` compares hashes instead). `S3_MIRROR_EXCLUDE` takes comma-separated rclone patterns (e.g. `logs/**,*.tmp`); `S3_MIRROR_RCLONE_OPTS` adds extra flags.
 
 **Safety guards**
 
+- With `SRC_TYPE=s3` and `MODE=sync`, a pass is **skipped** when the source lists no file (empty prefix, bad credentials, endpoint down): the destination is never emptied by mistake.
 - A pass is **skipped** (error logged) when a local `path` source is missing or empty, so a `sync` can never empty the destination because of an unmounted source.
 - The source volume is mounted **read-only**.
 - Credentials are handed to rclone through `RCLONE_CONFIG_*` environment variables: no config file, nothing in argv or logs.
+
+**Propagation delay:** rclone polls, it does not watch: a change on SRC reaches DST within `S3_MIRROR_INTERVAL` seconds (`3600` by default; `10` is cheap for a handful of small files). `S3_MIRROR_USER` / `S3_MIRROR_UMASK` set the container user and umask (needed to keep file ownership on a shared bind directory).
 
 **Healthcheck:** `entrypoint.sh health` succeeds when the last successful pass is not older than `2 × INTERVAL + 120 s` (unhealthy until the first success).
 

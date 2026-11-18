@@ -33,6 +33,7 @@ services:
     image: ${S3_MIRROR_IMAGE:-docker.io/rclone/rclone:1.68.2}
     restart: ${S3_MIRROR_RESTART:-unless-stopped}
     privileged: ${S3_MIRROR_PRIVILEGED:-false}
+    user: "${S3_MIRROR_USER:-0:0}"
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     configs:
       - source: s3_mirror_entrypoint
@@ -42,10 +43,12 @@ services:
       - ${S3_MIRROR_ENV_FILE:-.env.example}
     environment:
       - TZ=${TZ:-America/Montreal}
+      - S3_MIRROR_UMASK=${S3_MIRROR_UMASK:-022}
       - S3_MIRROR_MODE=${S3_MIRROR_MODE:-sync}
       - S3_MIRROR_INTERVAL=${S3_MIRROR_INTERVAL:-3600}
       - S3_MIRROR_EXCLUDE=${S3_MIRROR_EXCLUDE:-}
       - S3_MIRROR_MAX_DELETE=${S3_MIRROR_MAX_DELETE:-10}
+      - S3_MIRROR_CHECKSUM=${S3_MIRROR_CHECKSUM:-false}
       - S3_MIRROR_RCLONE_OPTS=${S3_MIRROR_RCLONE_OPTS:-}
       - S3_MIRROR_S3_PROVIDER=${S3_MIRROR_S3_PROVIDER:-Other}
       - S3_MIRROR_S3_FORCE_PATH_STYLE=${S3_MIRROR_S3_FORCE_PATH_STYLE:-true}
