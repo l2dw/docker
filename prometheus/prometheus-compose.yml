@@ -32,7 +32,6 @@ services:
       - --web.listen-address=:${PROMETHEUS_PORT:-9090}
       - --web.external-url=${PROMETHEUS_APP_URL:-http://prometheus.example.com/prometheus}
       - --web.route-prefix=${PROMETHEUS_BASE_PATH:-/}
-      - --web.enable-lifecycle=${PROMETHEUS_WEB_ENABLE_LIFECYCLE:-false}
     env_file:
       - ${PROMETHEUS_ENV_FILE:-.env.example}
     environment:

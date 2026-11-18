@@ -66,7 +66,7 @@ Prometheus supporte un sous-chemin (`--web.external-url`, `--web.route-prefix`).
 - `APP_NAME=prometheus` nomme le routeur et le service Traefik (Dokploy peut le surcharger).
 - `env_file` : `PROMETHEUS_ENV_FILE`, `PROMETHEUS_NODE_EXPORTER_ENV_FILE`, `PROMETHEUS_CADVISOR_ENV_FILE`, `PROMETHEUS_BLACKBOX_EXPORTER_ENV_FILE` (défaut `.env.example`, production `.env`). `environment:` l'emporte sur le fichier. En Swarm, `env_file` n'est pas fiable : Make exporte le `.env` racine et l'interpolation `${…}` s'applique.
 - Rétention : `PROMETHEUS_RETENTION_TIME` (15d), `PROMETHEUS_RETENTION_SIZE` (0 = désactivé).
-- `PROMETHEUS_WEB_ENABLE_LIFECYCLE=false` par défaut : `true` expose `/-/reload` et `/-/quit` sans authentification.
+- API lifecycle (`/-/reload`, `/-/quit`) désactivée : le flag `--web.enable-lifecycle` n'est pas passé (booléen sans valeur, non paramétrable par env ; à ajouter via override si besoin, derrière une auth).
 
 ## Sécurité
 

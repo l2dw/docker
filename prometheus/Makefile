@@ -63,9 +63,6 @@ prometheus-setup: ## Ensure prometheus/.env, warn on placeholder domain/base pat
 	if [ -n "$$mp" ] && [ "$$mp" != "$$want" ]; then \
 		echo "Warning: PROMETHEUS_BASE_PATH=$$bp but $$cfg job prometheus uses metrics_path $$mp (expected $$want)." >&2; \
 	fi; \
-	if [ "$$(get PROMETHEUS_WEB_ENABLE_LIFECYCLE)" = true ] && [ -z "$$(get PROMETHEUS_MIDDLEWARES)" ]; then \
-		echo "Warning: PROMETHEUS_WEB_ENABLE_LIFECYCLE=true without PROMETHEUS_MIDDLEWARES exposes /-/quit publicly." >&2; \
-	fi; \
 	echo "Prometheus env OK ($$envf)."
 .prometheus-setup: prometheus-setup
 prometheus-stack-up: .prometheus-setup ## Deploy the prometheus stack
