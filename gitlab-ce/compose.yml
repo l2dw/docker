@@ -1,0 +1,81 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-gitlab-ce-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+
+volumes:
+  config:
+    name: ${GITLAB_CONFIG_VOLUME_NAME:-gitlab_config}
+    external: ${GITLAB_CONFIG_VOLUME_EXTERNAL:-false}
+    driver: ${GITLAB_CONFIG_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${GITLAB_CONFIG_VOLUME_TYPE:-}
+      o: ${GITLAB_CONFIG_VOLUME_OPTS:-}
+      device: ${GITLAB_CONFIG_VOLUME_PATH:-}
+  logs:
+    name: ${GITLAB_LOGS_VOLUME_NAME:-gitlab_logs}
+    external: ${GITLAB_LOGS_VOLUME_EXTERNAL:-false}
+    driver: ${GITLAB_LOGS_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${GITLAB_LOGS_VOLUME_TYPE:-}
+      o: ${GITLAB_LOGS_VOLUME_OPTS:-}
+      device: ${GITLAB_LOGS_VOLUME_PATH:-}
+  data:
+    name: ${GITLAB_DATA_VOLUME_NAME:-gitlab_data}
+    external: ${GITLAB_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${GITLAB_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${GITLAB_DATA_VOLUME_TYPE:-}
+      o: ${GITLAB_DATA_VOLUME_OPTS:-}
+      device: ${GITLAB_DATA_VOLUME_PATH:-}
+
+services:
+  gitlab-ce:
+    image: ${GITLAB_IMAGE:-docker.io/gitlab/gitlab-ce:19.6.0-ce.0}
+    restart: ${GITLAB_RESTART:-unless-stopped}
+    privileged: ${GITLAB_PRIVILEGED:-false}
+    hostname: ${GITLAB_DOMAIN:-gitlab.example.com}
+    env_file:
+      - ${GITLAB_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Montreal}
+      - GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD:-}
+      - GITLAB_DB_PASSWORD=${GITLAB_DB_PASSWORD:-}
+      - GITLAB_REDIS_PASSWORD=${GITLAB_REDIS_PASSWORD:-}
+      - "GITLAB_OMNIBUS_CONFIG=external_url '${GITLAB_EXTERNAL_URL:-https://gitlab.example.com}'; nginx['listen_port']=${GITLAB_PORT:-80}; nginx['listen_https']=false; nginx['proxy_set_headers']={'X-Forwarded-Proto'=>'${GITLAB_FORWARDED_PROTO:-https}'}; gitlab_rails['gitlab_shell_ssh_port']=${GITLAB_SSH_PUBLISHED_PORT:-2222}; gitlab_rails['initial_root_password']=ENV['GITLAB_ROOT_PASSWORD']; postgresql['enable']=false; gitlab_rails['db_adapter']='postgresql'; gitlab_rails['db_encoding']='unicode'; gitlab_rails['db_host']='${GITLAB_DB_HOST:-}'; gitlab_rails['db_port']=${GITLAB_DB_PORT:-5432}; gitlab_rails['db_database']='${GITLAB_DB_NAME:-gitlabhq_production}'; gitlab_rails['db_username']='${GITLAB_DB_USER:-gitlab}'; gitlab_rails['db_password']=ENV['GITLAB_DB_PASSWORD']; redis['enable']=false; gitlab_rails['redis_host']='${GITLAB_REDIS_HOST:-}'; gitlab_rails['redis_port']=${GITLAB_REDIS_PORT:-6379}; gitlab_rails['redis_password']=ENV['GITLAB_REDIS_PASSWORD']; prometheus_monitoring['enable']=${GITLAB_PROMETHEUS_ENABLE:-false}"
+    volumes:
+      - config:${GITLAB_CONFIG_VOLUME_DIR:-/etc/gitlab}:z
+      - logs:${GITLAB_LOGS_VOLUME_DIR:-/var/log/gitlab}:z
+      - data:${GITLAB_DATA_VOLUME_DIR:-/var/opt/gitlab}:z
+    ports:
+      - published: ${GITLAB_SSH_PUBLISHED_PORT:-2222}
+        target: ${GITLAB_SSH_PORT:-22}
+        mode: ${GITLAB_SSH_PORT_MODE:-ingress}
+        protocol: ${GITLAB_SSH_PORT_PROTOCOL:-tcp}
+    deploy:
+      mode: ${GITLAB_DEPLOY_MODE:-replicated}
+      replicas: ${GITLAB_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${GITLAB_MEMORY_LIMIT:-4G}
+      placement:
+        constraints:
+          - ${GITLAB_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${GITLAB_RESTART_POLICY_CONDITION:-any}
+        delay: ${GITLAB_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${GITLAB_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${GITLAB_HOMEPAGE_GROUP:-Development}"
+        - "homepage.name=${GITLAB_HOMEPAGE_NAME:-GitLab CE}"
+        - "homepage.icon=${GITLAB_HOMEPAGE_ICON:-gitlab.png}"
+        - "homepage.href=${GITLAB_HOMEPAGE_URL:-}"
+        - "homepage.description=${GITLAB_HOMEPAGE_DESCRIPTION:-Self-hosted Git, CI/CD and DevSecOps platform}"
+        - "homepage.siteMonitor=${GITLAB_HOMEPAGE_SITEMONITOR:-http://gitlab-ce:80/users/sign_in}"
+    labels:
+      - "homepage.group=${GITLAB_HOMEPAGE_GROUP:-Development}"
+      - "homepage.name=${GITLAB_HOMEPAGE_NAME:-GitLab CE}"
+      - "homepage.icon=${GITLAB_HOMEPAGE_ICON:-gitlab.png}"
+      - "homepage.href=${GITLAB_HOMEPAGE_URL:-}"
+      - "homepage.description=${GITLAB_HOMEPAGE_DESCRIPTION:-Self-hosted Git, CI/CD and DevSecOps platform}"
+      - "homepage.siteMonitor=${GITLAB_HOMEPAGE_SITEMONITOR:-http://gitlab-ce:80/users/sign_in}"
