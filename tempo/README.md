@@ -17,7 +17,12 @@ make tempo-setup && make tempo-stack-up      # Swarm
 make tempo-compose-up                     # Compose
 ```
 
-Endpoints : /ready, /api/traces/<id>, /metrics. Aucun port publié : joindre `dokploy-network` (`DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true`) pour être joint par le collecteur OpenTelemetry et Grafana (`tempo:<port>`).
+Endpoints :
+- API HTTP `:3200` — `/ready`, `/api/traces/<id>`, `/metrics` (Dokploy domain `https://atelier.osers.ca/tempo`, strip `/tempo`).
+- OTLP HTTP `:4318` — public via Traefik `PathPrefix(/tempo/v1)` → strip `/tempo` (ex. `POST https://atelier.osers.ca/tempo/v1/traces`). Labels `tempo-otlp-*` dans `docker-compose.yml`.
+- OTLP gRPC `:4317` — réseau interne uniquement.
+
+Aucun port hôte publié : joindre `dokploy-network` (`DEFAULT_NETWORK_NAME=dokploy-network`, `DEFAULT_NETWORK_EXTERNAL=true`) pour le collecteur OpenTelemetry et Grafana (`tempo:<port>`).
 
 ## Volumes
 

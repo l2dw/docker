@@ -73,6 +73,17 @@ services:
         - "homepage.href=${TEMPO_HOMEPAGE_URL:-}"
         - "homepage.description=${TEMPO_HOMEPAGE_DESCRIPTION:-Traces (OTLP) backend}"
         - "homepage.siteMonitor=${TEMPO_HOMEPAGE_SITEMONITOR:-http://tempo:3200/ready}"
+        # OTLP HTTP (:4318) under /tempo/v1/* — Dokploy domain keeps API (:3200) on /tempo.
+        # Strip /tempo so /tempo/v1/traces → Tempo /v1/traces. Priority > PathPrefix(/tempo).
+        - "traefik.http.middlewares.tempo-otlp-strip.stripprefix.prefixes=/tempo"
+        - "traefik.http.routers.tempo-otlp-websecure.rule=Host(`atelier.osers.ca`) && PathPrefix(`/tempo/v1`)"
+        - "traefik.http.routers.tempo-otlp-websecure.entrypoints=websecure"
+        - "traefik.http.routers.tempo-otlp-websecure.tls=true"
+        - "traefik.http.routers.tempo-otlp-websecure.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.tempo-otlp-websecure.priority=200"
+        - "traefik.http.routers.tempo-otlp-websecure.middlewares=tempo-otlp-strip"
+        - "traefik.http.routers.tempo-otlp-websecure.service=tempo-otlp-websecure"
+        - "traefik.http.services.tempo-otlp-websecure.loadbalancer.server.port=4318"
     labels:
       - "homepage.group=${TEMPO_HOMEPAGE_GROUP:-Observability}"
       - "homepage.name=${TEMPO_HOMEPAGE_NAME:-Tempo}"
