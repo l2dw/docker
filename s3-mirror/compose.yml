@@ -76,8 +76,9 @@ services:
       retries: 3
       start_period: 180s
     deploy:
+      # global rejects `replicas` (Swarm). replicated defaults to 1; scale via
+      # `docker service scale` if needed (S3_MIRROR_DEPLOY_REPLICAS kept for docs/compat).
       mode: ${S3_MIRROR_DEPLOY_MODE:-replicated}
-      replicas: ${S3_MIRROR_DEPLOY_REPLICAS:-1}
       resources:
         limits:
           memory: ${S3_MIRROR_MEMORY_LIMIT:-256M}
