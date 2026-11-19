@@ -16,7 +16,7 @@ volumes:
 
 configs:
   prometheus_config:
-    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v3}
+    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v4}
     file: ${PROMETHEUS_CONFIG_FILE:-./config/prometheus.yml}
   blackbox_config:
     name: ${PROMETHEUS_BLACKBOX_EXPORTER_CONFIG_NAME:-prometheus_blackbox_config_v2}
@@ -45,6 +45,9 @@ services:
         target: /etc/prometheus/prometheus.yml
     volumes:
       - data:${PROMETHEUS_DATA_VOLUME_DIR:-/prometheus}:z
+      # dockerswarm_sd (instance = node hostname) needs the Swarm API → manager + socket.
+      - ${PROMETHEUS_DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    user: ${PROMETHEUS_USER:-root}
     deploy:
       mode: ${PROMETHEUS_DEPLOY_MODE:-replicated}
       replicas: ${PROMETHEUS_DEPLOY_REPLICAS:-1}
@@ -53,7 +56,7 @@ services:
           memory: ${PROMETHEUS_MEMORY_LIMIT:-1G}
       placement:
         constraints:
-          - ${PROMETHEUS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+          - ${PROMETHEUS_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
         condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
         delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}
@@ -75,7 +78,8 @@ services:
 
   prometheus-node-exporter:
     image: ${PROMETHEUS_NODE_EXPORTER_IMAGE:-docker.io/prom/node-exporter:v1.12.1}
-    hostname: ${PROMETHEUS_NODE_EXPORTER_HOSTNAME:-}
+    # Literal Swarm template (env ${…} strips {{}} via Dokploy). Sets node_uname_info{nodename}.
+    hostname: "{{.Node.Hostname}}"
     restart: ${PROMETHEUS_RESTART:-unless-stopped}
     privileged: ${PROMETHEUS_NODE_EXPORTER_PRIVILEGED:-false}
     command:
@@ -108,7 +112,7 @@ services:
 
   prometheus-cadvisor:
     image: ${PROMETHEUS_CADVISOR_IMAGE:-ghcr.io/google/cadvisor:v0.61.0}
-    hostname: ${PROMETHEUS_CADVISOR_HOSTNAME:-}
+    hostname: "{{.Node.Hostname}}"
     restart: ${PROMETHEUS_RESTART:-unless-stopped}
     privileged: ${PROMETHEUS_CADVISOR_PRIVILEGED:-false}
     command:

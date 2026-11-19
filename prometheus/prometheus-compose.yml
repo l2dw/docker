@@ -16,7 +16,7 @@ volumes:
 
 configs:
   prometheus_config:
-    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v3}
+    name: ${PROMETHEUS_CONFIG_NAME:-prometheus_config_v4}
     file: ${PROMETHEUS_CONFIG_FILE:-./config/prometheus.yml}
 
 services:
@@ -42,6 +42,9 @@ services:
         target: /etc/prometheus/prometheus.yml
     volumes:
       - data:${PROMETHEUS_DATA_VOLUME_DIR:-/prometheus}:z
+      # dockerswarm_sd (instance = node hostname) needs the Swarm API → manager + socket.
+      - ${PROMETHEUS_DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    user: ${PROMETHEUS_USER:-root}
     deploy:
       mode: ${PROMETHEUS_DEPLOY_MODE:-replicated}
       replicas: ${PROMETHEUS_DEPLOY_REPLICAS:-1}
@@ -50,7 +53,7 @@ services:
           memory: ${PROMETHEUS_MEMORY_LIMIT:-1G}
       placement:
         constraints:
-          - ${PROMETHEUS_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+          - ${PROMETHEUS_PLACEMENT_CONSTRAINTS:-node.role==manager}
       restart_policy:
         condition: ${PROMETHEUS_RESTART_POLICY_CONDITION:-any}
         delay: ${PROMETHEUS_RESTART_POLICY_DELAY:-5s}

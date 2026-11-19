@@ -46,13 +46,13 @@ Les fichiers `config/*.yml` sont livrés comme **configs** Compose/Swarm (`PROME
 Jobs fournis :
 
 - `prometheus` — auto-scrape (`metrics_path` doit inclure le base path) ;
-- `node-exporter`, `cadvisor` — découverte `dns_sd_configs` (type A) sur le nom du service. En Swarm, `endpoint_mode: dnsrr` renvoie une IP par tâche, donc un target par nœud ; en Compose, le nom résout le conteneur ;
+- `node-exporter`, `cadvisor` — découverte `dockerswarm_sd_configs` (rôle `tasks`) : `instance=<hostname nœud>:<port>`. Exige Prometheus sur un **manager** avec `/var/run/docker.sock` ;
 - `blackbox-exporter` — métriques propres ;
 - `blackbox-http` — sondes HTTP ; ajouter les URLs dans `static_configs.targets`.
 
 Le label `instance` des exporters est l'IP de la tâche. `PROMETHEUS_NODE_EXPORTER_HOSTNAME` / `PROMETHEUS_CADVISOR_HOSTNAME` = `{{.Node.Hostname}}` (Swarm) donnent au conteneur le nom du nœud : `node_uname_info{nodename}` devient le vrai nom d'hôte, stable entre redéploiements (laisser vide en Compose).
 
-Chaque job du serveur central ajoute `cluster=devel-cen` (à adapter : `replacement` dans `config/prometheus.yml`), comme le label externe `cluster` des agents : les dashboards filtrent tous les hôtes avec une seule variable `cluster`.
+Chaque job du serveur central ajoute `cluster=osers` (à adapter : `replacement` dans `config/prometheus.yml`), comme le label externe `cluster` des agents : les dashboards filtrent tous les hôtes avec une seule variable `cluster`.
 
 ## Mode agent (hôte non joignable en pull)
 

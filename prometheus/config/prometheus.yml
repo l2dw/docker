@@ -2,17 +2,12 @@
 # Delivered as a Compose/Swarm config (PROMETHEUS_CONFIG_NAME). Swarm configs are
 # immutable: after editing this file, bump PROMETHEUS_CONFIG_NAME (…_v2) and redeploy.
 #
-# Exporters use endpoint_mode=dnsrr in Swarm, so the service name resolves to one
-# A record per task (one per node for global services). In Compose the same name
-# resolves to the container IP. dns_sd_configs therefore works for both targets.
+# Cluster = infra name (osers). node-exporter / cAdvisor use dockerswarm_sd so
+# instance = <Swarm node hostname>:<port> (requires docker.sock + manager node).
 global:
   scrape_interval: 30s
   scrape_timeout: 10s
   evaluation_interval: 30s
-
-# Every job sets cluster=<this server> (same label as remote agents' external
-# cluster label), so dashboards can filter all hosts with one `cluster` variable.
-# Change `replacement: devel-cen` to this Prometheus server's name.
 
 # rule_files:
 #   - /etc/prometheus/rules/*.yml
@@ -27,32 +22,51 @@ scrape_configs:
           - localhost:9090
     relabel_configs:
       - target_label: cluster
-        replacement: devel-cen
+        replacement: osers
+      # Prefer the manager hostname when Prometheus is pinned to node.role==manager.
+      - target_label: instance
+        replacement: prod.oser.otspace.ca:9090
 
   # Host metrics — one node-exporter task per Swarm node (mode global).
   - job_name: node-exporter
-    dns_sd_configs:
-      - names:
-          - prometheus-node-exporter
-        type: A
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
         port: 9100
-        refresh_interval: 30s
     relabel_configs:
+      - source_labels: [__meta_dockerswarm_task_desired_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_service_name]
+        regex: .*prometheus-node-exporter
+        action: keep
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        regex: (.+)
+        replacement: ${1}:9100
+        target_label: instance
       - target_label: cluster
-        replacement: devel-cen
+        replacement: osers
 
   # Container metrics — one cAdvisor task per Swarm node (mode global).
   - job_name: cadvisor
     scrape_timeout: 25s
-    dns_sd_configs:
-      - names:
-          - prometheus-cadvisor
-        type: A
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
         port: 8080
-        refresh_interval: 30s
     relabel_configs:
+      - source_labels: [__meta_dockerswarm_task_desired_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_service_name]
+        regex: .*prometheus-cadvisor
+        action: keep
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        regex: (.+)
+        replacement: ${1}:8080
+        target_label: instance
       - target_label: cluster
-        replacement: devel-cen
+        replacement: osers
 
   # Blackbox exporter own metrics.
   - job_name: blackbox-exporter
@@ -61,7 +75,9 @@ scrape_configs:
           - prometheus-blackbox-exporter:9115
     relabel_configs:
       - target_label: cluster
-        replacement: devel-cen
+        replacement: osers
+      - target_label: instance
+        replacement: prod.oser.otspace.ca:9115
 
   # HTTP probes through the blackbox exporter. Add the URLs to monitor below.
   - job_name: blackbox-http
@@ -80,4 +96,4 @@ scrape_configs:
       - target_label: __address__
         replacement: prometheus-blackbox-exporter:9115
       - target_label: cluster
-        replacement: devel-cen
+        replacement: osers
