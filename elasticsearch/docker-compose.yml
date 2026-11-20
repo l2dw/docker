@@ -46,7 +46,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl -fsS "http://127.0.0.1:9200/_cluster/health?wait_for_status=${ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS:-yellow}&timeout=5s" >/dev/null
+        - if [ -n "$$ELASTIC_PASSWORD" ]; then A="-u elastic:$$ELASTIC_PASSWORD"; fi; curl -fsS $$A "http://127.0.0.1:9200/_cluster/health?wait_for_status=${ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS:-yellow}&timeout=5s" >/dev/null
       interval: 15s
       timeout: 10s
       retries: 20

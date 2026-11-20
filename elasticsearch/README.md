@@ -95,7 +95,7 @@ Elasticsearch has **no native HTTP base path**. Public routing is Traefik only.
 
 ## Health (`yellow` by default)
 
-Healthcheck: `/_cluster/health?wait_for_status=${ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS:-yellow}`. Default is **yellow** because a single-node cluster often stays yellow when indices expect replicas. With a 3-node cluster, set `ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS=green`. Do **not** pass `index.number_of_shards` / `index.number_of_replicas` as process env — Elasticsearch rejects them as unknown node settings. Replica count is an **index** setting (templates / index create), not a node env var.
+Healthcheck: `/_cluster/health?wait_for_status=${ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS:-yellow}`. When security is enabled and `ELASTIC_PASSWORD` is set in the container environment (e.g. via `ELASTICSEARCH_ENV_FILE`), the check authenticates as `elastic`; without it the request is anonymous (security disabled). A failing healthcheck makes Traefik's Docker provider ignore the container. Default is **yellow** because a single-node cluster often stays yellow when indices expect replicas. With a 3-node cluster, set `ELASTICSEARCH_HEALTHCHECK_WAIT_FOR_STATUS=green`. Do **not** pass `index.number_of_shards` / `index.number_of_replicas` as process env — Elasticsearch rejects them as unknown node settings. Replica count is an **index** setting (templates / index create), not a node env var.
 
 ## Traefik / Homepage
 
