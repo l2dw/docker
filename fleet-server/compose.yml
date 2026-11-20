@@ -1,0 +1,70 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-fleet-server-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+volumes:
+  data:
+    name: ${FLEET_SERVER_DATA_VOLUME_NAME:-fleet_server_data}
+    external: ${FLEET_SERVER_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${FLEET_SERVER_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${FLEET_SERVER_DATA_VOLUME_TYPE:-}
+      o: ${FLEET_SERVER_DATA_VOLUME_OPTS:-}
+      device: ${FLEET_SERVER_DATA_VOLUME_PATH:-}
+services:
+  fleet-server:
+    image: ${FLEET_SERVER_IMAGE:-docker.elastic.co/beats/elastic-agent:8.17.0}
+    hostname: ${FLEET_SERVER_HOSTNAME:-fleet-server}
+    restart: ${FLEET_SERVER_RESTART:-unless-stopped}
+    privileged: ${FLEET_SERVER_PRIVILEGED:-false}
+    env_file:
+      - ${FLEET_SERVER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - FLEET_SERVER_ENABLE=1
+      - FLEET_SERVER_ELASTICSEARCH_HOST=${FLEET_SERVER_ELASTICSEARCH_HOST:-http://elasticsearch:9200}
+      - FLEET_SERVER_SERVICE_TOKEN=${FLEET_SERVER_SERVICE_TOKEN:-ChangeMe}
+      - FLEET_SERVER_POLICY=${FLEET_SERVER_POLICY:-fleet-server-policy}
+      - FLEET_SERVER_PORT=${FLEET_SERVER_HTTP_PORT:-8220}
+      - FLEET_SERVER_INSECURE_HTTP=${FLEET_SERVER_INSECURE_HTTP:-false}
+      - FLEET_INSECURE=${FLEET_SERVER_INSECURE:-1}
+      - FLEET_ENROLL=${FLEET_SERVER_ENROLL:-1}
+    volumes:
+      - data:${FLEET_SERVER_DATA_VOLUME_DIR:-/usr/share/elastic-agent/state}:z
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - (curl -sk https://127.0.0.1:8220/api/status || curl -s http://127.0.0.1:8220/api/status) | grep -q status
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+    networks:
+      default: {}
+    deploy:
+      mode: ${FLEET_SERVER_DEPLOY_MODE:-replicated}
+      replicas: ${FLEET_SERVER_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${FLEET_SERVER_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${FLEET_SERVER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${FLEET_SERVER_RESTART_POLICY_CONDITION:-any}
+        delay: ${FLEET_SERVER_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${FLEET_SERVER_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "homepage.group=${FLEET_SERVER_HOMEPAGE_GROUP:-Search}"
+        - "homepage.name=${FLEET_SERVER_HOMEPAGE_NAME:-Fleet Server}"
+        - "homepage.icon=${FLEET_SERVER_HOMEPAGE_ICON:-elasticsearch.png}"
+        - "homepage.href=${FLEET_SERVER_HOMEPAGE_URL:-}"
+        - "homepage.description=${FLEET_SERVER_HOMEPAGE_DESCRIPTION:-Elastic Fleet Server}"
+        - "homepage.siteMonitor=${FLEET_SERVER_HOMEPAGE_SITEMONITOR:-http://fleet-server:8220/api/status}"
+    labels:
+      - "homepage.group=${FLEET_SERVER_HOMEPAGE_GROUP:-Search}"
+      - "homepage.name=${FLEET_SERVER_HOMEPAGE_NAME:-Fleet Server}"
+      - "homepage.icon=${FLEET_SERVER_HOMEPAGE_ICON:-elasticsearch.png}"
+      - "homepage.href=${FLEET_SERVER_HOMEPAGE_URL:-}"
+      - "homepage.description=${FLEET_SERVER_HOMEPAGE_DESCRIPTION:-Elastic Fleet Server}"
+      - "homepage.siteMonitor=${FLEET_SERVER_HOMEPAGE_SITEMONITOR:-http://fleet-server:8220/api/status}"
