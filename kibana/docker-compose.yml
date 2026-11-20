@@ -1,0 +1,89 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-kibana-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+volumes:
+  data:
+    name: ${KIBANA_DATA_VOLUME_NAME:-kibana_data}
+    external: ${KIBANA_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${KIBANA_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${KIBANA_DATA_VOLUME_TYPE:-}
+      o: ${KIBANA_DATA_VOLUME_OPTS:-}
+      device: ${KIBANA_DATA_VOLUME_PATH:-}
+services:
+  kibana:
+    image: ${KIBANA_IMAGE:-docker.io/library/kibana:8.17.0}
+    hostname: ${KIBANA_HOSTNAME:-kibana}
+    restart: ${KIBANA_RESTART:-unless-stopped}
+    privileged: ${KIBANA_PRIVILEGED:-false}
+    env_file:
+      - ${KIBANA_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - ELASTICSEARCH_HOSTS=${KIBANA_ELASTICSEARCH_HOSTS:-http://elasticsearch:9200}
+      - ELASTICSEARCH_USERNAME=${KIBANA_ELASTICSEARCH_USERNAME:-kibana_system}
+      - ELASTICSEARCH_PASSWORD=${KIBANA_ELASTICSEARCH_PASSWORD:-ChangeMe}
+      - SERVER_PUBLICBASEURL=${KIBANA_APP_URL:-http://kibana.example.com/kibana}
+      - SERVER_BASEPATH=${KIBANA_SERVER_BASE_PATH:-}
+      - SERVER_REWRITEBASEPATH=${KIBANA_SERVER_REWRITE_BASE_PATH:-false}
+      - XPACK_SECURITY_ENCRYPTIONKEY=${KIBANA_XPACK_SECURITY_ENCRYPTION_KEY:-ChangeMeChangeMeChangeMeChangeMe00}
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTION_KEY:-ChangeMeChangeMeChangeMeChangeMe00}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${KIBANA_XPACK_REPORTING_ENCRYPTION_KEY:-ChangeMeChangeMeChangeMeChangeMe00}
+      - XPACK_REPORTING_ROLES_ENABLED=false
+      - MONITORING_UI_CONTAINER_ELASTICSEARCH_ENABLED=true
+    volumes:
+      - data:${KIBANA_DATA_VOLUME_DIR:-/usr/share/kibana/data}:z
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5601${KIBANA_SERVER_BASE_PATH:-}/api/status | grep -qE '^(200|401)'
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    networks:
+      default: {}
+    deploy:
+      mode: ${KIBANA_DEPLOY_MODE:-replicated}
+      replicas: ${KIBANA_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${KIBANA_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${KIBANA_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${KIBANA_RESTART_POLICY_CONDITION:-any}
+        delay: ${KIBANA_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${KIBANA_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${KIBANA_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-kibana}.loadbalancer.server.port=${KIBANA_HTTP_PORT:-5601}"
+        - "traefik.http.routers.${APP_NAME:-kibana}.entrypoints=${KIBANA_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-kibana}.rule=Host(`${KIBANA_DOMAIN:-kibana.example.com}`) && PathPrefix(`${KIBANA_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-kibana}.service=${APP_NAME:-kibana}"
+        - "traefik.http.routers.${APP_NAME:-kibana}.middlewares=${KIBANA_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-kibana}.tls=${KIBANA_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-kibana}.tls.certresolver=${KIBANA_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${KIBANA_HOMEPAGE_GROUP:-Search}"
+        - "homepage.name=${KIBANA_HOMEPAGE_NAME:-Kibana}"
+        - "homepage.icon=${KIBANA_HOMEPAGE_ICON:-kibana.png}"
+        - "homepage.href=${KIBANA_HOMEPAGE_URL:-}"
+        - "homepage.description=${KIBANA_HOMEPAGE_DESCRIPTION:-Kibana UI}"
+        - "homepage.siteMonitor=${KIBANA_HOMEPAGE_SITEMONITOR:-http://kibana:5601/kibana/api/status}"
+    labels:
+      - "traefik.enable=${KIBANA_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-kibana}.loadbalancer.server.port=${KIBANA_HTTP_PORT:-5601}"
+      - "traefik.http.routers.${APP_NAME:-kibana}.entrypoints=${KIBANA_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-kibana}.rule=Host(`${KIBANA_DOMAIN:-kibana.example.com}`) && PathPrefix(`${KIBANA_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-kibana}.service=${APP_NAME:-kibana}"
+      - "traefik.http.routers.${APP_NAME:-kibana}.middlewares=${KIBANA_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-kibana}.tls=${KIBANA_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-kibana}.tls.certresolver=${KIBANA_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${KIBANA_HOMEPAGE_GROUP:-Search}"
+      - "homepage.name=${KIBANA_HOMEPAGE_NAME:-Kibana}"
+      - "homepage.icon=${KIBANA_HOMEPAGE_ICON:-kibana.png}"
+      - "homepage.href=${KIBANA_HOMEPAGE_URL:-}"
+      - "homepage.description=${KIBANA_HOMEPAGE_DESCRIPTION:-Kibana UI}"
+      - "homepage.siteMonitor=${KIBANA_HOMEPAGE_SITEMONITOR:-http://kibana:5601/kibana/api/status}"
