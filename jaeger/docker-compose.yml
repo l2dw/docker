@@ -1,0 +1,100 @@
+networks:
+  default:
+    name: ${DEFAULT_NETWORK_NAME:-jaeger-network}
+    external: ${DEFAULT_NETWORK_EXTERNAL:-false}
+volumes:
+  data:
+    name: ${JAEGER_DATA_VOLUME_NAME:-jaeger_data}
+    external: ${JAEGER_DATA_VOLUME_EXTERNAL:-false}
+    driver: ${JAEGER_DATA_VOLUME_DRIVER:-local}
+    driver_opts:
+      type: ${JAEGER_DATA_VOLUME_TYPE:-}
+      o: ${JAEGER_DATA_VOLUME_OPTS:-}
+      device: ${JAEGER_DATA_VOLUME_PATH:-}
+services:
+  jaeger:
+    image: ${JAEGER_IMAGE:-docker.io/jaegertracing/all-in-one:1.76.0}
+    hostname: ${JAEGER_HOSTNAME:-jaeger}
+    restart: ${JAEGER_RESTART:-unless-stopped}
+    privileged: ${JAEGER_PRIVILEGED:-false}
+    env_file:
+      - ${JAEGER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - SPAN_STORAGE_TYPE=elasticsearch
+      - ES_SERVER_URLS=${JAEGER_ES_SERVER_URLS:-http://elasticsearch:9200}
+      - ES_USERNAME=${JAEGER_ES_USERNAME:-elastic}
+      - ES_PASSWORD=${JAEGER_ES_PASSWORD:-ChangeMe}
+      - COLLECTOR_OTLP_ENABLED=true
+      - QUERY_BASE_PATH=${JAEGER_QUERY_BASE_PATH:-}
+    volumes:
+      - data:${JAEGER_DATA_VOLUME_DIR:-/data}:z
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q --spider http://127.0.0.1:14269/
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    networks:
+      default: {}
+    deploy:
+      mode: ${JAEGER_DEPLOY_MODE:-replicated}
+      replicas: ${JAEGER_DEPLOY_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${JAEGER_MEMORY_LIMIT:-1G}
+      placement:
+        constraints:
+          - ${JAEGER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${JAEGER_RESTART_POLICY_CONDITION:-any}
+        delay: ${JAEGER_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${JAEGER_RESTART_POLICY_MAX_ATTEMPTS:-3}
+      labels:
+        - "traefik.enable=${JAEGER_TRAEFIK_LABELS_SWARM_ENABLE:-true}"
+        - "traefik.http.services.${APP_NAME:-jaeger}.loadbalancer.server.port=${JAEGER_HTTP_PORT:-16686}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}.entrypoints=${JAEGER_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}.rule=Host(`${JAEGER_DOMAIN:-jaeger.example.com}`) && PathPrefix(`${JAEGER_BASE_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-jaeger}.service=${APP_NAME:-jaeger}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}.middlewares=${JAEGER_MIDDLEWARES:-}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}.tls=${JAEGER_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}.tls.certresolver=${JAEGER_TLS_CERTRESOLVER:-letsencrypt}"
+        - "traefik.http.middlewares.${APP_NAME:-jaeger}-otlp-strip.stripprefix.prefixes=${JAEGER_OTLP_PATH:-/otlp}"
+        - "traefik.http.services.${APP_NAME:-jaeger}-otlp.loadbalancer.server.port=${JAEGER_OTLP_PORT:-4318}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.entrypoints=${JAEGER_ENTRYPOINTS:-web}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.rule=Host(`${JAEGER_DOMAIN:-jaeger.example.com}`) && PathPrefix(`${JAEGER_OTLP_PATH:-/}`)"
+        - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.service=${APP_NAME:-jaeger}-otlp"
+        - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.middlewares=${APP_NAME:-jaeger}-otlp-strip"
+        - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.tls=${JAEGER_TLS_ENABLED:-false}"
+        - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.tls.certresolver=${JAEGER_TLS_CERTRESOLVER:-letsencrypt}"
+        - "homepage.group=${JAEGER_HOMEPAGE_GROUP:-Observability}"
+        - "homepage.name=${JAEGER_HOMEPAGE_NAME:-Jaeger}"
+        - "homepage.icon=${JAEGER_HOMEPAGE_ICON:-jaeger.png}"
+        - "homepage.href=${JAEGER_HOMEPAGE_URL:-}"
+        - "homepage.description=${JAEGER_HOMEPAGE_DESCRIPTION:-Jaeger tracing UI and OTLP collector}"
+        - "homepage.siteMonitor=${JAEGER_HOMEPAGE_SITEMONITOR:-http://jaeger:16686/jaeger}"
+    labels:
+      - "traefik.enable=${JAEGER_TRAEFIK_LABELS_DOCKER_ENABLE:-true}"
+      - "traefik.http.services.${APP_NAME:-jaeger}.loadbalancer.server.port=${JAEGER_HTTP_PORT:-16686}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}.entrypoints=${JAEGER_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}.rule=Host(`${JAEGER_DOMAIN:-jaeger.example.com}`) && PathPrefix(`${JAEGER_BASE_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-jaeger}.service=${APP_NAME:-jaeger}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}.middlewares=${JAEGER_MIDDLEWARES:-}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}.tls=${JAEGER_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}.tls.certresolver=${JAEGER_TLS_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.middlewares.${APP_NAME:-jaeger}-otlp-strip.stripprefix.prefixes=${JAEGER_OTLP_PATH:-/otlp}"
+      - "traefik.http.services.${APP_NAME:-jaeger}-otlp.loadbalancer.server.port=${JAEGER_OTLP_PORT:-4318}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.entrypoints=${JAEGER_ENTRYPOINTS:-web}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.rule=Host(`${JAEGER_DOMAIN:-jaeger.example.com}`) && PathPrefix(`${JAEGER_OTLP_PATH:-/}`)"
+      - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.service=${APP_NAME:-jaeger}-otlp"
+      - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.middlewares=${APP_NAME:-jaeger}-otlp-strip"
+      - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.tls=${JAEGER_TLS_ENABLED:-false}"
+      - "traefik.http.routers.${APP_NAME:-jaeger}-otlp.tls.certresolver=${JAEGER_TLS_CERTRESOLVER:-letsencrypt}"
+      - "homepage.group=${JAEGER_HOMEPAGE_GROUP:-Observability}"
+      - "homepage.name=${JAEGER_HOMEPAGE_NAME:-Jaeger}"
+      - "homepage.icon=${JAEGER_HOMEPAGE_ICON:-jaeger.png}"
+      - "homepage.href=${JAEGER_HOMEPAGE_URL:-}"
+      - "homepage.description=${JAEGER_HOMEPAGE_DESCRIPTION:-Jaeger tracing UI and OTLP collector}"
+      - "homepage.siteMonitor=${JAEGER_HOMEPAGE_SITEMONITOR:-http://jaeger:16686/jaeger}"
