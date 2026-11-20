@@ -18,6 +18,8 @@ services:
     image: ${PROMETHEUS_AGENT_IMAGE:-docker.io/prom/prometheus:v3.16.0}
     restart: ${PROMETHEUS_AGENT_RESTART:-unless-stopped}
     privileged: ${PROMETHEUS_AGENT_PRIVILEGED:-false}
+    security_opt:
+      - label=${PROMETHEUS_AGENT_SELINUX_LABEL:-disable}
     user: root
     # The agent config is rendered at start from environment variables (no config file to mount),
     # the remote_write password comes ONLY from the env_file (PROMETHEUS_AGENT_REMOTE_WRITE_PASSWORD).
@@ -99,6 +101,8 @@ services:
     image: ${PROMETHEUS_AGENT_NODE_EXPORTER_IMAGE:-docker.io/prom/node-exporter:v1.12.1}
     restart: ${PROMETHEUS_AGENT_RESTART:-unless-stopped}
     privileged: ${PROMETHEUS_AGENT_NODE_EXPORTER_PRIVILEGED:-false}
+    security_opt:
+      - label=${PROMETHEUS_AGENT_NODE_EXPORTER_SELINUX_LABEL:-disable}
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
