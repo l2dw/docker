@@ -60,7 +60,7 @@ kibana-setup: ## Ensure kibana/.env, sync base path / network EXTERNAL
 		if [ -n "$$root" ]; then upsert "$$root" KIBANA_BASE_PATH /; upsert "$$root" KIBANA_MIDDLEWARES ""; fi; \
 		echo "Empty KIBANA_BASE_PATH → / (Host-only) and cleared KIBANA_MIDDLEWARES."; \
 	fi; \
-	for k in KIBANA_XPACK_SECURITY_ENCRYPTION_KEY KIBANA_XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTION_KEY KIBANA_XPACK_REPORTING_ENCRYPTION_KEY; do \
+	for k in XPACK_SECURITY_ENCRYPTIONKEY XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY XPACK_REPORTING_ENCRYPTIONKEY; do \
 		v=$$(file_get "$$envf" "$$k"); \
 		case "$$v" in ""|ChangeMe*) upsert "$$envf" "$$k" "$$(openssl rand -hex 32)"; echo "Generated $$k in $$envf (not displayed)." ;; esac; \
 	done; \

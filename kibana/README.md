@@ -24,7 +24,7 @@ Supported by Kibana (`SERVER_BASEPATH` + `SERVER_REWRITEBASEPATH=true`). Default
 
 ## Configuration
 
-Required secrets (names only; placeholders in `.env.example`): `KIBANA_ELASTICSEARCH_PASSWORD` (password of the `kibana_system` user — set it on Elasticsearch first), `KIBANA_XPACK_SECURITY_ENCRYPTION_KEY`, `KIBANA_XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTION_KEY`, `KIBANA_XPACK_REPORTING_ENCRYPTION_KEY` (≥ 32 characters; `make kibana-setup` generates them when still `ChangeMe…`). Elasticsearch target: `KIBANA_ELASTICSEARCH_HOSTS` (default `http://elasticsearch:9200`, alias provided by the elasticsearch stack on the shared network). Extra Kibana settings can be added as environment variables in the file named by `KIBANA_ENV_FILE` (e.g. Fleet air-gapped mode and registry proxy).
+Required secrets (names only; native Kibana variable names, loaded only through `KIBANA_ENV_FILE` — `environment:` does not list them; placeholders in `.env.example`): `ELASTICSEARCH_PASSWORD` (password of the `kibana_system` user — set it on Elasticsearch first), `XPACK_SECURITY_ENCRYPTIONKEY`, `XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY`, `XPACK_REPORTING_ENCRYPTIONKEY` (≥ 32 characters; `make kibana-setup` generates them when still `ChangeMe…`). Elasticsearch target: `KIBANA_ELASTICSEARCH_HOSTS` (default `http://elasticsearch:9200`, alias provided by the elasticsearch stack on the shared network). Extra Kibana settings can be added as environment variables in the file named by `KIBANA_ENV_FILE` (e.g. Fleet air-gapped mode and registry proxy).
 
 ## Networks
 
