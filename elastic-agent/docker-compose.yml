@@ -21,6 +21,8 @@ services:
     pid: host
     restart: ${ELASTIC_AGENT_RESTART:-unless-stopped}
     privileged: ${ELASTIC_AGENT_PRIVILEGED:-false}
+    security_opt:
+      - label=${ELASTIC_AGENT_SELINUX_LABEL:-disable}
     # FLEET_ENROLLMENT_TOKEN is a secret: provide it ONLY through the env_file (ELASTIC_AGENT_ENV_FILE);
     # do not list it under environment: (it would override the file).
     env_file:
