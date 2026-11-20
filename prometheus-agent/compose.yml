@@ -44,6 +44,11 @@ services:
               - targets: ["prometheus-agent-node-exporter:$${PROMETHEUS_AGENT_NODE_EXPORTER_PORT}"]
                 labels:
                   instance: $${PROMETHEUS_AGENT_CLUSTER}
+          - job_name: podman-exporter
+            static_configs:
+              - targets: ["prometheus-agent-podman-exporter:$${PROMETHEUS_AGENT_PODMAN_EXPORTER_PORT}"]
+                labels:
+                  instance: $${PROMETHEUS_AGENT_CLUSTER}
         remote_write:
           - url: $${PROMETHEUS_AGENT_REMOTE_WRITE_URL}
             basic_auth:
@@ -64,6 +69,7 @@ services:
       - PROMETHEUS_AGENT_SCRAPE_INTERVAL=${PROMETHEUS_AGENT_SCRAPE_INTERVAL:-30s}
       - PROMETHEUS_AGENT_PORT=${PROMETHEUS_AGENT_PORT:-9090}
       - PROMETHEUS_AGENT_NODE_EXPORTER_PORT=${PROMETHEUS_AGENT_NODE_EXPORTER_PORT:-9100}
+      - PROMETHEUS_AGENT_PODMAN_EXPORTER_PORT=${PROMETHEUS_AGENT_PODMAN_EXPORTER_PORT:-9882}
       - PROMETHEUS_AGENT_DATA_VOLUME_DIR=${PROMETHEUS_AGENT_DATA_VOLUME_DIR:-/prometheus}
     volumes:
       - data:${PROMETHEUS_AGENT_DATA_VOLUME_DIR:-/prometheus}:z
@@ -127,6 +133,40 @@ services:
       placement:
         constraints:
           - ${PROMETHEUS_AGENT_NODE_EXPORTER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
+      restart_policy:
+        condition: ${PROMETHEUS_AGENT_RESTART_POLICY_CONDITION:-any}
+        delay: ${PROMETHEUS_AGENT_RESTART_POLICY_DELAY:-5s}
+        max_attempts: ${PROMETHEUS_AGENT_RESTART_POLICY_MAX_ATTEMPTS:-3}
+
+  # Podman containers and pods metrics (the Docker-compatible stats API of Podman has no usable memory detail).
+  prometheus-agent-podman-exporter:
+    image: ${PROMETHEUS_AGENT_PODMAN_EXPORTER_IMAGE:-quay.io/navidys/prometheus-podman-exporter:v2.0.0}
+    restart: ${PROMETHEUS_AGENT_RESTART:-unless-stopped}
+    privileged: ${PROMETHEUS_AGENT_PODMAN_EXPORTER_PRIVILEGED:-false}
+    security_opt:
+      - label=${PROMETHEUS_AGENT_PODMAN_EXPORTER_SELINUX_LABEL:-disable}
+    user: root
+    command:
+      - --web.listen-address=:${PROMETHEUS_AGENT_PODMAN_EXPORTER_PORT:-9882}
+      - --collector.enable-all
+    env_file:
+      - ${PROMETHEUS_AGENT_PODMAN_EXPORTER_ENV_FILE:-.env.example}
+    environment:
+      - TZ=${TZ:-America/Toronto}
+      - CONTAINER_HOST=unix:///run/podman/podman.sock
+    volumes:
+      # Podman API socket (rootless: /run/user/<uid>/podman/podman.sock)
+      - ${PROMETHEUS_AGENT_PODMAN_SOCK:-/run/podman/podman.sock}:/run/podman/podman.sock:ro
+    networks:
+      default: {}
+    deploy:
+      mode: ${PROMETHEUS_AGENT_PODMAN_EXPORTER_DEPLOY_MODE:-global}
+      resources:
+        limits:
+          memory: ${PROMETHEUS_AGENT_PODMAN_EXPORTER_MEMORY_LIMIT:-256M}
+      placement:
+        constraints:
+          - ${PROMETHEUS_AGENT_PODMAN_EXPORTER_PLACEMENT_CONSTRAINTS:-node.platform.os==linux}
       restart_policy:
         condition: ${PROMETHEUS_AGENT_RESTART_POLICY_CONDITION:-any}
         delay: ${PROMETHEUS_AGENT_RESTART_POLICY_DELAY:-5s}

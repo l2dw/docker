@@ -14,6 +14,7 @@ Required: `PROMETHEUS_AGENT_CLUSTER` (node label), `PROMETHEUS_AGENT_REMOTE_WRIT
 ## Notes
 - The scrape/remote_write config is rendered at container start from environment variables (no config file or Docker secret to mount: works on hosts where bind-mounted files of the Git checkout are not reachable by the daemon). The password is written to `/tmp` inside the container.
 - No Traefik, no published port, no base path. `compose.yml` and `docker-compose.yml` are identical (Homepage labels on both).
+- `prometheus-agent-podman-exporter` exposes per-container CPU/memory and Podman pod info (mount the Podman socket via `PROMETHEUS_AGENT_PODMAN_SOCK`; useful on Podman hosts only).
 - cAdvisor and blackbox are not included (see the `prometheus` stack for the central ones).
 
 ## Networks
