@@ -8,42 +8,6 @@ volumes:
     name: ${KEYCLOAK_DATA_VOLUME_NAME:-keycloak_data}
     external: ${KEYCLOAK_DATA_VOLUME_EXTERNAL:-false}
     driver: ${KEYCLOAK_DATA_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${KEYCLOAK_DATA_VOLUME_TYPE:-}
-      o: ${KEYCLOAK_DATA_VOLUME_OPTS:-}
-      device: ${KEYCLOAK_DATA_VOLUME_PATH:-}
-  themes:
-    name: ${KEYCLOAK_THEMES_VOLUME_NAME:-keycloak_themes}
-    external: ${KEYCLOAK_THEMES_VOLUME_EXTERNAL:-false}
-    driver: ${KEYCLOAK_THEMES_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${KEYCLOAK_THEMES_VOLUME_TYPE:-}
-      o: ${KEYCLOAK_THEMES_VOLUME_OPTS:-}
-      device: ${KEYCLOAK_THEMES_VOLUME_PATH:-}
-  providers:
-    name: ${KEYCLOAK_PROVIDERS_VOLUME_NAME:-keycloak_providers}
-    external: ${KEYCLOAK_PROVIDERS_VOLUME_EXTERNAL:-false}
-    driver: ${KEYCLOAK_PROVIDERS_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${KEYCLOAK_PROVIDERS_VOLUME_TYPE:-}
-      o: ${KEYCLOAK_PROVIDERS_VOLUME_OPTS:-}
-      device: ${KEYCLOAK_PROVIDERS_VOLUME_PATH:-}
-  conf:
-    name: ${KEYCLOAK_CONF_VOLUME_NAME:-keycloak_conf}
-    external: ${KEYCLOAK_CONF_VOLUME_EXTERNAL:-false}
-    driver: ${KEYCLOAK_CONF_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${KEYCLOAK_CONF_VOLUME_TYPE:-}
-      o: ${KEYCLOAK_CONF_VOLUME_OPTS:-}
-      device: ${KEYCLOAK_CONF_VOLUME_PATH:-}
-  logs:
-    name: ${KEYCLOAK_LOGS_VOLUME_NAME:-keycloak_logs}
-    external: ${KEYCLOAK_LOGS_VOLUME_EXTERNAL:-false}
-    driver: ${KEYCLOAK_LOGS_VOLUME_DRIVER:-local}
-    driver_opts:
-      type: ${KEYCLOAK_LOGS_VOLUME_TYPE:-}
-      o: ${KEYCLOAK_LOGS_VOLUME_OPTS:-}
-      device: ${KEYCLOAK_LOGS_VOLUME_PATH:-}
 
 services:
   keycloak:
@@ -70,14 +34,10 @@ services:
       - KC_HEALTH_ENABLED=${KEYCLOAK_HEALTH_ENABLED:-true}
       - KC_METRICS_ENABLED=${KEYCLOAK_METRICS_ENABLED:-false}
       - KC_LOG_LEVEL=${KEYCLOAK_LOG_LEVEL:-info}
-      - KC_LOG=${KEYCLOAK_LOG:-file,console}
+      - KC_LOG=${KEYCLOAK_LOG:-console}
       - KC_LOG_FILE=${KEYCLOAK_LOG_FILE:-/opt/keycloak/logs/keycloak.log}
     volumes:
       - data:${KEYCLOAK_DATA_VOLUME_DIR:-/opt/keycloak/data}:z
-      - themes:${KEYCLOAK_THEMES_VOLUME_DIR:-/opt/keycloak/themes}:z
-      - providers:${KEYCLOAK_PROVIDERS_VOLUME_DIR:-/opt/keycloak/providers}:z
-      - conf:${KEYCLOAK_CONF_VOLUME_DIR:-/opt/keycloak/conf}:z
-      - logs:${KEYCLOAK_LOGS_VOLUME_DIR:-/opt/keycloak/logs}:z
     deploy:
       mode: ${KEYCLOAK_DEPLOY_MODE:-replicated}
       replicas: ${KEYCLOAK_DEPLOY_REPLICAS:-1}
